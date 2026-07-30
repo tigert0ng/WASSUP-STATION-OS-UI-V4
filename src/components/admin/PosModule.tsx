@@ -130,7 +130,7 @@ interface AuditLog {
 
 export default function PosModule({ orders, revenueStats }: PosModuleProps) {
   // Navigation & Role simulation
-  const [activeTab, setActiveTab] = useState<"pos" | "vouchers" | "reports" | "audit" | "shifts">("pos");
+  const [activeTab, setActiveTab] = useState<"pos" | "receipts" | "expenses" | "reports" | "audit" | "shifts">("pos");
   const [currentRole, setCurrentRole] = useState<"cashier" | "manager">("manager");
 
   // Cash register/shift state
@@ -916,14 +916,25 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
           
           <button
-            onClick={() => setActiveTab("vouchers")}
+            onClick={() => setActiveTab("receipts")}
             className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
-              activeTab === "vouchers"
+              activeTab === "receipts"
                 ? "bg-slate-950 text-white"
                 : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
             }`}
           >
-            <FileText className="h-4 w-4" /> Phiếu Thu & Phiếu Chi ({phieuThuList.length + phieuChiList.length})
+            <TrendingUp className="h-4 w-4 text-emerald-500" /> Phiếu Thu ({phieuThuList.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("expenses")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+              activeTab === "expenses"
+                ? "bg-slate-950 text-white"
+                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+            }`}
+          >
+            <TrendingDown className="h-4 w-4 text-red-500" /> Phiếu Chi ({phieuChiList.length})
           </button>
 
           <button
@@ -1415,475 +1426,480 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </motion.div>
         )}
 
-        {/* TAB 2: LEDGER (PHIẾU THU & PHIẾU CHI) */}
-        {activeTab === "vouchers" && (
+        {/* TAB: PHIẾU THU */}
+        {activeTab === "receipts" && (
           <motion.div
-            key="vouchers-tab"
+            key="receipts-tab"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="space-y-6"
           >
-            {/* INFLOWS & OUTFLOWS SPLIT WORKSPACE */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* PHIẾU THU (INFLOWS LOGS) */}
-              <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                  <div>
-                    <h3 className="font-display font-extrabold text-sm text-slate-950 uppercase tracking-wider flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-emerald-600" />
-                      Sổ Quỹ Phiếu Thu (Dòng Thu Inflow)
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-sans mt-0.5">Thu phí dịch vụ, cọc combo hoặc bán lẻ phụ kiện.</p>
-                  </div>
-                  <button
-                    onClick={() => setShowAddThu(!showAddThu)}
-                    className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-850 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition border-0 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Tạo Phiếu Thu
-                  </button>
+            {/* PHIẾU THU (INFLOWS LOGS) */}
+            <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div>
+                  <h3 className="font-display font-extrabold text-sm text-slate-950 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                    Sổ Quỹ Phiếu Thu (Dòng Thu Inflow)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">Thu phí dịch vụ, cọc combo hoặc bán lẻ phụ kiện.</p>
                 </div>
+                <button
+                  onClick={() => setShowAddThu(!showAddThu)}
+                  className="px-2.5 py-1.5 bg-brand-green hover:bg-brand-green-hover text-matte-black rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition border-0 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5 stroke-[2.5]" /> Tạo Phiếu Thu
+                </button>
+              </div>
 
-                {/* FORM TẠO PHIẾU THU */}
-                {showAddThu && (
-                  <form onSubmit={handleCreateManualThu} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
-                    <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Thu Mới</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Khách hàng <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Tên khách..."
-                          value={newThuData.customerName}
-                          onChange={(e) => setNewThuData({ ...newThuData, customerName: e.target.value })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Số điện thoại</label>
-                        <input
-                          type="text"
-                          placeholder="Số điện thoại..."
-                          value={newThuData.customerPhone}
-                          onChange={(e) => setNewThuData({ ...newThuData, customerPhone: e.target.value })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Biển số xe <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Ví dụ: 30A-123.45"
-                          value={newThuData.licensePlate}
-                          onChange={(e) => setNewThuData({ ...newThuData, licensePlate: e.target.value })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs uppercase"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Phân khúc xe</label>
-                        <select
-                          value={newThuData.vehicleSegment}
-                          onChange={(e) => setNewThuData({ ...newThuData, vehicleSegment: e.target.value as any })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        >
-                          <option value="sedan">Sedan (4-5 Chỗ)</option>
-                          <option value="suv">SUV / MPV (7 Chỗ)</option>
-                          <option value="truck">Bán tải / Khác</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-500 uppercase">Phân loại dòng thu <span className="text-red-500">*</span></label>
-                        <select
-                          value={newThuData.thuType}
-                          onChange={(e) => setNewThuData({ ...newThuData, thuType: e.target.value as any })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-semibold text-slate-800"
-                        >
-                          <option value="service">Thu từ dịch vụ (Rửa xe, Ceramic...)</option>
-                          <option value="merchandise">Thu từ bán hàng (Dung dịch, gạt mưa...)</option>
-                          <option value="deposit">Thu khác: Khách cọc tiền combo lớn</option>
-                          <option value="prepaid_card">Thu khác: Thẻ trả trước (Prepaid)</option>
-                          <option value="insurance">Thu khác: Tiền đền bù từ bảo hiểm</option>
-                          <option value="other">Khoản thu khác</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Hình thức</label>
-                        <select
-                          value={newThuData.paymentMethod}
-                          onChange={(e) => setNewThuData({ ...newThuData, paymentMethod: e.target.value as any })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        >
-                          <option value="bank_transfer">Chuyển khoản VietQR</option>
-                          <option value="cash">Tiền mặt quỹ két</option>
-                          <option value="card">Cà thẻ ATM</option>
-                          <option value="e-wallet">Ví điện tử MoMo</option>
-                        </select>
-                      </div>
-                    </div>
-
+              {/* FORM TẠO PHIẾU THU */}
+              {showAddThu && (
+                <form onSubmit={handleCreateManualThu} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
+                  <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Thu Mới</p>
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền thu <span className="text-red-500">*</span></label>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Khách hàng <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Tên khách..."
+                        value={newThuData.customerName}
+                        onChange={(e) => setNewThuData({ ...newThuData, customerName: e.target.value })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Số điện thoại</label>
+                      <input
+                        type="text"
+                        placeholder="Số điện thoại..."
+                        value={newThuData.customerPhone}
+                        onChange={(e) => setNewThuData({ ...newThuData, customerPhone: e.target.value })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Biển số xe <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ví dụ: 30A-123.45"
+                        value={newThuData.licensePlate}
+                        onChange={(e) => setNewThuData({ ...newThuData, licensePlate: e.target.value })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs uppercase"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Phân khúc xe</label>
+                      <select
+                        value={newThuData.vehicleSegment}
+                        onChange={(e) => setNewThuData({ ...newThuData, vehicleSegment: e.target.value as any })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      >
+                        <option value="sedan">Sedan (4-5 Chỗ)</option>
+                        <option value="suv">SUV / MPV (7 Chỗ)</option>
+                        <option value="truck">Bán tải / Khác</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">Phân loại dòng thu <span className="text-red-500">*</span></label>
+                      <select
+                        value={newThuData.thuType}
+                        onChange={(e) => setNewThuData({ ...newThuData, thuType: e.target.value as any })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-semibold text-slate-800"
+                      >
+                        <option value="service">Thu từ dịch vụ (Rửa xe, Ceramic...)</option>
+                        <option value="merchandise">Thu từ bán hàng (Dung dịch, gạt mưa...)</option>
+                        <option value="deposit">Thu khác: Khách cọc tiền combo lớn</option>
+                        <option value="prepaid_card">Thu khác: Thẻ trả trước (Prepaid)</option>
+                        <option value="insurance">Thu khác: Tiền đền bù từ bảo hiểm</option>
+                        <option value="other">Khoản thu khác</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Hình thức</label>
+                      <select
+                        value={newThuData.paymentMethod}
+                        onChange={(e) => setNewThuData({ ...newThuData, paymentMethod: e.target.value as any })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      >
+                        <option value="bank_transfer">Chuyển khoản VietQR</option>
+                        <option value="cash">Tiền mặt quỹ két</option>
+                        <option value="card">Cà thẻ ATM</option>
+                        <option value="e-wallet">Ví điện tử MoMo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền thu <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="VND..."
+                      value={newThuData.amount}
+                      onChange={(e) => setNewThuData({ ...newThuData, amount: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-sans font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung thu <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nội dung cụ thể..."
+                      value={newThuData.notes}
+                      onChange={(e) => setNewThuData({ ...newThuData, notes: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddThu(false)}
+                      className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
+                    >
+                      Lưu phiếu thu
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* SEARCH PHIẾU THU */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm mã phiếu, biển số, tên khách..."
+                  value={phieuThuSearch}
+                  onChange={(e) => setPhieuThuSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs"
+                />
+              </div>
+
+              {/* TABLE OF INFLOWS */}
+              <div className="overflow-x-auto border border-stone-150 rounded-xl">
+                <table className="w-full text-left border-collapse text-[11px] font-sans">
+                  <thead>
+                    <tr className="bg-stone-50 text-slate-500 border-b border-stone-150">
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Mã / Giờ</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Xe & Khách</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Nội dung</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px] text-right">Số tiền</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px] text-center">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {phieuThuList
+                      .filter(p => p.id.toLowerCase().includes(phieuThuSearch.toLowerCase()) || p.licensePlate.toLowerCase().includes(phieuThuSearch.toLowerCase()) || p.customerName.toLowerCase().includes(phieuThuSearch.toLowerCase()))
+                      .map((p) => (
+                      <tr key={p.id} className="hover:bg-stone-50/40">
+                        <td className="p-3">
+                          <span className="font-sans font-bold text-slate-950 block">{p.id}</span>
+                          <span className="text-[9px] text-slate-400 font-sans mt-0.5 block mb-1">{new Date(p.timestamp).toLocaleTimeString("vi-VN")}</span>
+                          {p.thuType && (
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                              p.thuType === "service" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                              p.thuType === "merchandise" ? "bg-teal-50 text-teal-700 border border-teal-200" :
+                              p.thuType === "prepaid_card" ? "bg-violet-50 text-violet-700 border border-violet-200" :
+                              p.thuType === "deposit" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                              p.thuType === "insurance" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                              "bg-slate-50 text-slate-700 border border-slate-200"
+                            }`}>
+                              {p.thuType === "service" ? "Dịch vụ" :
+                               p.thuType === "merchandise" ? "Bán hàng" :
+                               p.thuType === "prepaid_card" ? "Thẻ trả trước" :
+                               p.thuType === "deposit" ? "Đặt cọc" :
+                               p.thuType === "insurance" ? "Bảo hiểm" : "Khác"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className="font-sans bg-slate-100 border border-stone-200 px-1 py-0.5 rounded text-[10px] font-bold block w-fit mb-1">{p.licensePlate}</span>
+                          <span className="font-bold text-slate-700">{p.customerName}</span>
+                        </td>
+                        <td className="p-3">
+                          {editingThuId === p.id ? (
+                            <div className="flex gap-1 items-center">
+                              <input
+                                type="text"
+                                value={editingThuNotes}
+                                onChange={(e) => setEditingThuNotes(e.target.value)}
+                                className="border border-stone-300 rounded p-1 text-[11px] bg-white text-slate-800"
+                              />
+                              <button onClick={() => saveEditThuNotes(p.id)} className="p-1 bg-[#A2C62C] rounded text-slate-950 font-bold">Lưu</button>
+                              <button onClick={() => setEditingThuId(null)} className="p-1 bg-stone-100 rounded text-slate-500">X</button>
+                            </div>
+                          ) : (
+                            <p className="text-slate-600 font-medium leading-relaxed">{p.notes}</p>
+                          )}
+                          <span className="text-[9px] text-slate-400 block mt-0.5 font-bold">Người thu: {p.createdBy} • HT: {p.paymentMethod.toUpperCase()}</span>
+                        </td>
+                        <td className="p-3 text-right font-black text-emerald-700 text-xs">
+                          +{formatVnd(p.amount)}
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => {
+                              setEditingThuId(p.id);
+                              setEditingThuNotes(p.notes);
+                            }}
+                            className="text-blue-600 hover:underline font-bold"
+                          >
+                            Sửa
+                          </button>
+                          <span className="block text-[8px] text-stone-400 font-sans mt-1">🔒 LOCKED</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB: PHIẾU CHI */}
+        {activeTab === "expenses" && (
+          <motion.div
+            key="expenses-tab"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            {/* PHIẾU CHI (OUTFLOWS LOGS) */}
+            <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div>
+                  <h3 className="font-display font-extrabold text-sm text-slate-950 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                    Sổ Quỹ Phiếu Chi (Dòng Chi Outflow)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">Giá vốn mua vật tư, trả hoa hồng thợ, điện nước mặt bằng.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddChi(!showAddChi)}
+                  className="px-2.5 py-1.5 bg-brand-green hover:bg-brand-green-hover text-matte-black rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition border-0 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5 stroke-[2.5]" /> Tạo Phiếu Chi
+                </button>
+              </div>
+
+              {/* FORM TẠO PHIẾU CHI */}
+              {showAddChi && (
+                <form onSubmit={handleCreateManualChi} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
+                  <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Chi Mới</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Loại chi phí</label>
+                      <select
+                        value={newChiData.expenseType}
+                        onChange={(e) => setNewChiData({ ...newChiData, expenseType: e.target.value as any })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      >
+                        <option value="commercial_goods">Mua hàng hóa / Vật tư hóa chất</option>
+                        <option value="technician_commission">Trả hoa hồng / Lương thợ</option>
+                        <option value="utilities">Điện nước sản xuất</option>
+                        <option value="rent">Mặt bằng / Thuê hạ tầng</option>
+                        <option value="entertainment">Tiếp khách / Đối tác</option>
+                        <option value="other">Chi phí khác</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Tài khoản thanh toán</label>
+                      <select
+                        value={newChiData.paymentAccount}
+                        onChange={(e) => setNewChiData({ ...newChiData, paymentAccount: e.target.value as any })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      >
+                        <option value="cash_fund">Quỹ tiền mặt (Két mặt)</option>
+                        <option value="bank_fund">Tài khoản ngân hàng</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Người nhận tiền <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Tên đơn vị/cá nhân nhận..."
+                        value={newChiData.recipient}
+                        onChange={(e) => setNewChiData({ ...newChiData, recipient: e.target.value })}
+                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền chi <span className="text-red-500">*</span></label>
                       <input
                         type="number"
                         required
                         placeholder="VND..."
-                        value={newThuData.amount}
-                        onChange={(e) => setNewThuData({ ...newThuData, amount: e.target.value })}
+                        value={newChiData.amount}
+                        onChange={(e) => setNewChiData({ ...newChiData, amount: e.target.value })}
                         className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-sans font-bold"
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung thu <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Nội dung cụ thể..."
-                        value={newThuData.notes}
-                        onChange={(e) => setNewThuData({ ...newThuData, notes: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung chi chi tiết <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nêu rõ lý do và danh mục chi..."
+                      value={newChiData.notes}
+                      onChange={(e) => setNewChiData({ ...newChiData, notes: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                    />
+                  </div>
 
-                    <div className="flex gap-2 pt-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddThu(false)}
-                        className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
-                      >
-                        Lưu phiếu thu
-                      </button>
-                    </div>
-                  </form>
-                )}
+                  <div className="flex gap-2 pt-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddChi(false)}
+                      className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
+                    >
+                      {currentRole === "manager" ? "Tạo đã duyệt" : "Gửi Đề xuất chi"}
+                    </button>
+                  </div>
+                </form>
+              )}
 
-                {/* SEARCH PHIẾU THU */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Tìm mã phiếu, biển số, tên khách..."
-                    value={phieuThuSearch}
-                    onChange={(e) => setPhieuThuSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                {/* TABLE OF INFLOWS */}
-                <div className="overflow-x-auto border border-stone-150 rounded-xl">
-                  <table className="w-full text-left border-collapse text-[11px] font-sans">
-                    <thead>
-                      <tr className="bg-stone-50 text-slate-500 border-b border-stone-150">
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Mã / Giờ</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Xe & Khách</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Nội dung</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px] text-right">Số tiền</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px] text-center">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                      {phieuThuList
-                        .filter(p => p.id.toLowerCase().includes(phieuThuSearch.toLowerCase()) || p.licensePlate.toLowerCase().includes(phieuThuSearch.toLowerCase()) || p.customerName.toLowerCase().includes(phieuThuSearch.toLowerCase()))
-                        .map((p) => (
-                        <tr key={p.id} className="hover:bg-stone-50/40">
-                          <td className="p-3">
-                            <span className="font-sans font-bold text-slate-950 block">{p.id}</span>
-                            <span className="text-[9px] text-slate-400 font-sans mt-0.5 block mb-1">{new Date(p.timestamp).toLocaleTimeString("vi-VN")}</span>
-                            {p.thuType && (
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
-                                p.thuType === "service" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                                p.thuType === "merchandise" ? "bg-teal-50 text-teal-700 border border-teal-200" :
-                                p.thuType === "prepaid_card" ? "bg-violet-50 text-violet-700 border border-violet-200" :
-                                p.thuType === "deposit" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                                p.thuType === "insurance" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                                "bg-slate-50 text-slate-700 border border-slate-200"
-                              }`}>
-                                {p.thuType === "service" ? "Dịch vụ" :
-                                 p.thuType === "merchandise" ? "Bán hàng" :
-                                 p.thuType === "prepaid_card" ? "Thẻ trả trước" :
-                                 p.thuType === "deposit" ? "Đặt cọc" :
-                                 p.thuType === "insurance" ? "Bảo hiểm" : "Khác"}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <span className="font-sans bg-slate-100 border border-stone-200 px-1 py-0.5 rounded text-[10px] font-bold block w-fit mb-1">{p.licensePlate}</span>
-                            <span className="font-bold text-slate-700">{p.customerName}</span>
-                          </td>
-                          <td className="p-3">
-                            {editingThuId === p.id ? (
-                              <div className="flex gap-1 items-center">
-                                <input
-                                  type="text"
-                                  value={editingThuNotes}
-                                  onChange={(e) => setEditingThuNotes(e.target.value)}
-                                  className="border border-stone-300 rounded p-1 text-[11px] bg-white text-slate-800"
-                                />
-                                <button onClick={() => saveEditThuNotes(p.id)} className="p-1 bg-[#A2C62C] rounded text-slate-950 font-bold">Lưu</button>
-                                <button onClick={() => setEditingThuId(null)} className="p-1 bg-stone-100 rounded text-slate-500">X</button>
-                              </div>
-                            ) : (
-                              <p className="text-slate-600 font-medium leading-relaxed">{p.notes}</p>
-                            )}
-                            <span className="text-[9px] text-slate-400 block mt-0.5 font-bold">Người thu: {p.createdBy} • HT: {p.paymentMethod.toUpperCase()}</span>
-                          </td>
-                          <td className="p-3 text-right font-black text-emerald-700 text-xs">
-                            +{formatVnd(p.amount)}
-                          </td>
-                          <td className="p-3 text-center">
-                            {/* Strict Auditing: Deletes are locked, editing is recorded */}
-                            <button
-                              onClick={() => {
-                                setEditingThuId(p.id);
-                                setEditingThuNotes(p.notes);
-                              }}
-                              className="text-blue-600 hover:underline font-bold"
-                            >
-                              Sửa
-                            </button>
-                            <span className="block text-[8px] text-stone-400 font-sans mt-1">🔒 LOCKED</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {/* SEARCH PHIẾU CHI */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm mã phiếu, người nhận, nội dung chi..."
+                  value={phieuChiSearch}
+                  onChange={(e) => setPhieuChiSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs"
+                />
               </div>
 
-              {/* PHIẾU CHI (OUTFLOWS LOGS) */}
-              <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                  <div>
-                    <h3 className="font-display font-extrabold text-sm text-slate-950 uppercase tracking-wider flex items-center gap-2">
-                      <TrendingDown className="h-5 w-5 text-red-600" />
-                      Sổ Quỹ Phiếu Chi (Dòng Chi Outflow)
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-sans mt-0.5">Giá vốn mua vật tư, trả hoa hồng thợ, điện nước mặt bằng.</p>
-                  </div>
-                  <button
-                    onClick={() => setShowAddChi(!showAddChi)}
-                    className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-850 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition border-0 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Tạo Phiếu Chi
-                  </button>
-                </div>
-
-                {/* FORM TẠO PHIẾU CHI */}
-                {showAddChi && (
-                  <form onSubmit={handleCreateManualChi} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
-                    <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Chi Mới</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Loại chi phí</label>
-                        <select
-                          value={newChiData.expenseType}
-                          onChange={(e) => setNewChiData({ ...newChiData, expenseType: e.target.value as any })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        >
-                          <option value="commercial_goods">Mua hàng hóa / Vật tư hóa chất</option>
-                          <option value="technician_commission">Trả hoa hồng / Lương thợ</option>
-                          <option value="utilities">Điện nước sản xuất</option>
-                          <option value="rent">Mặt bằng / Thuê hạ tầng</option>
-                          <option value="entertainment">Tiếp khách / Đối tác</option>
-                          <option value="other">Chi phí khác</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Tài khoản thanh toán</label>
-                        <select
-                          value={newChiData.paymentAccount}
-                          onChange={(e) => setNewChiData({ ...newChiData, paymentAccount: e.target.value as any })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        >
-                          <option value="cash_fund">Quỹ tiền mặt (Két mặt)</option>
-                          <option value="bank_fund">Tài khoản ngân hàng</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Người nhận tiền <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Tên đơn vị/cá nhân nhận..."
-                          value={newChiData.recipient}
-                          onChange={(e) => setNewChiData({ ...newChiData, recipient: e.target.value })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền chi <span className="text-red-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="VND..."
-                          value={newChiData.amount}
-                          onChange={(e) => setNewChiData({ ...newChiData, amount: e.target.value })}
-                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-sans font-bold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung chi chi tiết <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Nêu rõ lý do và danh mục chi..."
-                        value={newChiData.notes}
-                        onChange={(e) => setNewChiData({ ...newChiData, notes: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddChi(false)}
-                        className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
-                      >
-                        {currentRole === "manager" ? "Tạo đã duyệt" : "Gửi Đề xuất chi"}
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* SEARCH PHIẾU CHI */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Tìm mã phiếu, người nhận, nội dung chi..."
-                    value={phieuChiSearch}
-                    onChange={(e) => setPhieuChiSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                {/* TABLE OF OUTFLOWS */}
-                <div className="overflow-x-auto border border-stone-150 rounded-xl">
-                  <table className="w-full text-left border-collapse text-[11px] font-sans">
-                    <thead>
-                      <tr className="bg-stone-50 text-slate-500 border-b border-stone-150">
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Mã / Giờ</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Đối tác / Người nhận</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px]">Nội dung & Phân loại</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px] text-right">Số tiền</th>
-                        <th className="p-3 font-extrabold uppercase text-[9px] text-center">Xác thực / Duyệt</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                      {phieuChiList
-                        .filter(p => p.id.toLowerCase().includes(phieuChiSearch.toLowerCase()) || p.recipient.toLowerCase().includes(phieuChiSearch.toLowerCase()) || p.notes.toLowerCase().includes(phieuChiSearch.toLowerCase()))
-                        .map((p) => {
-                          const isPending = p.status === "pending";
-                          const isCompleted = p.status === "completed" || p.status === "approved";
-                          
-                          return (
-                            <tr key={p.id} className="hover:bg-stone-50/40">
-                              <td className="p-3">
-                                <span className="font-sans font-bold text-slate-950 block">{p.id}</span>
-                                <span className="text-[9px] text-slate-400 font-sans mt-0.5 block">{new Date(p.timestamp).toLocaleTimeString("vi-VN")}</span>
-                              </td>
-                              <td className="p-3">
-                                <span className="font-bold text-slate-800">{p.recipient}</span>
-                                <span className="text-[8px] bg-stone-100 text-stone-500 border border-stone-200 px-1 py-0.5 rounded uppercase font-sans block w-fit mt-1">
-                                  {p.paymentAccount === "cash_fund" ? "Quỹ Mặt" : "Ngân hàng"}
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                {editingChiId === p.id ? (
-                                  <div className="flex gap-1 items-center">
-                                    <input
-                                      type="text"
-                                      value={editingChiNotes}
-                                      onChange={(e) => setEditingChiNotes(e.target.value)}
-                                      className="border border-stone-300 rounded p-1 text-[11px] bg-white text-slate-800"
-                                    />
-                                    <button onClick={() => saveEditChiNotes(p.id)} className="p-1 bg-[#A2C62C] rounded text-slate-950 font-bold">Lưu</button>
-                                    <button onClick={() => setEditingChiId(null)} className="p-1 bg-stone-100 rounded text-slate-500">X</button>
-                                  </div>
-                                ) : (
-                                  <p className="text-slate-600 font-medium leading-relaxed">{p.notes}</p>
-                                )}
-                                <span className="text-[9px] text-slate-400 block mt-1 font-bold">Phân loại: {p.expenseType.toUpperCase()} • Tạo: {p.createdBy}</span>
-                              </td>
-                              <td className="p-3 text-right font-black text-red-700 text-xs">
-                                -{formatVnd(p.amount)}
-                              </td>
-                              <td className="p-3 text-center">
-                                {isPending ? (
-                                  <div className="space-y-1">
-                                    <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 font-bold text-[9px] rounded-full uppercase">Chờ Duyệt</span>
-                                    {currentRole === "manager" ? (
-                                      <div className="flex gap-1 justify-center mt-1.5">
-                                        <button
-                                          onClick={() => handleApproveExpense(p.id, "completed")}
-                                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded cursor-pointer border-0"
-                                        >
-                                          Duyệt
-                                        </button>
-                                        <button
-                                          onClick={() => handleApproveExpense(p.id, "rejected")}
-                                          className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded cursor-pointer border-0"
-                                        >
-                                          Hủy
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <p className="text-[8px] text-stone-400 leading-snug">Cần quản lý duyệt</p>
-                                    )}
-                                  </div>
-                                ) : p.status === "rejected" ? (
-                                  <span className="inline-block px-2 py-0.5 bg-red-100 text-red-800 font-bold text-[9px] rounded-full uppercase">Từ chối</span>
-                                ) : (
-                                  <div className="space-y-0.5">
-                                    <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[9px] rounded-full uppercase">Đã Chi</span>
-                                    {p.approvedBy && <span className="block text-[8px] text-slate-400">Duyệt: {p.approvedBy}</span>}
-                                  </div>
-                                )}
-                                
-                                <div className="mt-2 flex gap-1 justify-center border-t border-stone-100 pt-1">
-                                  <button
-                                    onClick={() => {
-                                      setEditingChiId(p.id);
-                                      setEditingChiNotes(p.notes);
-                                    }}
-                                    className="text-blue-600 hover:underline font-bold text-[10px]"
-                                  >
-                                    Sửa
-                                  </button>
+              {/* TABLE OF OUTFLOWS */}
+              <div className="overflow-x-auto border border-stone-150 rounded-xl">
+                <table className="w-full text-left border-collapse text-[11px] font-sans">
+                  <thead>
+                    <tr className="bg-stone-50 text-slate-500 border-b border-stone-150">
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Mã / Giờ</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Đối tác / Người nhận</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px]">Nội dung & Phân loại</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px] text-right">Số tiền</th>
+                      <th className="p-3 font-extrabold uppercase text-[9px] text-center">Xác thực / Duyệt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {phieuChiList
+                      .filter(p => p.id.toLowerCase().includes(phieuChiSearch.toLowerCase()) || p.recipient.toLowerCase().includes(phieuChiSearch.toLowerCase()) || p.notes.toLowerCase().includes(phieuChiSearch.toLowerCase()))
+                      .map((p) => {
+                        const isPending = p.status === "pending";
+                        
+                        return (
+                          <tr key={p.id} className="hover:bg-stone-50/40">
+                            <td className="p-3">
+                              <span className="font-sans font-bold text-slate-950 block">{p.id}</span>
+                              <span className="text-[9px] text-slate-400 font-sans mt-0.5 block">{new Date(p.timestamp).toLocaleTimeString("vi-VN")}</span>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-bold text-slate-800">{p.recipient}</span>
+                              <span className="text-[8px] bg-stone-100 text-stone-500 border border-stone-200 px-1 py-0.5 rounded uppercase font-sans block w-fit mt-1">
+                                {p.paymentAccount === "cash_fund" ? "Quỹ Mặt" : "Ngân hàng"}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              {editingChiId === p.id ? (
+                                <div className="flex gap-1 items-center">
+                                  <input
+                                    type="text"
+                                    value={editingChiNotes}
+                                    onChange={(e) => setEditingChiNotes(e.target.value)}
+                                    className="border border-stone-300 rounded p-1 text-[11px] bg-white text-slate-800"
+                                  />
+                                  <button onClick={() => saveEditChiNotes(p.id)} className="p-1 bg-[#A2C62C] rounded text-slate-950 font-bold">Lưu</button>
+                                  <button onClick={() => setEditingChiId(null)} className="p-1 bg-stone-100 rounded text-slate-500">X</button>
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
+                              ) : (
+                                <p className="text-slate-600 font-medium leading-relaxed">{p.notes}</p>
+                              )}
+                              <span className="text-[9px] text-slate-400 block mt-1 font-bold">Phân loại: {p.expenseType.toUpperCase()} • Tạo: {p.createdBy}</span>
+                            </td>
+                            <td className="p-3 text-right font-black text-red-700 text-xs">
+                              -{formatVnd(p.amount)}
+                            </td>
+                            <td className="p-3 text-center">
+                              {isPending ? (
+                                <div className="space-y-1">
+                                  <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 font-bold text-[9px] rounded-full uppercase">Chờ Duyệt</span>
+                                  {currentRole === "manager" ? (
+                                    <div className="flex gap-1 justify-center mt-1.5">
+                                      <button
+                                        onClick={() => handleApproveExpense(p.id, "completed")}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded cursor-pointer border-0"
+                                      >
+                                        Duyệt
+                                      </button>
+                                      <button
+                                        onClick={() => handleApproveExpense(p.id, "rejected")}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded cursor-pointer border-0"
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-[8px] text-stone-400 leading-snug">Cần quản lý duyệt</p>
+                                  )}
+                                </div>
+                              ) : p.status === "rejected" ? (
+                                <span className="inline-block px-2 py-0.5 bg-red-100 text-red-800 font-bold text-[9px] rounded-full uppercase">Từ chối</span>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[9px] rounded-full uppercase">Đã Chi</span>
+                                  {p.approvedBy && <span className="block text-[8px] text-slate-400">Duyệt: {p.approvedBy}</span>}
+                                </div>
+                              )}
+                              
+                              <div className="mt-2 flex gap-1 justify-center border-t border-stone-100 pt-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingChiId(p.id);
+                                    setEditingChiNotes(p.notes);
+                                  }}
+                                  className="text-blue-600 hover:underline font-bold text-[10px]"
+                                >
+                                  Sửa
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
               </div>
             </div>
           </motion.div>
