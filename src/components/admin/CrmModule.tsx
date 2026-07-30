@@ -1079,7 +1079,7 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
 
       {/* SECTION HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-2" id="crm-header-card">
-        <div>
+        <div className="px-4">
           <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight">HỆ THỐNG HỘI VIÊN & ĐIỂM THƯỞNG SUP</h1>
           <p className="text-mid-gray text-xs mt-1 font-sans">
             Bảng theo dõi tổng quan thông tin tài khoản, quản lý nhiều phương tiện (xe), cấp voucher thủ công và tra cứu lịch sử dịch vụ.
@@ -1119,43 +1119,43 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
       </div>
 
       {/* TABS BAR */}
-      <div className="flex flex-col sm:flex-row border border-stone-200/80 bg-white rounded-2xl p-1.5 shadow-xs gap-1.5" id="crm-tabs-bar">
+      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none" id="crm-tabs-bar">
         <button
           type="button"
           onClick={() => setActiveTab("customers")}
-          className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
             activeTab === "customers"
-              ? "bg-matte-black text-white shadow-sm"
-              : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          <Users className="h-4 w-4 shrink-0" />
+          <Users className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "customers" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
           DANH SÁCH HỘI VIÊN
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("vouchers")}
-          className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
             activeTab === "vouchers"
-              ? "bg-matte-black text-white shadow-sm"
-              : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          <Tag className="h-4 w-4 shrink-0" />
+          <Tag className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "vouchers" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
           QUẢN LÝ VOUCHER
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("groups")}
-          className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
             activeTab === "groups"
-              ? "bg-matte-black text-white shadow-sm"
-              : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          <Compass className="h-4 w-4 shrink-0" />
+          <Compass className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "groups" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
           NHÓM KHÁCH HÀNG
         </button>
       </div>

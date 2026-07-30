@@ -45,8 +45,7 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white border border-[#e5e5e5] p-6 rounded-2xl shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#A2C62C]" />
-        <div className="pl-3">
+        <div className="px-4">
           <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2">
             <Settings className="h-6 w-6 text-forest-green" />
             CÀI ĐẶT TRẠM & PHÂN QUYỀN
@@ -57,7 +56,7 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row border border-stone-200/80 bg-white rounded-2xl p-1.5 shadow-xs gap-1.5 overflow-x-auto scrollbar-none">
+      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -65,13 +64,13 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
             <button
               key={tab.id}
               onClick={() => selectTab(tab.id)}
-              className={`flex-1 min-w-[140px] py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
                 isActive
-                  ? "bg-matte-black text-white shadow-sm"
-                  : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+                  ? "bg-[#18181b] text-white shadow-xs"
+                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${isActive ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
               {tab.label}
             </button>
           );

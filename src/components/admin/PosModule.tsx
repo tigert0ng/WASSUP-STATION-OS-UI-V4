@@ -850,7 +850,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
       {/* TOP HEADER MODULE & REAL-TIME CONTROLS */}
       <div className="space-y-4 py-2">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1 px-4">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 bg-slate-900 text-[#A2C62C] text-[9px] font-black tracking-wider rounded uppercase">
                 DIGITAL CASHIER V2
@@ -903,71 +903,71 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
         </div>
 
         {/* WORKSPACE NAVIGATION TABS */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-stone-100">
+        <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none my-3">
           <button
             onClick={() => setActiveTab("pos")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "pos"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <CreditCard className="h-4 w-4" /> Bán Hàng & Tính Bill
+            <CreditCard className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "pos" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> BÁN HÀNG & TÍNH BILL
           </button>
           
           <button
             onClick={() => setActiveTab("receipts")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "receipts"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <TrendingUp className="h-4 w-4 text-emerald-500" /> Phiếu Thu ({phieuThuList.length})
+            <TrendingUp className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "receipts" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> PHIẾU THU ({phieuThuList.length})
           </button>
 
           <button
             onClick={() => setActiveTab("expenses")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "expenses"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <TrendingDown className="h-4 w-4 text-red-500" /> Phiếu Chi ({phieuChiList.length})
+            <TrendingDown className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "expenses" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> PHIẾU CHI ({phieuChiList.length})
           </button>
 
           <button
             onClick={() => setActiveTab("reports")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "reports"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <TrendingUp className="h-4 w-4" /> Báo Cáo Kế Toán
+            <TrendingUp className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "reports" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> BÁO CÁO KẾ TOÁN
           </button>
 
           <button
             onClick={() => setActiveTab("audit")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "audit"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <ClipboardList className="h-4 w-4" /> Lịch Sử Kiểm Toán ({auditLogs.length})
+            <ClipboardList className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "audit" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> KIỂM TOÁN ({auditLogs.length})
           </button>
 
           <button
             onClick={() => setActiveTab("shifts")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "shifts"
-                ? "bg-slate-950 text-white"
-                : "bg-stone-50 text-slate-600 hover:bg-stone-100 border border-stone-200/60"
+                ? "bg-[#18181b] text-white shadow-xs"
+                : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
             }`}
           >
-            <History className="h-4 w-4" /> Nhật Trình Giao Ca ({shiftLogs.length})
+            <History className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeTab === "shifts" ? "text-[#a2c62c]" : "text-[#64748b]"}`} /> GIAO CA ({shiftLogs.length})
           </button>
         </div>
       </div>

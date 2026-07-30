@@ -1420,7 +1420,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
         <div className="space-y-6">
           {/* HEADER DASHBOARD CARD */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-2">
-            <div>
+            <div className="px-4">
               <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight">
                 Quản lý Người Chăm Sóc (Carer) & Hiệu Suất
               </h1>
@@ -1451,49 +1451,49 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
           </div>
 
           {/* MODULE TABS NAVIGATION */}
-          <div className="flex flex-col sm:flex-row border border-stone-200/80 bg-white rounded-2xl p-1.5 shadow-xs gap-1.5">
+          <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
             <button
               onClick={() => setActiveM8Tab("performance")}
-              className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "performance"
-                  ? "bg-matte-black text-white shadow-sm"
-                  : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+                  ? "bg-[#18181b] text-white shadow-xs"
+                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
               }`}
             >
-              <TrendingUp className="h-4 w-4 shrink-0" />
+              <TrendingUp className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeM8Tab === "performance" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
               HIỆU SUẤT KTV
             </button>
             <button
               onClick={() => setActiveM8Tab("directory")}
-              className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "directory"
-                  ? "bg-matte-black text-white shadow-sm"
-                  : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+                  ? "bg-[#18181b] text-white shadow-xs"
+                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
               }`}
             >
-              <Users className="h-4 w-4 shrink-0" />
+              <Users className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeM8Tab === "directory" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
               DANH SÁCH KTV TRẠM
             </button>
             <button
               onClick={() => setActiveM8Tab("catalog")}
-              className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "catalog"
-                  ? "bg-matte-black text-white shadow-sm"
-                  : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+                  ? "bg-[#18181b] text-white shadow-xs"
+                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
               }`}
             >
-              <Layers className="h-4 w-4 shrink-0" />
+              <Layers className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeM8Tab === "catalog" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
               DANH MỤC KỸ NĂNG
             </button>
             <button
               onClick={() => setActiveM8Tab("bots")}
-              className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "bots"
-                  ? "bg-matte-black text-white shadow-sm"
-                  : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
+                  ? "bg-[#18181b] text-white shadow-xs"
+                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
               }`}
             >
-              <Bot className="h-4 w-4 shrink-0" />
+              <Bot className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${activeM8Tab === "bots" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
               CÀI ĐẶT BOTS & KÊNH
             </button>
           </div>

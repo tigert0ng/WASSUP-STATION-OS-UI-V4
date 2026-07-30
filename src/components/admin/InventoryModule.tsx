@@ -201,7 +201,6 @@ export default function InventoryModule() {
   // State synchronization and alerts
   useEffect(() => {
     localStorage.setItem("wassup_inventory_items", JSON.stringify(items));
-    window.dispatchEvent(new CustomEvent("wassup-inventory-update", { detail: items }));
   }, [items]);
 
   useEffect(() => {
@@ -212,13 +211,19 @@ export default function InventoryModule() {
   useEffect(() => {
     const handleOutsideUpdate = () => {
       try {
-        const cachedItems = localStorage.getItem("wassup_inventory_items");
-        if (cachedItems) {
-          setItems(JSON.parse(cachedItems));
+        const cachedItemsStr = localStorage.getItem("wassup_inventory_items");
+        if (cachedItemsStr) {
+          setItems(prev => {
+            if (JSON.stringify(prev) === cachedItemsStr) return prev;
+            return JSON.parse(cachedItemsStr);
+          });
         }
-        const cachedLedger = localStorage.getItem("wassup_inventory_ledger");
-        if (cachedLedger) {
-          setLedger(JSON.parse(cachedLedger));
+        const cachedLedgerStr = localStorage.getItem("wassup_inventory_ledger");
+        if (cachedLedgerStr) {
+          setLedger(prev => {
+            if (JSON.stringify(prev) === cachedLedgerStr) return prev;
+            return JSON.parse(cachedLedgerStr);
+          });
         }
       } catch (e) {
         console.error("Error updating inventory from storage event:", e);
@@ -462,6 +467,7 @@ export default function InventoryModule() {
 
     let totalExpense = 0;
     const timestamp = new Date().toISOString();
+    const newLedgerRows: StockLedgerRow[] = [];
 
     const updatedItems = items.map(item => {
       if (item.category === "tool") {
@@ -476,8 +482,8 @@ export default function InventoryModule() {
         const actualDep = curVal - nextVal;
         totalExpense += actualDep;
 
-        const ledgerRow: StockLedgerRow = {
-          id: `lg_dep_${item.id}_${Date.now()}`,
+        newLedgerRows.push({
+          id: `lg_dep_${item.id}_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
           itemId: item.id,
           itemName: item.name,
           date: timestamp,
@@ -487,12 +493,7 @@ export default function InventoryModule() {
           balanceAfter: item.quantity,
           actor: "Hệ thống tự động",
           reason: `Trích khấu hao thẳng hàng tháng (-${formatVnd(actualDep)}) · Giá trị còn lại: ${formatVnd(nextVal)}`
-        };
-
-        // Inject delay to bypass concurrent state modifications
-        setTimeout(() => {
-          setLedger(prev => [ledgerRow, ...prev]);
-        }, 50);
+        });
 
         return {
           ...item,
@@ -509,6 +510,9 @@ export default function InventoryModule() {
     }
 
     setItems(updatedItems);
+    if (newLedgerRows.length > 0) {
+      setLedger(prev => [...newLedgerRows, ...prev]);
+    }
     showToast(`Đã hạch toán khấu hao thành công! Tổng giá trị hao mòn tài sản: -${formatVnd(totalExpense)}`);
   };
 
@@ -552,16 +556,18 @@ export default function InventoryModule() {
 
     // Auto deduct soap can (20L per can) proportional to calculated soap usage
     const cansDeducted = Math.floor(totalConsumed / 20) || 1;
+    const timestamp = new Date().toISOString();
+    let logRow: StockLedgerRow | null = null;
 
     setItems(prevItems => prevItems.map(item => {
       if (item.id === "inv-02") {
         const remaining = Math.max(item.quantity - cansDeducted, 0);
 
-        const logRow: StockLedgerRow = {
-          id: "lg_calc_" + Date.now(),
+        logRow = {
+          id: "lg_calc_" + Date.now() + "_" + Math.floor(Math.random() * 10000),
           itemId: item.id,
           itemName: item.name,
-          date: new Date().toISOString(),
+          date: timestamp,
           type: "export",
           typeLabel: "Hao phí định mức",
           quantityChanged: -cansDeducted,
@@ -570,16 +576,18 @@ export default function InventoryModule() {
           reason: `Auto-BOM: Trừ bọt tuyết tự động dựa trên số đơn hàng (${totalWashes} lượt xe x ${ratePerWash}L/lượt)`
         };
 
-        setTimeout(() => setLedger(prev => [logRow, ...prev]), 50);
-
         return {
           ...item,
           quantity: remaining,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: timestamp
         };
       }
       return item;
     }));
+
+    if (logRow) {
+      setLedger(prev => [logRow!, ...prev]);
+    }
 
     showToast(`Đã tự động trừ bọt tuyết trong kho: -${cansDeducted} can 20L`);
   };
@@ -625,7 +633,7 @@ export default function InventoryModule() {
 
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-2">
-        <div>
+        <div className="px-4">
 
           <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight">KHO VẬT TƯ & KHẤU HAO THIẾT BỊ</h1>
           <p className="text-mid-gray text-xs mt-1 font-sans">
@@ -643,46 +651,46 @@ export default function InventoryModule() {
       </div>
 
       {/* MODULE TABS NAVIGATION */}
-      <div className="flex flex-col sm:flex-row border border-[#e5e5e5] bg-white rounded-2xl p-2 shadow-xs gap-2">
+      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveModuleTab("inventory")}
-          className={`flex-1 py-3 text-center font-display font-black text-[10.5px] tracking-wider uppercase transition rounded-xl cursor-pointer ${
-            activeModuleTab === "inventory" 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "text-[#a5a5a5] hover:text-matte-black bg-stone-50 hover:bg-stone-100/50"
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeModuleTab === "inventory"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          💳 DANH MỤC THẺ KHO
+          DANH MỤC THẺ KHO
         </button>
         <button
           onClick={() => setActiveModuleTab("counting")}
-          className={`flex-1 py-3 text-center font-display font-black text-[10.5px] tracking-wider uppercase transition rounded-xl cursor-pointer ${
-            activeModuleTab === "counting" 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "text-[#a5a5a5] hover:text-matte-black bg-stone-50 hover:bg-stone-100/50"
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeModuleTab === "counting"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          📋 KIỂM KHO ĐỊNH KỲ (AUDIT)
+          KIỂM KHO ĐỊNH KỲ (AUDIT)
         </button>
         <button
           onClick={() => setActiveModuleTab("reports")}
-          className={`flex-1 py-3 text-center font-display font-black text-[10.5px] tracking-wider uppercase transition rounded-xl cursor-pointer ${
-            activeModuleTab === "reports" 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "text-[#a5a5a5] hover:text-matte-black bg-stone-50 hover:bg-stone-100/50"
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeModuleTab === "reports"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          📊 BÁO CÁO PHÂN TÍCH
+          BÁO CÁO PHÂN TÍCH
         </button>
         <button
           onClick={() => setActiveModuleTab("prd")}
-          className={`flex-1 py-3 text-center font-display font-black text-[10.5px] tracking-wider uppercase transition rounded-xl cursor-pointer ${
-            activeModuleTab === "prd" 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "text-[#a5a5a5] hover:text-matte-black bg-stone-50 hover:bg-stone-100/50"
+          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeModuleTab === "prd"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          📕 QUY TRÌNH CHUẨN PRD
+          QUY TRÌNH CHUẨN PRD
         </button>
       </div>
 

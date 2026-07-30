@@ -272,7 +272,7 @@ export default function FinanceModule() {
     <div className="space-y-6">
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
-        <div className="space-y-1">
+        <div className="space-y-1 px-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-forest-green" />
             <h1 className="text-lg font-black tracking-tight text-matte-black uppercase font-display">
