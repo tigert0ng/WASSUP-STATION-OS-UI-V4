@@ -1,0 +1,8 @@
+{
+  "name": "Remix 4: UI Upgrade  Wassup Station OS",
+  "description": "Hệ điều hành vận hành và POS thông minh cho trạm rửa xe Wassup, hỗ trợ Kiosk tự chọn, Quản trị nội bộ Admin Hub và Màn hình TV điều phối trực quan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
