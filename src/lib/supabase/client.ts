@@ -51,6 +51,7 @@ const INITIAL_STATE: SimState = {
       id: 'c1',
       name: 'Trần Minh Quân',
       phone: '0901234567',
+      pin: '123456',
       licensePlate: '30A-123.45',
       licensePlates: ['30A-123.45', '29A-555.55'],
       dob: '1990-05-15',
@@ -66,6 +67,7 @@ const INITIAL_STATE: SimState = {
       id: 'c2',
       name: 'Nguyễn Thị Bích',
       phone: '0911223344',
+      pin: '123456',
       licensePlate: '51G-999.99',
       licensePlates: ['51G-999.99'],
       dob: '1995-10-20',
@@ -80,6 +82,7 @@ const INITIAL_STATE: SimState = {
       id: 'c3',
       name: 'Lê Hoàng Long',
       phone: '0988776655',
+      pin: '123456',
       licensePlate: '29H-888.88',
       licensePlates: ['29H-888.88', '30F-999.88', '30L-111.22'],
       dob: '1988-12-01',
@@ -415,13 +418,14 @@ export const simActions = {
   getVouchers: () => currentState.vouchers,
   getThresholds: () => currentState.thresholds,
   
-  addCustomer: (data: { name: string; phone: string; licensePlate?: string; licensePlates?: string[]; dob?: string; address?: string; points?: number; vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck' }[] }) => {
+  addCustomer: (data: { name: string; phone: string; pin?: string; licensePlate?: string; licensePlates?: string[]; dob?: string; address?: string; points?: number; vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck' }[] }) => {
     const plates = data.licensePlates || (data.licensePlate ? [data.licensePlate] : []);
     const vehiclesList = data.vehicles || plates.map(p => ({ plate: p, vehicleClass: 'sedan' as const }));
     const newCust = {
       id: 'c_' + Date.now(),
       name: data.name,
       phone: data.phone,
+      pin: data.pin || "123456",
       licensePlate: data.licensePlate || "",
       licensePlates: plates,
       dob: data.dob || "",
@@ -610,6 +614,7 @@ export const simActions = {
     subtotal: number;
     discount: number;
     total: number;
+    paymentMethod?: string;
     boothId?: string;
     estimatedDuration?: number;
     notes?: string;
@@ -1200,7 +1205,7 @@ export const supabaseRealtime = {
           .order("order_created_at", { ascending: false });
         
         if (error) {
-          console.error("Error fetching order_status_view, falling back to simulator:", error);
+          console.warn("Notice fetching order_status_view, falling back to simulator:", error);
           callback(getMergedOrderStatusView());
           return;
         }
@@ -1231,7 +1236,7 @@ export const supabaseRealtime = {
 
         callback(mapped);
       } catch (err) {
-        console.error("Error in fetchAndEmit order_status_view, falling back to simulator:", err);
+        console.warn("Notice in fetchAndEmit order_status_view, falling back to simulator:", err);
         callback(getMergedOrderStatusView());
       }
     };
@@ -1343,7 +1348,7 @@ export const supabaseRealtime = {
           reworkCount
         });
       } catch (err) {
-        console.error("Error fetching revenue stats from Supabase, falling back to simulator:", err);
+        console.warn("Notice fetching revenue stats from Supabase, falling back to simulator:", err);
         callback(getRevenueStats());
       }
     };
@@ -1386,7 +1391,7 @@ export const supabaseRealtime = {
           callback(data);
         }
       } catch (err) {
-        console.error("Error fetching staff from Supabase, falling back to simulator:", err);
+        console.warn("Notice fetching staff from Supabase, falling back to simulator:", err);
         callback(currentState.staff);
       }
     };
@@ -1442,7 +1447,7 @@ export const supabaseRealtime = {
           callback(mapped);
         }
       } catch (err) {
-        console.error("Error fetching vouchers from Supabase, falling back to simulator:", err);
+        console.warn("Notice fetching vouchers from Supabase, falling back to simulator:", err);
         callback(currentState.vouchers);
       }
     };
@@ -1495,7 +1500,7 @@ export const supabaseRealtime = {
           callback(mapped);
         }
       } catch (err) {
-        console.error("Error fetching customers from Supabase, falling back to simulator:", err);
+        console.warn("Notice fetching customers from Supabase, falling back to simulator:", err);
         callback(currentState.customers);
       }
     };

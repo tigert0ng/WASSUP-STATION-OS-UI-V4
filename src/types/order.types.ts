@@ -4,6 +4,7 @@ export interface Customer {
   id: string;
   name: string;
   phone: string;
+  pin?: string;             // 4-6 digit PIN
   licensePlate?: string;
   licensePlates?: string[]; // Multiple vehicles support
   dob?: string;             // Date of birth
@@ -48,6 +49,7 @@ export interface Order {
   subtotal: number;
   discount: number;
   total: number;
+  paymentMethod?: string;
   status: OrderCommerceStatus;
   boothId?: string;
   createdAt: string;

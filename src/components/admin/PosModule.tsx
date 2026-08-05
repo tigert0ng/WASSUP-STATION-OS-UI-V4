@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { OrderStatusView } from "../../types/workOrder.types";
 import { simActions } from "../../lib/supabase/client";
+import { exportPosModuleToHtml } from "../../utils/exportPosHtml";
 import { Voucher } from "../../types/voucher.types";
 import {
   BarChart,
@@ -864,7 +865,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
             </p>
           </div>
 
-          {/* SIMULATED ROLE SELECTOR */}
+          {/* SIMULATED ROLE SELECTOR & EXPORT HTML */}
           <div className="bg-stone-50 border border-stone-200/80 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <UserCheck className="h-4 w-4 text-slate-500" /> VAI TRÒ CHUYÊN MÔN:
@@ -899,6 +900,32 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                 👑 Kế Toán / Admin
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                exportPosModuleToHtml({
+                  orders: orders || [],
+                  activeShift: {
+                    cashierName,
+                    shiftType,
+                    openTime: new Date().toISOString(),
+                    openCash,
+                    sales: shiftSales
+                  },
+                  phieuThuList,
+                  phieuChiList,
+                  auditLogs: [],
+                  shiftHistory: shiftLogs || []
+                });
+                triggerToast("Đã xuất thành công Module 3 (M3 POS) thành 1 file HTML!");
+              }}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 shadow-sm shrink-0"
+              title="Xuất Module 3 thành file HTML độc lập"
+            >
+              <Download className="h-4 w-4" />
+              <span>Xuất File HTML</span>
+            </button>
           </div>
         </div>
 

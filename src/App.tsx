@@ -83,7 +83,6 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 const ADMIN_MODULES = [
   { id: "dashboard", label: "M1: Dashboard & Live Ops", icon: TrendingUp, category: "QUẢN TRỊ VẬN HÀNH" },
   { id: "reception", label: "M2: Tiếp nhận & Điều phối", icon: Laptop, category: "QUẢN TRỊ VẬN HÀNH" },
-  { id: "ktv", label: "MX: Kỹ Thuật Viên Mobile", icon: Wrench, category: "QUẢN TRỊ VẬN HÀNH" },
   { id: "pos", label: "M3: POS Thu ngân & Ca kíp", icon: CreditCard, category: "QUẢN TRỊ VẬN HÀNH" },
   { id: "finance", label: "M4.5: Sổ cái Tài chính", icon: DollarSign, category: "QUẢN TRỊ VẬN HÀNH" },
   { id: "crm", label: "M4: Khách Hàng & CRM", icon: Tag, category: "QUẢN TRỊ VẬN HÀNH" },
