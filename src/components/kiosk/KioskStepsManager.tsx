@@ -1409,9 +1409,9 @@ export default function KioskStepsManager() {
                     🚗 DANH SÁCH XE ĐÃ LƯU TRONG TÀI KHOẢN (CHỌN NHANH):
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {state.customerData.vehicles.map((v: any) => (
+                    {state.customerData.vehicles.map((v: any, idx: number) => (
                       <button
-                        key={v.plate}
+                        key={`${v.plate}-${idx}`}
                         type="button"
                         onClick={() => {
                           dispatch({

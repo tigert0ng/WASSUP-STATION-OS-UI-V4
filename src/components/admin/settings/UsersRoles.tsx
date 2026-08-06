@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Users, Plus, Key, X, Lock, Unlock, CheckCircle2, Trash2, ShieldCheck, KeyRound, AlertTriangle, Copy
 } from "lucide-react";
@@ -587,86 +588,135 @@ export default function UsersRoles() {
         </div>
       </div>
 
-      {/* ---- Modal: tạo vai trò ---- */}
-      {newRoleModalOpen && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
-            <button onClick={() => setNewRoleModalOpen(false)} className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer">
-              <X className="h-5 w-5" />
-            </button>
-            <h3 className="text-base font-black font-display uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <ShieldCheck className="h-5 w-5 text-purple-600" /> Tạo vai trò mới
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">Tên vai trò</label>
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Ví dụ: Thủ kho"
-                  value={newRoleName}
-                  onChange={(e) => setNewRoleName(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-              <div className="pt-2 flex gap-3">
-                <button onClick={() => setNewRoleModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold uppercase cursor-pointer">Hủy</button>
-                <button onClick={() => void handleCreateRole()} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs uppercase shadow-sm cursor-pointer">Tạo</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---- Modal: thêm nhân sự ---- */}
-      {newStaffModalOpen && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
-            <button onClick={() => setNewStaffModalOpen(false)} className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer">
-              <X className="h-5 w-5" />
-            </button>
-            <h3 className="text-base font-black font-display uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Users className="h-5 w-5 text-purple-600" /> Thêm nhân sự
-            </h3>
-            <form onSubmit={handleCreateStaff} className="space-y-3.5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">Họ tên</label>
-                <input type="text" required value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">SĐT</label>
-                <input type="tel" value={newStaff.phone} onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">Username</label>
-                <input type="text" required value={newStaff.username} onChange={(e) => setNewStaff({ ...newStaff, username: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-purple-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">Mật khẩu khởi tạo</label>
-                <input type="password" required minLength={6} value={newStaff.password} onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-purple-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">Vai trò</label>
-                <select required value={newStaff.role_id} onChange={(e) => setNewStaff({ ...newStaff, role_id: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500">
-                  <option value="">Chọn vai trò...</option>
-                  {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
-                </select>
-              </div>
-              <div className="pt-2 flex gap-3">
-                <button type="button" onClick={() => setNewStaffModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold uppercase cursor-pointer">Hủy</button>
-                <button type="submit" disabled={savingStaff} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs uppercase shadow-sm cursor-pointer disabled:opacity-60">
-                  {savingStaff ? "Đang tạo..." : "Tạo tài khoản"}
+      {/* ---- Drawer: tạo vai trò ---- */}
+      <AnimatePresence>
+        {newRoleModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setNewRoleModalOpen(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-[#e5e5e5] text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-purple-400" />
+                  Tạo vai trò mới
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setNewRoleModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <div className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">Tên vai trò</label>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Ví dụ: Thủ kho"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button onClick={() => setNewRoleModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-stone-500 hover:bg-stone-50 transition text-xs font-extrabold uppercase cursor-pointer">Hủy</button>
+                  <button onClick={() => void handleCreateRole()} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs uppercase shadow-sm cursor-pointer">Tạo</button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ---- Drawer: thêm nhân sự ---- */}
+      <AnimatePresence>
+        {newStaffModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setNewStaffModalOpen(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-[#e5e5e5] text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-400" />
+                  Thêm nhân sự
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setNewStaffModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateStaff} className="p-6 flex-1 overflow-y-auto space-y-3.5 text-left flex flex-col justify-between">
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">Họ tên</label>
+                    <input type="text" required value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                      className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">SĐT</label>
+                    <input type="tel" value={newStaff.phone} onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
+                      className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">Username</label>
+                    <input type="text" required value={newStaff.username} onChange={(e) => setNewStaff({ ...newStaff, username: e.target.value })}
+                      className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">Mật khẩu khởi tạo</label>
+                    <input type="password" required minLength={6} value={newStaff.password} onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                      className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-stone-500 uppercase font-extrabold block">Vai trò</label>
+                    <select required value={newStaff.role_id} onChange={(e) => setNewStaff({ ...newStaff, role_id: e.target.value })}
+                      className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500">
+                      <option value="">Chọn vai trò...</option>
+                      {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button type="button" onClick={() => setNewStaffModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-stone-500 hover:bg-stone-50 transition text-xs font-extrabold uppercase cursor-pointer">Hủy</button>
+                  <button type="submit" disabled={savingStaff} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs uppercase shadow-sm cursor-pointer disabled:opacity-60">
+                    {savingStaff ? "Đang tạo..." : "Tạo tài khoản"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ---- Modal: gõ tên xác nhận xóa (dùng chung user/role, US-0.7) ---- */}
       {confirmDelete && (

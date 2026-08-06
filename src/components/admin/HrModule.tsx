@@ -28,6 +28,7 @@ import {
   DollarSign,
   ChevronRight,
   Info,
+  X,
   CheckSquare,
   HelpCircle,
   Activity,
@@ -1950,271 +1951,371 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
         </div>
       )}
 
-      {/* MODAL: THÊM KỸ THUẬT VIÊN TRẠM (Tab 2) */}
-      {showAddKtvModal && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-stone-200 w-full max-w-md rounded-2xl p-6 shadow-2xl relative font-sans">
-            <h3 className="text-sm font-black font-display text-matte-black uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">
-              Thêm Kỹ Thuật Viên Mới vào Trạm
-            </h3>
-
-            <form onSubmit={handleCreateKtv} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Họ và tên KTV *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn Hải"
-                  value={newKtv.name}
-                  onChange={(e) => setNewKtv({ ...newKtv, name: e.target.value })}
-                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-stone-950"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Số điện thoại *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: 0912xxxxxx"
-                  value={newKtv.phone}
-                  onChange={(e) => setNewKtv({ ...newKtv, phone: e.target.value })}
-                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-stone-950"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Trạm Phân công *</label>
-                  <select
-                    value={newKtv.stationId}
-                    onChange={(e) => setNewKtv({ ...newKtv, stationId: e.target.value })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
-                  >
-                    {STATIONS.map(st => (
-                      <option key={st.id} value={st.id}>{st.name.replace("WASSUP Station - ", "")}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Bậc trình độ *</label>
-                  <select
-                    value={newKtv.rank}
-                    onChange={(e) => setNewKtv({ ...newKtv, rank: e.target.value as any })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
-                  >
-                    <option value="junior">Thợ phụ (Junior)</option>
-                    <option value="senior">Thợ chính (Senior)</option>
-                    <option value="team_lead">Tổ trưởng (Lead)</option>
-                    <option value="apprentice">Học việc</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2 text-xs font-bold uppercase">
+      {/* DRAWER: THÊM KỸ THUẬT VIÊN TRẠM */}
+      <AnimatePresence>
+        {showAddKtvModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddKtvModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-[#A2C62C]" />
+                  Thêm Kỹ Thuật Viên Mới vào Trạm
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAddKtvModal(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
-                >
-                  Thêm KTV
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* FORM MODAL: ADD CERTIFICATE */}
-      {showAddCertModal && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-stone-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-sans">
-            <h3 className="text-sm font-black font-display text-matte-black uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">
-              Form Thêm Chứng Chỉ Nhân Sự
-            </h3>
-
-            <form onSubmit={handleAddCert} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Tên chứng chỉ *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Certified Gyeon Detailer"
-                  value={newCert.name}
-                  onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
-                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Tổ chức cấp *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Gyeon Vietnam"
-                  value={newCert.issuer}
-                  onChange={(e) => setNewCert({ ...newCert, issuer: e.target.value })}
-                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleCreateKtv} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Ngày cấp *</label>
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Họ và tên KTV *</label>
                   <input
-                    type="date"
+                    type="text"
                     required
-                    value={newCert.issuedDate}
-                    onChange={(e) => setNewCert({ ...newCert, issuedDate: e.target.value })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                    placeholder="Ví dụ: Nguyễn Văn Hải"
+                    value={newKtv.name}
+                    onChange={(e) => setNewKtv({ ...newKtv, name: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-stone-950"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Ngày hết hạn</label>
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Số điện thoại *</label>
                   <input
-                    type="date"
-                    value={newCert.expiryDate}
-                    onChange={(e) => setNewCert({ ...newCert, expiryDate: e.target.value })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                    type="text"
+                    required
+                    placeholder="Ví dụ: 0912xxxxxx"
+                    value={newKtv.phone}
+                    onChange={(e) => setNewKtv({ ...newKtv, phone: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-stone-950"
                   />
                 </div>
-              </div>
 
-              <div className="flex gap-2 pt-2 text-xs font-bold uppercase">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Trạm Phân công *</label>
+                    <select
+                      value={newKtv.stationId}
+                      onChange={(e) => setNewKtv({ ...newKtv, stationId: e.target.value })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
+                    >
+                      {STATIONS.map(st => (
+                        <option key={st.id} value={st.id}>{st.name.replace("WASSUP Station - ", "")}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Bậc trình độ *</label>
+                    <select
+                      value={newKtv.rank}
+                      onChange={(e) => setNewKtv({ ...newKtv, rank: e.target.value as any })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
+                    >
+                      <option value="junior">Thợ phụ (Junior)</option>
+                      <option value="senior">Thợ chính (Senior)</option>
+                      <option value="team_lead">Tổ trưởng (Lead)</option>
+                      <option value="apprentice">Học việc</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 text-xs font-bold uppercase mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddKtvModal(false)}
+                    className="flex-1 py-2.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
+                  >
+                    Thêm KTV
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: ADD CERTIFICATE */}
+      <AnimatePresence>
+        {showAddCertModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddCertModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-400" />
+                  Thêm Chứng Chỉ Nhân Sự
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAddCertModal(false)}
-                  className="flex-1 py-2 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
-                >
-                  Cấp chứng chỉ
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* FORM MODAL: ADD DISCIPLINE LOG */}
-      {showAddLogModal && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-stone-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-sans">
-            <h3 className="text-sm font-black font-display text-matte-black uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">
-              Ghi Sự Kiện Kỷ Luật / Khen Thưởng
-            </h3>
-
-            <form onSubmit={handleAddDisciplineLog} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleAddCert} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Phân loại sự kiện</label>
-                  <select
-                    value={newLog.type}
-                    onChange={(e) => setNewLog({ ...newLog, type: e.target.value as any })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 cursor-pointer font-semibold"
-                  >
-                    <option value="violation">Kỷ Luật / Vi Phạm</option>
-                    <option value="commendation">Khen Thưởng</option>
-                  </select>
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Tên chứng chỉ *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Certified Gyeon Detailer"
+                    value={newCert.name}
+                    onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                  />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-500 uppercase">Danh mục</label>
-                  <select
-                    value={newLog.category}
-                    onChange={(e) => setNewLog({ ...newLog, category: e.target.value as any })}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 cursor-pointer font-semibold"
-                  >
-                    <option value="technical_process">Quy Trình Kỹ Thuật</option>
-                    <option value="safety">An Toàn Lao Động</option>
-                    <option value="other">Sự Kiện Khác</option>
-                  </select>
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Tổ chức cấp *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Gyeon Vietnam"
+                    value={newCert.issuer}
+                    onChange={(e) => setNewCert({ ...newCert, issuer: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Nội dung chi tiết *</label>
-                <MarkdownTextarea
-                  id="hr-log-desc"
-                  placeholder="Mô tả cụ thể sự kiện vi phạm hoặc khen thưởng..."
-                  value={newLog.description}
-                  onChange={(val) => setNewLog({ ...newLog, description: val })}
-                  rows={3}
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Ngày cấp *</label>
+                    <input
+                      type="date"
+                      required
+                      value={newCert.issuedDate}
+                      onChange={(e) => setNewCert({ ...newCert, issuedDate: e.target.value })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                    />
+                  </div>
 
-              <div className="flex gap-2 pt-2 text-xs font-bold uppercase">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Ngày hết hạn</label>
+                    <input
+                      type="date"
+                      value={newCert.expiryDate}
+                      onChange={(e) => setNewCert({ ...newCert, expiryDate: e.target.value })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 text-xs font-bold uppercase mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCertModal(false)}
+                    className="flex-1 py-2.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
+                  >
+                    Cấp chứng chỉ
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: ADD DISCIPLINE LOG */}
+      <AnimatePresence>
+        {showAddLogModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddLogModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  Ghi Sự Kiện Kỷ Luật / Khen Thưởng
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAddLogModal(false)}
-                  className="flex-1 py-2 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
-                >
-                  Ghi nhận sự kiện
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* FORM MODAL: ADD SKILL TO CATALOG */}
-      {showAddSkillModal && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-stone-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-sans">
-            <h3 className="text-sm font-black font-display text-matte-black uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">
-              Thêm Kỹ Năng Mới vào Hệ Thống
-            </h3>
+              <form onSubmit={handleAddDisciplineLog} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Phân loại sự kiện</label>
+                    <select
+                      value={newLog.type}
+                      onChange={(e) => setNewLog({ ...newLog, type: e.target.value as any })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 cursor-pointer font-semibold"
+                    >
+                      <option value="violation">Kỷ Luật / Vi Phạm</option>
+                      <option value="commendation">Khen Thưởng</option>
+                    </select>
+                  </div>
 
-            <form onSubmit={handleCreateNewSkill} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-stone-500 uppercase">Tên kỹ năng mới *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Vệ sinh khoang máy chi tiết"
-                  value={newSkillName}
-                  onChange={(e) => setNewSkillName(e.target.value)}
-                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-500 uppercase">Danh mục</label>
+                    <select
+                      value={newLog.category}
+                      onChange={(e) => setNewLog({ ...newLog, category: e.target.value as any })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 cursor-pointer font-semibold"
+                    >
+                      <option value="technical_process">Quy Trình Kỹ Thuật</option>
+                      <option value="safety">An Toàn Lao Động</option>
+                      <option value="other">Sự Kiện Khác</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="flex gap-2 pt-2 text-xs font-bold uppercase">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Nội dung chi tiết *</label>
+                  <MarkdownTextarea
+                    id="hr-log-desc"
+                    placeholder="Mô tả cụ thể sự kiện vi phạm hoặc khen thưởng..."
+                    value={newLog.description}
+                    onChange={(val) => setNewLog({ ...newLog, description: val })}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4 text-xs font-bold uppercase mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddLogModal(false)}
+                    className="flex-1 py-2.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
+                  >
+                    Ghi nhận sự kiện
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: ADD SKILL TO CATALOG */}
+      <AnimatePresence>
+        {showAddSkillModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddSkillModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800 font-sans"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-400" />
+                  Thêm Kỹ Năng Mới vào Hệ Thống
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAddSkillModal(false)}
-                  className="flex-1 py-2 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
-                >
-                  Thêm Kỹ Năng
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleCreateNewSkill} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-stone-500 uppercase">Tên kỹ năng mới *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Vệ sinh khoang máy chi tiết"
+                    value={newSkillName}
+                    onChange={(e) => setNewSkillName(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-stone-950 font-semibold"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4 text-xs font-bold uppercase mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSkillModal(false)}
+                    className="flex-1 py-2.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-lg bg-stone-950 hover:bg-stone-800 text-white transition cursor-pointer"
+                  >
+                    Thêm Kỹ Năng
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

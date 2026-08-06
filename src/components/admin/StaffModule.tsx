@@ -641,199 +641,236 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
         </div>
       </div>
 
-      {/* ADD STAFF MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
-            <button
+      {/* DRAWER: ADD STAFF */}
+      <AnimatePresence>
+        {showAddModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black transition"
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
             >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-lg font-black font-display tracking-wide text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Users className="h-5 w-5 text-purple-600" />
-              THÊM NHÂN SỰ MỚI
-            </h3>
-
-            <form onSubmit={handleCreateStaff} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Họ và tên nhân viên
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Số điện thoại
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="Ví dụ: 0922222222"
-                  value={addForm.phone}
-                  onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Quyền hạn & Vai trò (Role)
-                </label>
-                <select
-                  value={addForm.role}
-                  onChange={(e) => setAddForm({ ...addForm, role: e.target.value as any })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                >
-                  <option value="manager">Quản Lý Trạm</option>
-                  <option value="accountant">Kế Toán</option>
-                  <option value="master_admin">Master Admin</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Mã PIN bảo mật
-                </label>
-                <input
-                  type="text"
-                  maxLength={8}
-                  placeholder="Mặc định: 123456"
-                  value={addForm.pin}
-                  onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold tracking-widest text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-400" />
+                  THÊM NHÂN SỰ MỚI
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  HỦY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  THÊM MỚI
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* EDIT STAFF MODAL */}
-      {showEditModal && selectedStaffForEdit && (
-        <div className="fixed inset-0 bg-matte-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
-            <button
+              <form onSubmit={handleCreateStaff} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Họ và tên nhân viên
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    value={addForm.name}
+                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Số điện thoại
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Ví dụ: 0922222222"
+                    value={addForm.phone}
+                    onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Quyền hạn & Vai trò (Role)
+                  </label>
+                  <select
+                    value={addForm.role}
+                    onChange={(e) => setAddForm({ ...addForm, role: e.target.value as any })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="manager">Quản Lý Trạm</option>
+                    <option value="accountant">Kế Toán</option>
+                    <option value="master_admin">Master Admin</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Mã PIN bảo mật
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    placeholder="Mặc định: 123456"
+                    value={addForm.pin}
+                    onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold tracking-widest text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    THÊM MỚI
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: EDIT STAFF */}
+      <AnimatePresence>
+        {showEditModal && selectedStaffForEdit && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => {
                 setShowEditModal(false);
                 setSelectedStaffForEdit(null);
               }}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black transition"
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
             >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-lg font-black font-display tracking-wide text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Edit className="h-5 w-5 text-purple-600" />
-              SỬA THÔNG TIN NHÂN SỰ
-            </h3>
-
-            <form onSubmit={handleUpdateStaff} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Họ và tên nhân viên
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Số điện thoại
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="Ví dụ: 0922222222"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Quyền hạn & Vai trò (Role)
-                </label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                >
-                  <option value="manager">Quản Lý Trạm</option>
-                  <option value="accountant">Kế Toán</option>
-                  <option value="master_admin">Master Admin</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Mã PIN bảo mật
-                </label>
-                <input
-                  type="text"
-                  maxLength={8}
-                  placeholder="Ví dụ: 123456"
-                  value={editForm.pin}
-                  onChange={(e) => setEditForm({ ...editForm, pin: e.target.value })}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold tracking-widest text-matte-black focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-purple-400" />
+                  SỬA THÔNG TIN NHÂN SỰ
+                </h3>
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditModal(false);
                     setSelectedStaffForEdit(null);
                   }}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  HỦY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  LƯU THAY ĐỔI
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleUpdateStaff} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Họ và tên nhân viên
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Số điện thoại
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Ví dụ: 0922222222"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Quyền hạn & Vai trò (Role)
+                  </label>
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="manager">Quản Lý Trạm</option>
+                    <option value="accountant">Kế Toán</option>
+                    <option value="master_admin">Master Admin</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Mã PIN bảo mật
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    placeholder="Ví dụ: 123456"
+                    value={editForm.pin}
+                    onChange={(e) => setEditForm({ ...editForm, pin: e.target.value })}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold tracking-widest text-matte-black focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setSelectedStaffForEdit(null);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    LƯU THAY ĐỔI
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* CUSTOM CONFIRM BLOCK KTV DIALOG */}
       {confirmBlockStaff && (

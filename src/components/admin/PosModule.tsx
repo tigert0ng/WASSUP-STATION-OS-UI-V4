@@ -1480,132 +1480,169 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                 </button>
               </div>
 
-              {/* FORM TẠO PHIẾU THU */}
-              {showAddThu && (
-                <form onSubmit={handleCreateManualThu} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
-                  <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Thu Mới</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Khách hàng <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Tên khách..."
-                        value={newThuData.customerName}
-                        onChange={(e) => setNewThuData({ ...newThuData, customerName: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Số điện thoại</label>
-                      <input
-                        type="text"
-                        placeholder="Số điện thoại..."
-                        value={newThuData.customerPhone}
-                        onChange={(e) => setNewThuData({ ...newThuData, customerPhone: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Biển số xe <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ví dụ: 30A-123.45"
-                        value={newThuData.licensePlate}
-                        onChange={(e) => setNewThuData({ ...newThuData, licensePlate: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs uppercase"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Phân khúc xe</label>
-                      <select
-                        value={newThuData.vehicleSegment}
-                        onChange={(e) => setNewThuData({ ...newThuData, vehicleSegment: e.target.value as any })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="sedan">Sedan (4-5 Chỗ)</option>
-                        <option value="suv">SUV / MPV (7 Chỗ)</option>
-                        <option value="truck">Bán tải / Khác</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase">Phân loại dòng thu <span className="text-red-500">*</span></label>
-                      <select
-                        value={newThuData.thuType}
-                        onChange={(e) => setNewThuData({ ...newThuData, thuType: e.target.value as any })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-semibold text-slate-800"
-                      >
-                        <option value="service">Thu từ dịch vụ (Rửa xe, Ceramic...)</option>
-                        <option value="merchandise">Thu từ bán hàng (Dung dịch, gạt mưa...)</option>
-                        <option value="deposit">Thu khác: Khách cọc tiền combo lớn</option>
-                        <option value="prepaid_card">Thu khác: Thẻ trả trước (Prepaid)</option>
-                        <option value="insurance">Thu khác: Tiền đền bù từ bảo hiểm</option>
-                        <option value="other">Khoản thu khác</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Hình thức</label>
-                      <select
-                        value={newThuData.paymentMethod}
-                        onChange={(e) => setNewThuData({ ...newThuData, paymentMethod: e.target.value as any })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="bank_transfer">Chuyển khoản VietQR</option>
-                        <option value="cash">Tiền mặt quỹ két</option>
-                        <option value="card">Cà thẻ ATM</option>
-                        <option value="e-wallet">Ví điện tử MoMo</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền thu <span className="text-red-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="VND..."
-                      value={newThuData.amount}
-                      onChange={(e) => setNewThuData({ ...newThuData, amount: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-sans font-bold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung thu <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Nội dung cụ thể..."
-                      value={newThuData.notes}
-                      onChange={(e) => setNewThuData({ ...newThuData, notes: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2 justify-end">
-                    <button
-                      type="button"
+              {/* FORM TẠO PHIẾU THU DRAWER */}
+              <AnimatePresence>
+                {showAddThu && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       onClick={() => setShowAddThu(false)}
-                      className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
+                      className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-50 transition-opacity"
+                    />
+
+                    <motion.div
+                      initial={{ x: "100%" }}
+                      animate={{ x: 0 }}
+                      exit={{ x: "100%" }}
+                      transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                      className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col border-l border-stone-200 text-slate-800"
                     >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
-                    >
-                      Lưu phiếu thu
-                    </button>
-                  </div>
-                </form>
-              )}
+                      <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl bg-[#A2C62C] flex items-center justify-center text-slate-950">
+                            <TrendingUp className="h-4.5 w-4.5" />
+                          </div>
+                          <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-white">
+                            Tạo Phiếu Thu Mới
+                          </h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddThu(false)}
+                          className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleCreateManualThu} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Khách hàng <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Tên khách..."
+                              value={newThuData.customerName}
+                              onChange={(e) => setNewThuData({ ...newThuData, customerName: e.target.value })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Số điện thoại</label>
+                            <input
+                              type="text"
+                              placeholder="Số điện thoại..."
+                              value={newThuData.customerPhone}
+                              onChange={(e) => setNewThuData({ ...newThuData, customerPhone: e.target.value })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Biển số xe <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Ví dụ: 30A-123.45"
+                              value={newThuData.licensePlate}
+                              onChange={(e) => setNewThuData({ ...newThuData, licensePlate: e.target.value })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 uppercase focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Phân khúc xe</label>
+                            <select
+                              value={newThuData.vehicleSegment}
+                              onChange={(e) => setNewThuData({ ...newThuData, vehicleSegment: e.target.value as any })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            >
+                              <option value="sedan">Sedan (4-5 Chỗ)</option>
+                              <option value="suv">SUV / MPV (7 Chỗ)</option>
+                              <option value="truck">Bán tải / Khác</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase">Phân loại dòng thu <span className="text-red-500">*</span></label>
+                            <select
+                              value={newThuData.thuType}
+                              onChange={(e) => setNewThuData({ ...newThuData, thuType: e.target.value as any })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-900"
+                            >
+                              <option value="service">Thu từ dịch vụ (Rửa xe, Ceramic...)</option>
+                              <option value="merchandise">Thu từ bán hàng (Dung dịch, gạt mưa...)</option>
+                              <option value="deposit">Thu khác: Khách cọc tiền combo lớn</option>
+                              <option value="prepaid_card">Thu khác: Thẻ trả trước (Prepaid)</option>
+                              <option value="insurance">Thu khác: Tiền đền bù từ bảo hiểm</option>
+                              <option value="other">Khoản thu khác</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Hình thức</label>
+                            <select
+                              value={newThuData.paymentMethod}
+                              onChange={(e) => setNewThuData({ ...newThuData, paymentMethod: e.target.value as any })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            >
+                              <option value="bank_transfer">Chuyển khoản VietQR</option>
+                              <option value="cash">Tiền mặt quỹ két</option>
+                              <option value="card">Cà thẻ ATM</option>
+                              <option value="e-wallet">Ví điện tử MoMo</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền thu <span className="text-red-500">*</span></label>
+                          <input
+                            type="number"
+                            required
+                            placeholder="VND..."
+                            value={newThuData.amount}
+                            onChange={(e) => setNewThuData({ ...newThuData, amount: e.target.value })}
+                            className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs font-sans font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung thu <span className="text-red-500">*</span></label>
+                          <textarea
+                            required
+                            rows={3}
+                            placeholder="Nội dung cụ thể..."
+                            value={newThuData.notes}
+                            onChange={(e) => setNewThuData({ ...newThuData, notes: e.target.value })}
+                            className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                          />
+                        </div>
+
+                        <div className="flex gap-3 pt-4 border-t border-stone-200 justify-end mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddThu(false)}
+                            className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer border-0"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border-0 shadow-sm"
+                          >
+                            Lưu phiếu thu
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
 
               {/* SEARCH PHIẾU THU */}
               <div className="relative">
@@ -1728,93 +1765,130 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                 </button>
               </div>
 
-              {/* FORM TẠO PHIẾU CHI */}
-              {showAddChi && (
-                <form onSubmit={handleCreateManualChi} className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-3 text-xs animate-fadeIn">
-                  <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] border-b border-stone-200 pb-1">Tạo Phiếu Chi Mới</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Loại chi phí</label>
-                      <select
-                        value={newChiData.expenseType}
-                        onChange={(e) => setNewChiData({ ...newChiData, expenseType: e.target.value as any })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="commercial_goods">Mua hàng hóa / Vật tư hóa chất</option>
-                        <option value="technician_commission">Trả hoa hồng / Lương thợ</option>
-                        <option value="utilities">Điện nước sản xuất</option>
-                        <option value="rent">Mặt bằng / Thuê hạ tầng</option>
-                        <option value="entertainment">Tiếp khách / Đối tác</option>
-                        <option value="other">Chi phí khác</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Tài khoản thanh toán</label>
-                      <select
-                        value={newChiData.paymentAccount}
-                        onChange={(e) => setNewChiData({ ...newChiData, paymentAccount: e.target.value as any })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="cash_fund">Quỹ tiền mặt (Két mặt)</option>
-                        <option value="bank_fund">Tài khoản ngân hàng</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Người nhận tiền <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Tên đơn vị/cá nhân nhận..."
-                        value={newChiData.recipient}
-                        onChange={(e) => setNewChiData({ ...newChiData, recipient: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền chi <span className="text-red-500">*</span></label>
-                      <input
-                        type="number"
-                        required
-                        placeholder="VND..."
-                        value={newChiData.amount}
-                        onChange={(e) => setNewChiData({ ...newChiData, amount: e.target.value })}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs font-sans font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung chi chi tiết <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Nêu rõ lý do và danh mục chi..."
-                      value={newChiData.notes}
-                      onChange={(e) => setNewChiData({ ...newChiData, notes: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2 justify-end">
-                    <button
-                      type="button"
+              {/* FORM TẠO PHIẾU CHI DRAWER */}
+              <AnimatePresence>
+                {showAddChi && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       onClick={() => setShowAddChi(false)}
-                      className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-[10px] font-bold"
+                      className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-50 transition-opacity"
+                    />
+
+                    <motion.div
+                      initial={{ x: "100%" }}
+                      animate={{ x: 0 }}
+                      exit={{ x: "100%" }}
+                      transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                      className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col border-l border-stone-200 text-slate-800"
                     >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase"
-                    >
-                      {currentRole === "manager" ? "Tạo đã duyệt" : "Gửi Đề xuất chi"}
-                    </button>
-                  </div>
-                </form>
-              )}
+                      <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl bg-red-600 flex items-center justify-center text-white">
+                            <TrendingDown className="h-4.5 w-4.5" />
+                          </div>
+                          <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-white">
+                            Tạo Phiếu Chi Mới
+                          </h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddChi(false)}
+                          className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleCreateManualChi} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Loại chi phí</label>
+                            <select
+                              value={newChiData.expenseType}
+                              onChange={(e) => setNewChiData({ ...newChiData, expenseType: e.target.value as any })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            >
+                              <option value="commercial_goods">Mua hàng hóa / Vật tư hóa chất</option>
+                              <option value="technician_commission">Trả hoa hồng / Lương thợ</option>
+                              <option value="utilities">Điện nước sản xuất</option>
+                              <option value="rent">Mặt bằng / Thuê hạ tầng</option>
+                              <option value="entertainment">Tiếp khách / Đối tác</option>
+                              <option value="other">Chi phí khác</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Tài khoản thanh toán</label>
+                            <select
+                              value={newChiData.paymentAccount}
+                              onChange={(e) => setNewChiData({ ...newChiData, paymentAccount: e.target.value as any })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            >
+                              <option value="cash_fund">Quỹ tiền mặt (Két mặt)</option>
+                              <option value="bank_fund">Tài khoản ngân hàng</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Người nhận tiền <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Tên đơn vị/cá nhân nhận..."
+                              value={newChiData.recipient}
+                              onChange={(e) => setNewChiData({ ...newChiData, recipient: e.target.value })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase">Số tiền chi <span className="text-red-500">*</span></label>
+                            <input
+                              type="number"
+                              required
+                              placeholder="VND..."
+                              value={newChiData.amount}
+                              onChange={(e) => setNewChiData({ ...newChiData, amount: e.target.value })}
+                              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs font-sans font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase">Nội dung chi chi tiết <span className="text-red-500">*</span></label>
+                          <textarea
+                            required
+                            rows={3}
+                            placeholder="Nêu rõ lý do và danh mục chi..."
+                            value={newChiData.notes}
+                            onChange={(e) => setNewChiData({ ...newChiData, notes: e.target.value })}
+                            className="w-full bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                          />
+                        </div>
+
+                        <div className="flex gap-3 pt-4 border-t border-stone-200 justify-end mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddChi(false)}
+                            className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer border-0"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border-0 shadow-sm"
+                          >
+                            {currentRole === "manager" ? "Tạo đã duyệt" : "Gửi Đề xuất chi"}
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
 
               {/* SEARCH PHIẾU CHI */}
               <div className="relative">
@@ -2249,17 +2323,28 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
         )}
       </AnimatePresence>
 
-      {/* CLOSE SHIFT FORM MODAL */}
+      {/* CLOSE SHIFT FORM DRAWER (SLIDING FROM RIGHT) */}
       <AnimatePresence>
         {showShiftConfig && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <>
+            {/* Backdrop Overlay */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white border border-stone-250 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl text-slate-800"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowShiftConfig(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-50 transition-opacity"
+            />
+
+            {/* Sliding Sidebar Drawer Container */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col border-l border-stone-200 text-slate-800"
             >
-              <div className="bg-slate-950 text-white px-6 py-5 flex items-center justify-between">
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="h-8 w-8 rounded-xl bg-[#A2C62C] flex items-center justify-center text-slate-950">
                     <Coins className="h-4.5 w-4.5" />
@@ -2269,6 +2354,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                   </h3>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowShiftConfig(false)}
                   className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
@@ -2276,7 +2362,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                 </button>
               </div>
 
-              <form onSubmit={handleCloseShift} className="p-6 space-y-4 text-left">
+              <form onSubmit={handleCloseShift} className="p-6 flex-1 overflow-y-auto space-y-5 text-left">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-display font-black text-slate-400 uppercase tracking-wider block">
                     Thu ngân giao ca
@@ -2286,7 +2372,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                     required
                     value={cashierName}
                     onChange={(e) => setCashierName(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
                   />
                 </div>
 
@@ -2299,11 +2385,11 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                     required
                     value={shiftType}
                     onChange={(e) => setShiftType(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
                   />
                 </div>
 
-                <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl text-xs space-y-2">
+                <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl text-xs space-y-2.5">
                   <p className="font-bold text-slate-400 text-[10px] uppercase tracking-wider border-b border-stone-200 pb-1.5">KẾT TOÁN LÝ THUYẾT CA TRỰC</p>
                   <div className="flex justify-between text-slate-600">
                     <span>Quỹ đầu ca (Mặt):</span>
@@ -2315,9 +2401,9 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                       +{formatVnd(shiftSales.filter(s => s.method === "cash").reduce((sum, s) => sum + s.total, 0))}
                     </span>
                   </div>
-                  <div className="flex justify-between text-slate-800 font-bold border-t border-stone-200/80 pt-1.5">
+                  <div className="flex justify-between text-slate-800 font-bold border-t border-stone-200/80 pt-2">
                     <span>TỔNG TIỀN MẶT LÝ THUYẾT:</span>
-                    <span className="font-sans text-slate-950">
+                    <span className="font-sans text-slate-950 font-black">
                       {formatVnd(openCash + shiftSales.filter(s => s.method === "cash").reduce((sum, s) => sum + s.total, 0))}
                     </span>
                   </div>
@@ -2333,7 +2419,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                     placeholder="Kiểm đếm và nhập số tiền thực có..."
                     value={actualCashInput}
                     onChange={(e) => setActualCashInput(e.target.value)}
-                    className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-sans font-bold text-slate-900 focus:outline-none"
+                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold text-slate-900 focus:outline-none focus:border-slate-900"
                   />
                 </div>
 
@@ -2354,7 +2440,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                 </div>
               </form>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
 

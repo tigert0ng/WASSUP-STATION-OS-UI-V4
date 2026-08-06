@@ -1373,9 +1373,9 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
                           {plates.length === 0 ? (
                             <span className="text-stone-400 italic text-[10px]">Chưa đăng ký xe</span>
                           ) : (
-                            plates.map((plate) => (
+                            plates.map((plate, idx) => (
                               <span
-                                key={plate}
+                                key={`${plate}-${idx}`}
                                 className="inline-flex px-2 py-0.5 bg-stone-100 text-slate-800 rounded font-sans font-bold text-[9px] border border-stone-200"
                               >
                                 {plate}
@@ -2039,10 +2039,10 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
                           {merged.length === 0 ? (
                             <span className="text-xs text-stone-400 italic font-sans py-1">Hội viên chưa có xe đăng ký</span>
                           ) : (
-                            merged.map((v) => (
+                            merged.map((v, idx) => (
                               <button
                                 type="button"
-                                key={v.plate}
+                                key={`${v.plate}-${idx}`}
                                 onClick={() => setHistoryPlateFilter(v.plate)}
                                 className={`px-3 py-2 rounded-xl border text-xs font-bold font-sans transition cursor-pointer flex items-center gap-1.5 ${
                                   activeHistoryPlate === v.plate
@@ -2285,641 +2285,920 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
         )}
       </AnimatePresence>
 
-      {/* MODAL: ADD / EDIT CUSTOMER PORTRAIT */}
-      {showCustomerModal && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" id="crm-customer-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-            <button
+      {/* DRAWER: ADD / EDIT CUSTOMER PORTRAIT */}
+      <AnimatePresence>
+        {showCustomerModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowCustomerModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-customer-modal"
             >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Users className="h-5 w-5 text-forest-green" />
-              {customerFormMode === "add" ? "ĐĂNG KÝ HỘI VIÊN MỚI" : "CẬP NHẬT HỒ SƠ HỘI VIÊN"}
-            </h3>
-
-            <form onSubmit={handleSubmitCustomer} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Họ và tên khách hàng *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn A..."
-                  value={cName}
-                  onChange={(e) => setCName(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Số điện thoại di động *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: 090xxxxxxxx..."
-                  value={cPhone}
-                  onChange={(e) => setCPhone(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Ngày tháng năm sinh (DOB)
-                </label>
-                <input
-                  type="date"
-                  value={cDob}
-                  onChange={(e) => setCDob(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Địa chỉ liên lạc / thường trú
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: 123 Đường Láng, Hà Nội..."
-                  value={cAddress}
-                  onChange={(e) => setCAddress(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                />
-              </div>
-
-              {customerFormMode === "add" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                      Biển số liên kết ban đầu
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: 30A-123.45..."
-                      value={cLicensePlate}
-                      onChange={(e) => setCLicensePlate(e.target.value.toUpperCase())}
-                      className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                      Phân hạng (Segment)
-                    </label>
-                    <select
-                      value={cVehicleClass}
-                      onChange={(e) => setCVehicleClass(e.target.value as any)}
-                      className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#A2C62C]"
-                      disabled={!cLicensePlate.trim()}
-                    >
-                      <option value="sedan">Sedan (4-5 chỗ nhỏ)</option>
-                      <option value="suv">SUV / CUV (5-7 chỗ lớn)</option>
-                      <option value="truck">Bán tải / Xe khách</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-4 flex gap-3">
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Users className="h-4.5 w-4.5 text-[#A2C62C]" />
+                  {customerFormMode === "add" ? "ĐĂNG KÝ HỘI VIÊN MỚI" : "CẬP NHẬT HỒ SƠ HỘI VIÊN"}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowCustomerModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
                 >
-                  HủY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#A2C62C] hover:bg-[#A2C62C]/90 text-matte-black font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  LƯU HỒ SƠ
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* MODAL: DIRECT POINTS ADJUSTMENT (MASTER ADMIN ONLY) */}
-      {showPointsModal && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" id="crm-points-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowPointsModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Shield className="h-5 w-5 text-amber-500 animate-pulse" />
-              ĐIỀU CHỈNH ĐIỂM SUP TRỰC TIẾP
-            </h3>
-
-            <form onSubmit={handleAdjustPointsDirect} className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs font-sans text-amber-800 leading-relaxed mb-2">
-                Trực tiếp thay đổi số dư điểm SUP của khách hàng{" "}
-                <strong>{selectedCustomer?.name}</strong>. Nghiệp vụ này sẽ tự
-                động tạo bản ghi kiểm toán trên SUP Ledger.
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmitCustomer} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Hướng thay đổi
-                  </label>
-                  <select
-                    value={pointsDir}
-                    onChange={(e) => setPointsDir(e.target.value as any)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  >
-                    <option value="add">Cộng điểm (+)</option>
-                    <option value="sub">Trừ điểm (-)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Số điểm thay đổi
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="Ví dụ: 50..."
-                    value={pointsChange}
-                    onChange={(e) => setPointsChange(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Lý do điều chỉnh
-                </label>
-                <MarkdownTextarea
-                  id="crm-points-reason"
-                  placeholder="Ghi rõ lý do điều chỉnh điểm để phục vụ kiểm toán..."
-                  value={pointsReason}
-                  onChange={(val) => setPointsReason(val)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowPointsModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  Xác nhận
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: POINT ADJUSTMENT PROPOSAL (MANAGER ROLE ONLY) */}
-      {showProposalModal && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" id="crm-proposal-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowProposalModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Clock className="h-5 w-5 text-blue-500" />
-              ĐỀ XUẤT ĐIỀU CHỈNH ĐIỂM SUP (QUẢN LÝ ĐỀ XUẤT)
-            </h3>
-
-            <form onSubmit={handleProposePoints} className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs font-sans text-blue-800 leading-relaxed mb-2">
-                Bạn đang tạo yêu cầu điều chỉnh số dư điểm SUP của khách hàng{" "}
-                <strong>{selectedCustomer?.name}</strong>. Yêu cầu này cần được
-                Master Admin trực tiếp phê duyệt trước khi cộng vào tài khoản.
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Đề xuất thay đổi
-                  </label>
-                  <select
-                    value={propDir}
-                    onChange={(e) => setPropDir(e.target.value as any)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  >
-                    <option value="add">Cộng điểm (+)</option>
-                    <option value="sub">Trừ điểm (-)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Số điểm đề xuất
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="Ví dụ: 20..."
-                    value={propPoints}
-                    onChange={(e) => setPropPoints(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Lý do đề xuất chi tiết * (Bắt buộc)
-                </label>
-                <MarkdownTextarea
-                  id="crm-prop-reason"
-                  placeholder="Mô tả lý do, ví dụ: Đăng ký sai thông tin, cộng bù cho khách rửa hôm qua..."
-                  value={propReason}
-                  onChange={(val) => setPropReason(val)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowProposalModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
-                >
-                  HỦY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-matte-black hover:bg-matte-black/90 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  GỬI ĐỀ XUẤT DUYỆT
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: LỊCH SỬ ĐIỂM TÍCH LŨY */}
-      {showPointsHistoryModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" id="crm-points-history-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-3xl rounded-2xl p-6 shadow-2xl relative flex flex-col max-h-[85vh]">
-            <button
-              onClick={() => setShowPointsHistoryModal(false)}
-              className="absolute top-4 right-4 p-1 rounded-lg hover:bg-stone-100 text-mid-gray hover:text-matte-black cursor-pointer transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-sm font-black font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <History className="h-5 w-5 text-[#A2C62C]" />
-              LỊCH SỬ BIẾN ĐỘNG ĐIỂM SUP - {selectedCustomer.name}
-            </h3>
-
-            <div className="flex-1 overflow-y-auto pr-1">
-              <div className="overflow-x-auto border border-stone-150 rounded-xl bg-white">
-                <table className="w-full text-left border-collapse font-sans text-xs">
-                  <thead>
-                    <tr className="bg-stone-50 text-slate-400 font-extrabold text-[9px] uppercase border-b border-stone-150">
-                      <th className="p-3 pl-4">Thời gian</th>
-                      <th className="p-3">Loại giao dịch</th>
-                      <th className="p-3 text-center">Thay đổi</th>
-                      <th className="p-3 text-center">Số dư mới</th>
-                      <th className="p-3 pr-4">Lý do điều chỉnh</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {customerLedger.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-6 text-center text-stone-400 italic font-sans bg-white">
-                          Chưa có lịch sử giao dịch điểm tích lũy.
-                        </td>
-                      </tr>
-                    ) : (
-                      customerLedger.map((row) => (
-                        <tr key={row.id} className="hover:bg-stone-50/50 transition">
-                          <td className="p-3 pl-4 text-slate-500 font-medium">
-                            {new Date(row.date).toLocaleString("vi-VN", {
-                              dateStyle: "short",
-                              timeStyle: "short"
-                            })}
-                          </td>
-                          <td className="p-3">
-                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold ${
-                              row.type === "auto_gain"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : row.type === "redeem"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-100"
-                                  : row.type === "compensation"
-                                    ? "bg-red-50 text-red-700 border border-red-100"
-                                    : "bg-amber-50 text-amber-800 border border-amber-250"
-                            }`}>
-                              {row.typeLabel || (row.type === "auto_gain" ? "Tự động" : row.type === "redeem" ? "Đổi quà" : row.type === "compensation" ? "Bồi hoàn" : "Điều chỉnh")}
-                            </span>
-                          </td>
-                          <td className={`p-3 text-center font-black ${
-                            row.pointsChanged >= 0 ? "text-emerald-600" : "text-red-500"
-                          }`}>
-                            {row.pointsChanged >= 0 ? `+${row.pointsChanged}` : row.pointsChanged}
-                          </td>
-                          <td className="p-3 text-center font-sans font-extrabold text-slate-800">
-                            {row.balanceAfter} SUP
-                          </td>
-                          <td className="p-3 pr-4 text-slate-500 font-medium max-w-xs truncate" title={row.reason}>
-                            {row.reason}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-stone-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPointsHistoryModal(false)}
-                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs tracking-wider uppercase cursor-pointer"
-              >
-                Đóng lịch sử
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: CREATE / EDIT RULE-BASED VOUCHER */}
-      {showVoucherModal && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto" id="crm-voucher-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-xl rounded-2xl p-6 shadow-2xl relative my-8">
-            <button
-              onClick={() => setShowVoucherModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Gift className="h-5 w-5 text-forest-green" />
-              {vFormMode === "add" ? "TẠO VOUCHER CHIẾN DỊCH MỚI" : `CẬP NHẬT VOUCHER: ${vCode}`}
-            </h3>
-
-            <form onSubmit={handleSaveVoucher} className="space-y-4 text-left">
-              <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl text-[11px] text-slate-600 leading-relaxed">
-                Thiết lập điều kiện, hạn dùng, giới hạn sử dụng và đối tượng áp dụng cho mã voucher. Mã sẽ tự động có hiệu lực theo lịch biểu đã cài đặt.
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Mã Voucher (Code) *
+                    Họ và tên khách hàng *
                   </label>
                   <input
                     type="text"
                     required
-                    disabled={vFormMode === "edit"}
-                    placeholder="Ví dụ: SUP2026, SUPVIP"
-                    value={vCode}
-                    onChange={(e) => setVCode(e.target.value.toUpperCase())}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-sans font-bold text-matte-black focus:outline-none focus:border-[#A2C62C] disabled:bg-stone-50"
+                    placeholder="Ví dụ: Nguyễn Văn A..."
+                    value={cName}
+                    onChange={(e) => setCName(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Tên chiến dịch / Chương trình *
+                    Số điện thoại di động *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ví dụ: Tri ân khách hàng tháng 7"
-                    value={vName}
-                    onChange={(e) => setVName(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-sans text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Loại ưu đãi
-                  </label>
-                  <select
-                    value={vType}
-                    onChange={(e) => setVType(e.target.value as any)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  >
-                    <option value="percent">Giảm giá %</option>
-                    <option value="fixed_amount">Giảm tiền mặt (đ)</option>
-                    <option value="free_service">Miễn phí dịch vụ</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Giá trị giảm *
-                  </label>
-                  <input
-                    type="number"
-                    required={vType !== "free_service"}
-                    disabled={vType === "free_service"}
-                    placeholder={vType === "percent" ? "Ví dụ: 10 (%)" : "Ví dụ: 50000 (đ)"}
-                    value={vType === "free_service" ? "" : vValue}
-                    onChange={(e) => setVValue(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C] disabled:bg-stone-50"
-                  />
-                </div>
-
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Nguồn phát hành
-                  </label>
-                  <select
-                    value={vSource}
-                    onChange={(e) => setVSource(e.target.value as any)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  >
-                    <option value="manual">Phát hành thủ công</option>
-                    <option value="birthday">Tự động sinh nhật</option>
-                    <option value="upgrade">Tự động khi lên hạng</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Đơn hàng tối thiểu (đ)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Không giới hạn..."
-                    value={vMinOrder}
-                    onChange={(e) => setVMinOrder(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    placeholder="Ví dụ: 090xxxxxxxx..."
+                    value={cPhone}
+                    onChange={(e) => setCPhone(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Giảm tối đa (Trần giảm - đ)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Không giới hạn..."
-                    value={vMaxDiscount}
-                    onChange={(e) => setVMaxDiscount(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Ngày bắt đầu có hiệu lực *
+                    Ngày tháng năm sinh (DOB)
                   </label>
                   <input
                     type="date"
-                    required
-                    value={vValidFrom}
-                    onChange={(e) => setVValidFrom(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    value={cDob}
+                    onChange={(e) => setCDob(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Ngày hết hạn hiệu lực *
+                    Địa chỉ liên lạc / thường trú
                   </label>
                   <input
-                    type="date"
-                    required
-                    value={vValidTo}
-                    onChange={(e) => setVValidTo(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Giới hạn / một khách hàng *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="Ví dụ: 1"
-                    value={vLimitPerCustomer}
-                    onChange={(e) => setVLimitPerCustomer(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    type="text"
+                    placeholder="Ví dụ: 123 Đường Láng, Hà Nội..."
+                    value={cAddress}
+                    onChange={(e) => setCAddress(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                    Tổng lượt dùng tối đa hệ thống
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Không giới hạn..."
-                    value={vLimitTotal}
-                    onChange={(e) => setVLimitTotal(e.target.value)}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                  />
-                </div>
-              </div>
+                {customerFormMode === "add" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                        Biển số liên kết ban đầu
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: 30A-123.45..."
+                        value={cLicensePlate}
+                        onChange={(e) => setCLicensePlate(e.target.value.toUpperCase())}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans font-bold text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                      />
+                    </div>
 
-              {/* TARGETING SPECIFICATION */}
-              <div className="space-y-2 border-t border-stone-150 pt-3">
-                <label className="text-xs font-sans text-mid-gray uppercase font-black block">
-                  Đối tượng khách hàng áp dụng *
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="vTargetType"
-                      value="all_customers"
-                      checked={vTargetType === "all_customers"}
-                      onChange={() => setVTargetType("all_customers")}
-                    />
-                    Tất cả khách
-                  </label>
-
-                  <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="vTargetType"
-                      value="group"
-                      checked={vTargetType === "group"}
-                      onChange={() => setVTargetType("group")}
-                    />
-                    Theo nhóm khách
-                  </label>
-
-                  <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="vTargetType"
-                      value="specific_customers"
-                      checked={vTargetType === "specific_customers"}
-                      onChange={() => setVTargetType("specific_customers")}
-                    />
-                    Chỉ định thủ công
-                  </label>
-                </div>
-
-                {vTargetType === "group" && (
-                  <div className="space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200 mt-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase block">Chọn nhóm thành viên</label>
-                    <select
-                      value={vTargetGroupId}
-                      onChange={(e) => setVTargetGroupId(e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-700"
-                    >
-                      <option value="">-- Chưa chọn nhóm --</option>
-                      {groups.map(g => (
-                        <option key={g.id} value={g.id}>
-                          {g.name} ({getGroupMembers(g).length} khách)
-                        </option>
-                      ))}
-                    </select>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                        Phân hạng (Segment)
+                      </label>
+                      <select
+                        value={cVehicleClass}
+                        onChange={(e) => setCVehicleClass(e.target.value as any)}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#A2C62C]"
+                        disabled={!cLicensePlate.trim()}
+                      >
+                        <option value="sedan">Sedan (4-5 chỗ nhỏ)</option>
+                        <option value="suv">SUV / CUV (5-7 chỗ lớn)</option>
+                        <option value="truck">Bán tải / Xe khách</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 
-                {vTargetType === "specific_customers" && (
-                  <div className="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200 mt-2 max-h-48 overflow-y-auto">
-                    <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Đánh dấu khách hàng được nhận ({vTargetSpecificCustomers.length} đã chọn):</span>
-                    <div className="space-y-1.5">
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-[#A2C62C] hover:bg-[#A2C62C]/90 text-matte-black font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    LƯU HỒ SƠ
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: DIRECT POINTS ADJUSTMENT (MASTER ADMIN ONLY) */}
+      <AnimatePresence>
+        {showPointsModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPointsModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-points-modal"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Shield className="h-4.5 w-4.5 text-amber-500 animate-pulse" />
+                  ĐIỀU CHỈNH ĐIỂM SUP TRỰC TIẾP
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPointsModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAdjustPointsDirect} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs font-sans text-amber-800 leading-relaxed mb-2">
+                  Trực tiếp thay đổi số dư điểm SUP của khách hàng{" "}
+                  <strong>{selectedCustomer?.name}</strong>. Nghiệp vụ này sẽ tự
+                  động tạo bản ghi kiểm toán trên SUP Ledger.
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Hướng thay đổi
+                    </label>
+                    <select
+                      value={pointsDir}
+                      onChange={(e) => setPointsDir(e.target.value as any)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    >
+                      <option value="add">Cộng điểm (+)</option>
+                      <option value="sub">Trừ điểm (-)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Số điểm thay đổi
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="Ví dụ: 50..."
+                      value={pointsChange}
+                      onChange={(e) => setPointsChange(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Lý do điều chỉnh
+                  </label>
+                  <MarkdownTextarea
+                    id="crm-points-reason"
+                    placeholder="Ghi rõ lý do điều chỉnh điểm để phục vụ kiểm toán..."
+                    value={pointsReason}
+                    onChange={(val) => setPointsReason(val)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowPointsModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    Xác nhận
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: POINT ADJUSTMENT PROPOSAL (MANAGER ROLE ONLY) */}
+      <AnimatePresence>
+        {showProposalModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProposalModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-proposal-modal"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Clock className="h-4.5 w-4.5 text-blue-400" />
+                  ĐỀ XUẤT ĐIỀU CHỈNH ĐIỂM SUP
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowProposalModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleProposePoints} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs font-sans text-blue-800 leading-relaxed mb-2">
+                  Bạn đang tạo yêu cầu điều chỉnh số dư điểm SUP của khách hàng{" "}
+                  <strong>{selectedCustomer?.name}</strong>. Yêu cầu này cần được
+                  Master Admin trực tiếp phê duyệt trước khi cộng vào tài khoản.
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Đề xuất thay đổi
+                    </label>
+                    <select
+                      value={propDir}
+                      onChange={(e) => setPropDir(e.target.value as any)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    >
+                      <option value="add">Cộng điểm (+)</option>
+                      <option value="sub">Trừ điểm (-)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Số điểm đề xuất
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="Ví dụ: 20..."
+                      value={propPoints}
+                      onChange={(e) => setPropPoints(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Lý do đề xuất chi tiết * (Bắt buộc)
+                  </label>
+                  <MarkdownTextarea
+                    id="crm-prop-reason"
+                    placeholder="Mô tả lý do, ví dụ: Đăng ký sai thông tin, cộng bù cho khách rửa hôm qua..."
+                    value={propReason}
+                    onChange={(val) => setPropReason(val)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowProposalModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    GỬI ĐỀ XUẤT DUYỆT
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: LỊCH SỬ ĐIỂM TÍCH LŨY */}
+      <AnimatePresence>
+        {showPointsHistoryModal && selectedCustomer && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPointsHistoryModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-points-history-modal"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-black font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <History className="h-5 w-5 text-[#A2C62C]" />
+                  LỊCH SỬ BIẾN ĐỘNG ĐIỂM SUP - {selectedCustomer.name}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPointsHistoryModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="overflow-x-auto border border-stone-200 rounded-xl bg-white">
+                  <table className="w-full text-left border-collapse font-sans text-xs">
+                    <thead>
+                      <tr className="bg-stone-50 text-slate-400 font-extrabold text-[9px] uppercase border-b border-stone-200">
+                        <th className="p-3 pl-4">Thời gian</th>
+                        <th className="p-3">Loại giao dịch</th>
+                        <th className="p-3 text-center">Thay đổi</th>
+                        <th className="p-3 text-center">Số dư mới</th>
+                        <th className="p-3 pr-4">Lý do điều chỉnh</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {customerLedger.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-stone-400 italic font-sans bg-white">
+                            Chưa có lịch sử giao dịch điểm tích lũy.
+                          </td>
+                        </tr>
+                      ) : (
+                        customerLedger.map((row) => (
+                          <tr key={row.id} className="hover:bg-stone-50/50 transition">
+                            <td className="p-3 pl-4 text-slate-500 font-medium">
+                              {new Date(row.date).toLocaleString("vi-VN", {
+                                dateStyle: "short",
+                                timeStyle: "short"
+                              })}
+                            </td>
+                            <td className="p-3">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                                row.type === "auto_gain"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                  : row.type === "redeem"
+                                    ? "bg-blue-50 text-blue-700 border border-blue-100"
+                                    : row.type === "compensation"
+                                      ? "bg-red-50 text-red-700 border border-red-100"
+                                      : "bg-amber-50 text-amber-800 border border-amber-250"
+                              }`}>
+                                {row.typeLabel || (row.type === "auto_gain" ? "Tự động" : row.type === "redeem" ? "Đổi quà" : row.type === "compensation" ? "Bồi hoàn" : "Điều chỉnh")}
+                              </span>
+                            </td>
+                            <td className={`p-3 text-center font-black ${
+                              row.pointsChanged >= 0 ? "text-emerald-600" : "text-red-500"
+                            }`}>
+                              {row.pointsChanged >= 0 ? `+${row.pointsChanged}` : row.pointsChanged}
+                            </td>
+                            <td className="p-3 text-center font-sans font-extrabold text-slate-800">
+                              {row.balanceAfter} SUP
+                            </td>
+                            <td className="p-3 pr-4 text-slate-500 font-medium max-w-xs truncate" title={row.reason}>
+                              {row.reason}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-stone-200 bg-stone-50 flex justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPointsHistoryModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs tracking-wider uppercase cursor-pointer"
+                >
+                  Đóng lịch sử
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: CREATE / EDIT RULE-BASED VOUCHER */}
+      <AnimatePresence>
+        {showVoucherModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowVoucherModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-voucher-modal"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-[#A2C62C]" />
+                  {vFormMode === "add" ? "TẠO VOUCHER CHIẾN DỊCH MỚI" : `CẬP NHẬT VOUCHER: ${vCode}`}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowVoucherModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveVoucher} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl text-[11px] text-slate-600 leading-relaxed">
+                  Thiết lập điều kiện, hạn dùng, giới hạn sử dụng và đối tượng áp dụng cho mã voucher. Mã sẽ tự động có hiệu lực theo lịch biểu đã cài đặt.
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Mã Voucher (Code) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={vFormMode === "edit"}
+                      placeholder="Ví dụ: SUP2026, SUPVIP"
+                      value={vCode}
+                      onChange={(e) => setVCode(e.target.value.toUpperCase())}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-sans font-bold text-matte-black focus:outline-none focus:border-[#A2C62C] disabled:bg-stone-100"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Tên chiến dịch / Chương trình *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ví dụ: Tri ân khách hàng tháng 7"
+                      value={vName}
+                      onChange={(e) => setVName(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-sans text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Loại ưu đãi
+                    </label>
+                    <select
+                      value={vType}
+                      onChange={(e) => setVType(e.target.value as any)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    >
+                      <option value="percent">Giảm giá %</option>
+                      <option value="fixed_amount">Giảm tiền mặt (đ)</option>
+                      <option value="free_service">Miễn phí dịch vụ</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Giá trị giảm *
+                    </label>
+                    <input
+                      type="number"
+                      required={vType !== "free_service"}
+                      disabled={vType === "free_service"}
+                      placeholder={vType === "percent" ? "Ví dụ: 10 (%)" : "Ví dụ: 50000 (đ)"}
+                      value={vType === "free_service" ? "" : vValue}
+                      onChange={(e) => setVValue(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C] disabled:bg-stone-100"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Nguồn phát hành
+                    </label>
+                    <select
+                      value={vSource}
+                      onChange={(e) => setVSource(e.target.value as any)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    >
+                      <option value="manual">Phát hành thủ công</option>
+                      <option value="birthday">Tự động sinh nhật</option>
+                      <option value="upgrade">Tự động khi lên hạng</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Đơn hàng tối thiểu (đ)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Không giới hạn..."
+                      value={vMinOrder}
+                      onChange={(e) => setVMinOrder(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Giảm tối đa (Trần giảm - đ)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Không giới hạn..."
+                      value={vMaxDiscount}
+                      onChange={(e) => setVMaxDiscount(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Ngày bắt đầu có hiệu lực *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={vValidFrom}
+                      onChange={(e) => setVValidFrom(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Ngày hết hạn hiệu lực *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={vValidTo}
+                      onChange={(e) => setVValidTo(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Giới hạn / một khách hàng *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="Ví dụ: 1"
+                      value={vLimitPerCustomer}
+                      onChange={(e) => setVLimitPerCustomer(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                      Tổng lượt dùng tối đa hệ thống
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Không giới hạn..."
+                      value={vLimitTotal}
+                      onChange={(e) => setVLimitTotal(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                    />
+                  </div>
+                </div>
+
+                {/* TARGETING SPECIFICATION */}
+                <div className="space-y-2 border-t border-stone-150 pt-3">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-black block">
+                    Đối tượng khách hàng áp dụng *
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="vTargetType"
+                        value="all_customers"
+                        checked={vTargetType === "all_customers"}
+                        onChange={() => setVTargetType("all_customers")}
+                      />
+                      Tất cả khách
+                    </label>
+
+                    <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="vTargetType"
+                        value="group"
+                        checked={vTargetType === "group"}
+                        onChange={() => setVTargetType("group")}
+                      />
+                      Theo nhóm khách
+                    </label>
+
+                    <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="vTargetType"
+                        value="specific_customers"
+                        checked={vTargetType === "specific_customers"}
+                        onChange={() => setVTargetType("specific_customers")}
+                      />
+                      Chỉ định thủ công
+                    </label>
+                  </div>
+
+                  {vTargetType === "group" && (
+                    <div className="space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200 mt-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase block">Chọn nhóm thành viên</label>
+                      <select
+                        value={vTargetGroupId}
+                        onChange={(e) => setVTargetGroupId(e.target.value)}
+                        className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-700"
+                      >
+                        <option value="">-- Chưa chọn nhóm --</option>
+                        {groups.map(g => (
+                          <option key={g.id} value={g.id}>
+                            {g.name} ({getGroupMembers(g).length} khách)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {vTargetType === "specific_customers" && (
+                    <div className="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200 mt-2 max-h-48 overflow-y-auto">
+                      <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Đánh dấu khách hàng được nhận ({vTargetSpecificCustomers.length} đã chọn):</span>
+                      <div className="space-y-1.5">
+                        {customers.map(c => {
+                          const isChecked = vTargetSpecificCustomers.includes(c.id);
+                          return (
+                            <label key={c.id} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer hover:bg-stone-100 p-1 rounded">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setVTargetSpecificCustomers(vTargetSpecificCustomers.filter(id => id !== c.id));
+                                  } else {
+                                    setVTargetSpecificCustomers([...vTargetSpecificCustomers, c.id]);
+                                  }
+                                }}
+                              />
+                              <span className="font-bold">{c.name}</span> - <span className="font-sans text-stone-500 text-[10px]">{c.phone}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 flex gap-3 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowVoucherModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
+                  >
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-[#A2C62C] hover:bg-[#A2C62C]/90 text-matte-black font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    {vFormMode === "add" ? "KÍCH HOẠT VOUCHER" : "LƯU THAY ĐỔI"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: CREATE / EDIT CUSTOMER GROUP */}
+      <AnimatePresence>
+        {showGroupModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowGroupModal(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-group-modal"
+            >
+              <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                  <Compass className="h-5 w-5 text-purple-400" />
+                  {groupFormMode === "add" ? "THIẾT LẬP NHÓM HỘI VIÊN MỚI" : "SỬA NHÓM HỘI VIÊN"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowGroupModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveGroup} className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Tên Nhóm Hội Viên *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Khách Thân Thiết 2026, Sinh Nhật Tháng 7"
+                    value={gName}
+                    onChange={(e) => setGName(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                    Cơ chế phân nhóm
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gMode"
+                        value="static"
+                        checked={gMode === "static"}
+                        onChange={() => setGMode("static")}
+                      />
+                      Nhóm tĩnh (Chọn tay từng người)
+                    </label>
+
+                    <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gMode"
+                        value="dynamic"
+                        checked={gMode === "dynamic"}
+                        onChange={() => setGMode("dynamic")}
+                      />
+                      Nhóm động (Tự lọc theo hành vi)
+                    </label>
+                  </div>
+                </div>
+
+                {gMode === "dynamic" ? (
+                  <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-3">
+                    <span className="text-[10px] font-black text-slate-500 uppercase block">Điều kiện lọc động (And):</span>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-600">Mức doanh thu tích lũy</label>
+                        <select
+                          value={gFilterSpent}
+                          onChange={(e) => setGFilterSpent(e.target.value)}
+                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                        >
+                          <option value="all">Tất cả chi tiêu</option>
+                          <option value="under_1m">Dưới 1,000,000đ</option>
+                          <option value="1m_5m">Từ 1,000,000đ - 5,000,000đ</option>
+                          <option value="over_5m">Trên 5,000,000đ</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-600">Số lần ghé trạm</label>
+                        <select
+                          value={gFilterVisits}
+                          onChange={(e) => setGFilterVisits(e.target.value)}
+                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                        >
+                          <option value="all">Tất cả lượt ghé</option>
+                          <option value="under_3">Dưới 3 lần</option>
+                          <option value="3_10">Từ 3 đến 10 lần</option>
+                          <option value="over_10">Trên 10 lần</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-600">Lần ghé gần nhất</label>
+                        <select
+                          value={gFilterLastVisit}
+                          onChange={(e) => setGFilterLastVisit(e.target.value)}
+                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                        >
+                          <option value="all">Tất cả mốc giờ</option>
+                          <option value="7_days">Trong vòng 7 ngày</option>
+                          <option value="30_days">Trong vòng 30 ngày</option>
+                          <option value="over_30">Đã hơn 30 ngày chưa ghé</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-600">Tháng sinh nhật</label>
+                        <select
+                          value={gFilterDobMonth}
+                          onChange={(e) => setGFilterDobMonth(e.target.value)}
+                          className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
+                        >
+                          <option value="all">Tất cả các tháng</option>
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={(i + 1).toString()}>Tháng {i + 1}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase block">Chọn thành viên vào nhóm ({gSelectedCustomers.length} đã chọn):</span>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
                       {customers.map(c => {
-                        const isChecked = vTargetSpecificCustomers.includes(c.id);
+                        const isChecked = gSelectedCustomers.includes(c.id);
                         return (
                           <label key={c.id} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer hover:bg-stone-100 p-1 rounded">
                             <input
@@ -2927,351 +3206,202 @@ export default function CrmModule({ customers, vouchers, orders = [] }: CrmModul
                               checked={isChecked}
                               onChange={() => {
                                 if (isChecked) {
-                                  setVTargetSpecificCustomers(vTargetSpecificCustomers.filter(id => id !== c.id));
+                                  setGSelectedCustomers(gSelectedCustomers.filter(id => id !== c.id));
                                 } else {
-                                  setVTargetSpecificCustomers([...vTargetSpecificCustomers, c.id]);
+                                  setGSelectedCustomers([...gSelectedCustomers, c.id]);
                                 }
                               }}
                             />
-                            <span className="font-bold">{c.name}</span> - <span className="font-sans text-stone-500 text-[10px]">{c.phone}</span>
+                            <span className="font-bold">{c.name}</span> - <span className="text-[10px] text-stone-500 font-sans">{c.phone}</span>
                           </label>
                         );
                       })}
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowVoucherModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
-                >
-                  HỦY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-matte-black hover:bg-matte-black/95 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  {vFormMode === "add" ? "KÍCH HOẠT VOUCHER" : "LƯU THAY ĐỔI"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: CREATE / EDIT CUSTOMER GROUP */}
-      {showGroupModal && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto" id="crm-group-modal">
-          <div className="bg-white border border-[#e5e5e5] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowGroupModal(false)}
-              className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-              <Compass className="h-5 w-5 text-purple-600" />
-              {groupFormMode === "add" ? "THIẾT LẬP NHÓM HỘI VIÊN MỚI" : "SỬA NHÓM HỘI VIÊN"}
-            </h3>
-
-            <form onSubmit={handleSaveGroup} className="space-y-4 text-left">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Tên Nhóm Hội Viên *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Khách Thân Thiết 2026, Sinh Nhật Tháng 7"
-                  value={gName}
-                  onChange={(e) => setGName(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-[#A2C62C]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Cơ chế phân nhóm
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gMode"
-                      value="static"
-                      checked={gMode === "static"}
-                      onChange={() => setGMode("static")}
-                    />
-                    Nhóm tĩnh (Chọn tay từng người)
-                  </label>
-
-                  <label className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gMode"
-                      value="dynamic"
-                      checked={gMode === "dynamic"}
-                      onChange={() => setGMode("dynamic")}
-                    />
-                    Nhóm động (Tự lọc theo hành vi)
-                  </label>
-                </div>
-              </div>
-
-              {gMode === "dynamic" ? (
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-3">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block">Điều kiện lọc động (And):</span>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600">Mức doanh thu tích lũy</label>
-                      <select
-                        value={gFilterSpent}
-                        onChange={(e) => setGFilterSpent(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="all">Tất cả chi tiêu</option>
-                        <option value="under_1m">Dưới 1,000,000đ</option>
-                        <option value="1m_5m">Từ 1,000,000đ - 5,000,000đ</option>
-                        <option value="over_5m">Trên 5,000,000đ</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600">Số lần ghé trạm</label>
-                      <select
-                        value={gFilterVisits}
-                        onChange={(e) => setGFilterVisits(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="all">Tất cả lượt ghé</option>
-                        <option value="under_3">Dưới 3 lần</option>
-                        <option value="3_10">Từ 3 đến 10 lần</option>
-                        <option value="over_10">Trên 10 lần</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600">Lần ghé gần nhất</label>
-                      <select
-                        value={gFilterLastVisit}
-                        onChange={(e) => setGFilterLastVisit(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="all">Tất cả mốc giờ</option>
-                        <option value="7_days">Trong vòng 7 ngày</option>
-                        <option value="30_days">Trong vòng 30 ngày</option>
-                        <option value="over_30">Đã hơn 30 ngày chưa ghé</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600">Tháng sinh nhật</label>
-                      <select
-                        value={gFilterDobMonth}
-                        onChange={(e) => setGFilterDobMonth(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-lg p-2 text-xs"
-                      >
-                        <option value="all">Tất cả các tháng</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={(i + 1).toString()}>Tháng {i + 1}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-2">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block">Chọn thành viên vào nhóm ({gSelectedCustomers.length} đã chọn):</span>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {customers.map(c => {
-                      const isChecked = gSelectedCustomers.includes(c.id);
-                      return (
-                        <label key={c.id} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer hover:bg-stone-100 p-1 rounded">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                              if (isChecked) {
-                                setGSelectedCustomers(gSelectedCustomers.filter(id => id !== c.id));
-                              } else {
-                                setGSelectedCustomers([...gSelectedCustomers, c.id]);
-                              }
-                            }}
-                          />
-                          <span className="font-bold">{c.name}</span> - <span className="text-[10px] text-stone-500 font-sans">{c.phone}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowGroupModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#e5e5e5] text-mid-gray hover:bg-warm-white transition text-xs font-extrabold font-display uppercase cursor-pointer"
-                >
-                  HỦY BỎ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-matte-black hover:bg-matte-black/95 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
-                >
-                  LƯU NHÓM
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* S4.10 MODAL: VOUCHER DETAILS & REDEMPTIONS AUDIT LOG */}
-      {viewingVoucherId && (
-        <div className="fixed inset-0 bg-matte-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto" id="crm-voucher-details-modal">
-          {(() => {
-            const v = vouchersList.find(x => x.id === viewingVoucherId);
-            if (!v) return null;
-            const rtStatus = getVoucherRuntimeStatus(v);
-            const voucherRed = redemptions.filter(r => r.voucherId === v.id);
-
-            let statusColor = "text-stone-600 bg-stone-100";
-            if (rtStatus === "active") statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
-            else if (rtStatus === "paused") statusColor = "text-amber-700 bg-amber-50 border-amber-200";
-            else if (rtStatus === "expired") statusColor = "text-red-700 bg-red-50 border-red-200";
-
-            return (
-              <div className="bg-white border border-[#e5e5e5] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative my-8 text-left">
-                <button
-                  onClick={() => setViewingVoucherId(null)}
-                  className="absolute top-4 right-4 text-mid-gray hover:text-matte-black cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-
-                <h3 className="text-md font-extrabold font-display tracking-wider text-matte-black uppercase mb-4 flex items-center gap-2 border-b border-[#e5e5e5] pb-3">
-                  <Gift className="h-5 w-5 text-forest-green" />
-                  CHI TIẾT & LỊCH SỬ SỬ DỤNG VOUCHER
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2">
-                    <span className="text-[10px] font-black text-stone-500 uppercase block">Thông tin cơ bản</span>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 bg-slate-900 text-[#A2C62C] font-sans font-black text-xs rounded tracking-wider uppercase">
-                        {v.code}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${statusColor}`}>
-                        {rtStatus === "active" ? "ĐANG HOẠT ĐỘNG" : rtStatus === "paused" ? "TẠM DỪNG" : "HẾT HẠN"}
-                      </span>
-                    </div>
-                    <p className="text-xs font-extrabold text-slate-800 font-sans mt-1">
-                      {v.name || "Chưa đặt tên chiến dịch"}
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      Hiệu lực: <strong className="text-slate-700">{new Date(v.validFrom).toLocaleDateString("vi-VN")}</strong> đến <strong className="text-slate-700">{new Date(v.validTo).toLocaleDateString("vi-VN")}</strong>
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      Giá trị giảm: <strong className="text-slate-800">{v.type === "percent" ? `Giảm ${v.value}%` : v.type === "free_service" ? "Miễn phí dịch vụ" : `Giảm ${formatVnd(v.value)}`}</strong>
-                    </p>
-                  </div>
-
-                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2">
-                    <span className="text-[10px] font-black text-stone-500 uppercase block">Thông số phát hành & Hiệu suất</span>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">Giới hạn hệ thống:</span>
-                        <strong className="text-slate-800">{v.usage_limit_total || "Không giới hạn"}</strong>
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">Đã áp dụng:</span>
-                        <strong className="text-emerald-600">{voucherRed.length} lượt dùng</strong>
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">Giới hạn mỗi khách:</span>
-                        <strong className="text-slate-800">{v.usage_limit_per_customer || 1} lần</strong>
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">Đối tượng áp dụng:</span>
-                        <strong className="text-slate-800 capitalize">
-                          {v.target_type === "all_customers" ? "Tất cả khách" : v.target_type === "group" ? "Theo nhóm khách" : "Khách chỉ định"}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* REDEMPTION LOG TABLE */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-wide">Nhật ký sử dụng / Áp dụng thực tế (S4.8/S4.10)</span>
-                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-sans font-bold text-slate-600">
-                      {voucherRed.length} bản ghi kiểm toán
-                    </span>
-                  </div>
-
-                  <div className="border border-stone-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
-                    <table className="w-full text-left border-collapse font-sans text-xs">
-                      <thead>
-                        <tr className="bg-stone-50 text-slate-500 font-extrabold text-[9px] uppercase border-b border-stone-200">
-                          <th className="p-2.5 pl-4">Thời gian</th>
-                          <th className="p-2.5">Khách hàng</th>
-                          <th className="p-2.5">Mã đơn hàng</th>
-                          <th className="p-2.5 text-right pr-4">Số tiền giảm</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-stone-150">
-                        {voucherRed.map(r => {
-                          const c = customers.find(x => x.id === r.customerId);
-                          return (
-                            <tr key={r.id} className="hover:bg-stone-50 transition">
-                              <td className="p-2.5 pl-4 text-stone-500 font-sans text-[10px]">
-                                {new Date(r.redeemedAt).toLocaleString("vi-VN")}
-                              </td>
-                              <td className="p-2.5">
-                                <span className="font-bold text-slate-800">{c ? c.name : "Khách vãng lai"}</span>
-                                <span className="block text-[9px] text-stone-400 font-sans">{c ? c.phone : ""}</span>
-                              </td>
-                              <td className="p-2.5 font-sans text-stone-600">{r.orderId}</td>
-                              <td className="p-2.5 text-right pr-4 font-black font-sans text-emerald-600">
-                                -{formatVnd(r.discountApplied)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        {voucherRed.length === 0 && (
-                          <tr>
-                            <td colSpan={4} className="p-6 text-center text-stone-400 italic">
-                              Chưa có lịch sử áp dụng voucher này trên hệ thống.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end">
+                <div className="pt-4 flex gap-3 mt-auto">
                   <button
                     type="button"
-                    onClick={() => setViewingVoucherId(null)}
-                    className="px-6 py-2 rounded-xl bg-slate-900 text-white font-extrabold text-xs font-display uppercase tracking-wider hover:bg-slate-800 cursor-pointer"
+                    onClick={() => setShowGroupModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-stone-200 text-mid-gray hover:bg-stone-100 transition text-xs font-extrabold font-display uppercase cursor-pointer"
                   >
-                    ĐÓNG CỬA SỔ
+                    HỦY BỎ
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold transition text-xs font-display uppercase shadow-sm cursor-pointer"
+                  >
+                    LƯU NHÓM
                   </button>
                 </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* DRAWER: VOUCHER DETAILS & REDEMPTIONS AUDIT LOG */}
+      <AnimatePresence>
+        {viewingVoucherId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewingVoucherId(null)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[9999] transition-opacity"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl z-[9999] flex flex-col border-l border-stone-200 text-slate-800"
+              id="crm-voucher-details-modal"
+            >
+              {(() => {
+                const v = vouchersList.find(x => x.id === viewingVoucherId);
+                if (!v) return null;
+                const rtStatus = getVoucherRuntimeStatus(v);
+                const voucherRed = redemptions.filter(r => r.voucherId === v.id);
+
+                let statusColor = "text-stone-600 bg-stone-100";
+                if (rtStatus === "active") statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                else if (rtStatus === "paused") statusColor = "text-amber-700 bg-amber-50 border-amber-200";
+                else if (rtStatus === "expired") statusColor = "text-red-700 bg-red-50 border-red-200";
+
+                return (
+                  <>
+                    <div className="p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                      <h3 className="text-sm font-extrabold font-display tracking-wider text-white uppercase flex items-center gap-2">
+                        <Gift className="h-5 w-5 text-[#A2C62C]" />
+                        CHI TIẾT & LỊCH SỬ SỬ DỤNG VOUCHER
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setViewingVoucherId(null)}
+                        className="p-1.5 rounded-xl hover:bg-white/10 text-stone-400 hover:text-white transition cursor-pointer border-0"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="p-6 flex-1 overflow-y-auto space-y-4 text-left">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2">
+                          <span className="text-[10px] font-black text-stone-500 uppercase block">Thông tin cơ bản</span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 bg-slate-900 text-[#A2C62C] font-sans font-black text-xs rounded tracking-wider uppercase">
+                              {v.code}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${statusColor}`}>
+                              {rtStatus === "active" ? "ĐANG HOẠT ĐỘNG" : rtStatus === "paused" ? "TẠM DỪNG" : "HẾT HẠN"}
+                            </span>
+                          </div>
+                          <p className="text-xs font-extrabold text-slate-800 font-sans mt-1">
+                            {v.name || "Chưa đặt tên chiến dịch"}
+                          </p>
+                          <p className="text-xs text-stone-500">
+                            Hiệu lực: <strong className="text-slate-700">{new Date(v.validFrom).toLocaleDateString("vi-VN")}</strong> đến <strong className="text-slate-700">{new Date(v.validTo).toLocaleDateString("vi-VN")}</strong>
+                          </p>
+                          <p className="text-xs text-stone-500">
+                            Giá trị giảm: <strong className="text-slate-800">{v.type === "percent" ? `Giảm ${v.value}%` : v.type === "free_service" ? "Miễn phí dịch vụ" : `Giảm ${formatVnd(v.value)}`}</strong>
+                          </p>
+                        </div>
+
+                        <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2">
+                          <span className="text-[10px] font-black text-stone-500 uppercase block">Thông số phát hành & Hiệu suất</span>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-stone-400 block text-[10px]">Giới hạn hệ thống:</span>
+                              <strong className="text-slate-800">{v.usage_limit_total || "Không giới hạn"}</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-400 block text-[10px]">Đã áp dụng:</span>
+                              <strong className="text-emerald-600">{voucherRed.length} lượt dùng</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-400 block text-[10px]">Giới hạn mỗi khách:</span>
+                              <strong className="text-slate-800">{v.usage_limit_per_customer || 1} lần</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-400 block text-[10px]">Đối tượng áp dụng:</span>
+                              <strong className="text-slate-800 capitalize">
+                                {v.target_type === "all_customers" ? "Tất cả khách" : v.target_type === "group" ? "Theo nhóm khách" : "Khách chỉ định"}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* REDEMPTION LOG TABLE */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-800 uppercase tracking-wide">Nhật ký sử dụng / Áp dụng thực tế</span>
+                          <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-sans font-bold text-slate-600">
+                            {voucherRed.length} bản ghi kiểm toán
+                          </span>
+                        </div>
+
+                        <div className="border border-stone-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+                          <table className="w-full text-left border-collapse font-sans text-xs">
+                            <thead>
+                              <tr className="bg-stone-50 text-slate-500 font-extrabold text-[9px] uppercase border-b border-stone-200">
+                                <th className="p-2.5 pl-4">Thời gian</th>
+                                <th className="p-2.5">Khách hàng</th>
+                                <th className="p-2.5">Mã đơn hàng</th>
+                                <th className="p-2.5 text-right pr-4">Số tiền giảm</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-150">
+                              {voucherRed.map(r => {
+                                const c = customers.find(x => x.id === r.customerId);
+                                return (
+                                  <tr key={r.id} className="hover:bg-stone-50 transition">
+                                    <td className="p-2.5 pl-4 text-stone-500 font-sans text-[10px]">
+                                      {new Date(r.redeemedAt).toLocaleString("vi-VN")}
+                                    </td>
+                                    <td className="p-2.5">
+                                      <span className="font-bold text-slate-800">{c ? c.name : "Khách vãng lai"}</span>
+                                      <span className="block text-[9px] text-stone-400 font-sans">{c ? c.phone : ""}</span>
+                                    </td>
+                                    <td className="p-2.5 font-sans text-stone-600">{r.orderId}</td>
+                                    <td className="p-2.5 text-right pr-4 font-black font-sans text-emerald-600">
+                                      -{formatVnd(r.discountApplied)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {voucherRed.length === 0 && (
+                                <tr>
+                                  <td colSpan={4} className="p-6 text-center text-stone-400 italic">
+                                    Chưa có lịch sử áp dụng voucher này trên hệ thống.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 border-t border-stone-200 bg-stone-50 flex justify-end shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setViewingVoucherId(null)}
+                        className="px-6 py-2.5 rounded-xl bg-slate-900 text-white font-extrabold text-xs font-display uppercase tracking-wider hover:bg-slate-800 cursor-pointer"
+                      >
+                        ĐÓNG CỬA SỔ
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </div>
   );
