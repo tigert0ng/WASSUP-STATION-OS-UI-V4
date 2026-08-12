@@ -1,6 +1,6 @@
 # Design & UX Guidelines Áp Dụng Toàn Dự Án
 
-*Cập nhật: 19/07/2026 (2 đợt) · Viết lại toàn bộ, thay thế bản cũ (nguồn §15 PRD gốc v2.3, chỉ có 1 bộ token light theme dùng chung). Đợt 2 cùng ngày: audit Module 5, bỏ font `font-mono`/JetBrains Mono khỏi dự án (còn 2 font Lexend + Inter), thêm kiểu nút "Solid Dark", làm rõ màu thẻ gói do Master Admin chọn tay tự do, siết chặt §8.2 (component Markdown dùng chung bắt buộc, cấm chèn HTML tùy ý).*
+*Cập nhật: 11/08/2026 (Đợt 3) · Bổ sung quy chuẩn Tab Bar Navigation Pill, SearchableSelect (Inline Editable Dropdown), tối giản Header phân hệ.*
 
 > **Nguồn thiết kế chính thức:** `/Users/tigertong/VScode/google-studio-ui-wassup-wip` — repo React/Vite/Tailwind v4 riêng, là **bản thiết kế cập nhật mới nhất** (theo xác nhận trực tiếp của Tiger 19/07/2026), thay thế mọi mô tả UI/UX rời rạc trước đó (kể cả bản archive PRD v1.2 đã nén trong `prd/draft.zip`). Tài liệu này tổng hợp lại 2 nguồn trong repo đó: `design.md` (design system chính thức) và `src/index.css` (token Tailwind `@theme` thực thi được), đối chiếu với code thực tế đã build (`src/App.tsx`, `src/components/`) để đảm bảo tài liệu khớp với những gì đã dựng, không chỉ mô tả ý định. *(`wassup-build-spec-v3.md` — tài liệu đặc tả Module 2 cũ trong cùng repo — đã lỗi thời, không dùng làm nguồn tham chiếu ở đây, xem ghi chú 19/07/2026 trong sync log CLAUDE.md.)*
 >
@@ -158,6 +158,22 @@ Link hành động quản trị/CRM trong sheet chi tiết (VD "Đăng ký thêm
 ### 5.5 Icon
 
 Toàn bộ icon **bắt buộc** import từ `lucide-react`. Không tự vẽ SVG inline, không dùng bộ icon font khác.
+
+### 5.6 Tab Bar Navigation Component (Sub-tab Pill Container)
+
+Component điều hướng phân tab cấp 2 (Sub-tabs) được chuẩn hóa theo phong cách Pill Container:
+- **Khung chứa (Container):** `flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-xs gap-2 overflow-x-auto scrollbar-none`
+- **Tab Active:** Nền Matte Black sẫm (`bg-[#18181b] text-white shadow-xs`), icon mang màu xanh chanh thương hiệu (`text-[#a2c62c]`).
+- **Tab Inactive:** Nền xám mềm (`bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70`).
+- **Cấu trúc tab:** Bắt buộc kèm Icon nhận diện trực quan + Nhãn viết hoa (`font-display font-black text-xs tracking-wider uppercase`).
+
+### 5.7 SearchableSelect Component (Inline Editable Dropdown)
+
+Toàn bộ danh sách thả xuống (`<select>`) trong hệ thống được thay thế bằng component chuẩn **`SearchableSelect`** (`/src/components/common/SearchableSelect.tsx`):
+- **Cơ chế Inline Editable Input:** Khi click/focus vào vị trí dropdown, ngay tại vị trí đó sẽ chuyển trực tiếp thành ô nhập dữ liệu (`<input>`). Giá trị đang chọn biến thành mờ (placeholder), người dùng gõ từ khóa lọc trực tiếp mà không sinh thêm ô input phụ bên trong menu popover.
+- **Tìm kiếm Tiếng Việt thông minh:** Tự động lọc bỏ dấu (diacritics-insensitive) giúp gõ có dấu hay không dấu đều tìm đúng kết quả.
+- **Menu Popover:** Chỉ chứa danh sách các tùy chọn được lọc (filtered list) hiển thị nhãn chính (label) và nhãn phụ (sublabel: SKU, ĐVT, SĐT...).
+- **Tương thích Form & Phím:** Hỗ trợ phím `Escape` để đóng, `Enter` để chọn nhanh, nút xóa nhanh lựa chọn (clearable), và đồng bộ form validation.
 
 ---
 

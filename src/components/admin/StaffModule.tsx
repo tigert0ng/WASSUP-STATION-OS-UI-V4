@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SearchableSelect from "../common/SearchableSelect";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Users,
@@ -706,15 +707,16 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
                     Quyền hạn & Vai trò (Role)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={addForm.role}
-                    onChange={(e) => setAddForm({ ...addForm, role: e.target.value as any })}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="manager">Quản Lý Trạm</option>
-                    <option value="accountant">Kế Toán</option>
-                    <option value="master_admin">Master Admin</option>
-                  </select>
+                    onChange={(val) => setAddForm({ ...addForm, role: val as any })}
+                    searchPlaceholder="Lọc vai trò..."
+                    options={[
+                      { value: "manager", label: "Quản Lý Trạm" },
+                      { value: "accountant", label: "Kế Toán" },
+                      { value: "master_admin", label: "Master Admin" },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -823,15 +825,16 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
                   <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
                     Quyền hạn & Vai trò (Role)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-sans text-matte-black focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="manager">Quản Lý Trạm</option>
-                    <option value="accountant">Kế Toán</option>
-                    <option value="master_admin">Master Admin</option>
-                  </select>
+                    onChange={(val) => setEditForm({ ...editForm, role: val as any })}
+                    searchPlaceholder="Lọc vai trò..."
+                    options={[
+                      { value: "manager", label: "Quản Lý Trạm" },
+                      { value: "accountant", label: "Kế Toán" },
+                      { value: "master_admin", label: "Master Admin" },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1.5">

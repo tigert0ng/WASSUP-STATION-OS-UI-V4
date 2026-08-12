@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SearchableSelect from "../common/SearchableSelect";
 import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -1384,16 +1385,17 @@ export default function InventoryModule() {
                 <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
                   Nhóm Danh Mục Vật Tư <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value as any)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-purple-500 cursor-pointer"
-                >
-                  <option value="commercial">Nhóm 1 — Hàng thương mại (Bán lẻ / Phụ kiện)</option>
-                  <option value="consumable">Nhóm 2 — Vật liệu tiêu hao (Dung dịch / Xi / Ceramic)</option>
-                  <option value="tool">Nhóm 3 — Công cụ dụng cụ (Máy móc / Thiết bị)</option>
-                  <option value="spare_part">Nhóm 4 — Phụ tùng thay thế (Sửa chữa CCDC)</option>
-                </select>
+                  onChange={(val) => setFormCategory(val as any)}
+                  searchPlaceholder="Gõ để lọc nhóm vật tư..."
+                  options={[
+                    { value: "commercial", label: "Nhóm 1 — Hàng thương mại (Bán lẻ / Phụ kiện)" },
+                    { value: "consumable", label: "Nhóm 2 — Vật liệu tiêu hao (Dung dịch / Xi / Ceramic)" },
+                    { value: "tool", label: "Nhóm 3 — Công cụ dụng cụ (Máy móc / Thiết bị)" },
+                    { value: "spare_part", label: "Nhóm 4 — Phụ tùng thay thế (Sửa chữa CCDC)" },
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1413,18 +1415,17 @@ export default function InventoryModule() {
                   <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
                     Nhà Cung Cấp Mặc Định
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formSupplierId}
-                    onChange={(e) => setFormSupplierId(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-purple-500 cursor-pointer"
-                  >
-                    <option value="">-- Chọn nhà cung cấp --</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormSupplierId(val)}
+                    placeholder="-- Chọn nhà cung cấp --"
+                    searchPlaceholder="Tìm tên nhà cung cấp..."
+                    options={suppliers.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                      sublabel: s.phone,
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -1568,20 +1569,19 @@ export default function InventoryModule() {
                   <label className="font-extrabold uppercase text-[10px] text-amber-900 block">
                     Gắn Với CCDC Cụ Thể (Nhóm 3)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formRelatedToolId}
-                    onChange={(e) => setFormRelatedToolId(e.target.value)}
-                    className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
-                  >
-                    <option value="">-- Chọn CCDC/Máy móc mà phụ tùng này sửa chữa --</option>
-                    {items
+                    onChange={(val) => setFormRelatedToolId(val)}
+                    placeholder="-- Chọn CCDC/Máy móc mà phụ tùng này sửa chữa --"
+                    searchPlaceholder="Tìm kiếm CCDC / Máy móc..."
+                    options={items
                       .filter((i) => i.category === "tool")
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                  </select>
+                      .map((t) => ({
+                        value: t.id,
+                        label: t.name,
+                        sublabel: t.code || t.id,
+                      }))}
+                  />
                 </div>
               )}
 

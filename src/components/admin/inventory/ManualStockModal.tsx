@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SearchableSelect from "../../common/SearchableSelect";
 import {
   FileText,
   X,
@@ -178,22 +179,21 @@ export default function ManualStockModal({
             <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
               Chọn Vật Tư / Phụ Tùng Xuất Kho <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
               required
               value={selectedItemId}
-              onChange={(e) => {
-                setSelectedItemId(e.target.value);
+              onChange={(val) => {
+                setSelectedItemId(val);
                 setErrorMessage(null);
               }}
-              className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-amber-500 cursor-pointer"
-            >
-              <option value="">-- Chọn vật tư (Nhóm 1 - 4) --</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  [{item.code || item.id}] {item.name} — Tồn: {item.quantity} {item.unit}
-                </option>
-              ))}
-            </select>
+              placeholder="-- Chọn vật tư (Nhóm 1 - 4) --"
+              searchPlaceholder="Gõ tên hoặc mã vật tư để tìm nhanh..."
+              options={items.map((item) => ({
+                value: item.id,
+                label: `[${item.code || item.id}] ${item.name}`,
+                sublabel: `Tồn kho: ${item.quantity} ${item.unit}`,
+              }))}
+            />
           </div>
 
           {selectedItem && (
@@ -240,37 +240,34 @@ export default function ManualStockModal({
             <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
               Lý Do Xuất Kho Bắt Buộc <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
               value={reason}
-              onChange={(e) => setReason(e.target.value as ManualExportReason)}
-              className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-amber-500 cursor-pointer"
-            >
-              {(Object.keys(MANUAL_REASON_LABELS) as ManualExportReason[]).map((key) => (
-                <option key={key} value={key}>
-                  {MANUAL_REASON_LABELS[key]}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setReason(val as ManualExportReason)}
+              searchPlaceholder="Lọc lý do xuất kho..."
+              options={(Object.keys(MANUAL_REASON_LABELS) as ManualExportReason[]).map((key) => ({
+                value: key,
+                label: MANUAL_REASON_LABELS[key],
+              }))}
+            />
           </div>
 
           {/* If Reason = Tool Maintenance */}
           {reason === "tool_maintenance" && (
             <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl space-y-2">
               <label className="font-extrabold uppercase text-[10px] text-purple-900 block flex items-center gap-1">
-                <Wrench className="h-3.5 w-3.5 text-purple-600" /> Choose Target Tool / Machine (Optional)
+                <Wrench className="h-3.5 w-3.5 text-purple-600" /> Chọn CCDC / Máy Móc Sửa Chữa
               </label>
-              <select
+              <SearchableSelect
                 value={targetToolItemId}
-                onChange={(e) => setTargetToolItemId(e.target.value)}
-                className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none"
-              >
-                <option value="">-- Chọn CCDC/Máy móc được sửa chữa --</option>
-                {toolItems.map((tool) => (
-                  <option key={tool.id} value={tool.id}>
-                    {tool.name} ({tool.unit})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTargetToolItemId(val)}
+                placeholder="-- Chọn CCDC/Máy móc được sửa chữa --"
+                searchPlaceholder="Tìm kiếm CCDC..."
+                options={toolItems.map((tool) => ({
+                  value: tool.id,
+                  label: tool.name,
+                  sublabel: `Đơn vị: ${tool.unit}`,
+                }))}
+              />
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SearchableSelect from "../../common/SearchableSelect";
 import { 
   ClipboardList, 
   Plus, 
@@ -284,18 +285,17 @@ export default function StockCounting({ items, setItems, ledger, setLedger, show
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2 space-y-1">
                   <label className="text-[8px] font-extrabold text-slate-400 uppercase">Chọn SKU vật tư</label>
-                  <select
+                  <SearchableSelect
                     value={formItemId}
-                    onChange={(e) => setFormItemId(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-950"
-                  >
-                    <option value="">-- Chọn một mặt hàng --</option>
-                    {items.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} ({item.quantity} {item.unit} sổ sách)
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormItemId(val)}
+                    placeholder="-- Chọn một mặt hàng --"
+                    searchPlaceholder="Tìm kiếm SKU hoặc tên..."
+                    options={items.map(item => ({
+                      value: item.id,
+                      label: item.name,
+                      sublabel: `${item.quantity} ${item.unit} sổ sách`
+                    }))}
+                  />
                 </div>
 
                 <div className="space-y-1">

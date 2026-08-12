@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import SearchableSelect from "../../common/SearchableSelect";
 import { Plus, Trash2, AlertTriangle, Beaker } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
 import { useAuth } from "../../../lib/auth/AuthProvider";
@@ -329,19 +330,18 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
           <h4 className="text-[10px] font-black font-display uppercase tracking-wider text-matte-black flex items-center gap-1.5">
             <Beaker className="h-3.5 w-3.5 text-forest-green" /> Thêm dòng định mức mới
           </h4>
-          <select
+          <SearchableSelect
             required
             value={addItemId}
-            onChange={(e) => setAddItemId(e.target.value)}
-            className="w-full bg-white border border-[#e5e5e5] rounded-lg px-3 py-2 text-xs font-sans focus:outline-none focus:border-forest-green"
-          >
-            <option value="">Chọn vật tư (Nhóm 2/3, từ Module 6 - Kho vật tư)...</option>
-            {inventoryItems.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name} · {i.unit} ({i.category === "consumable" ? "Tiêu hao" : "Dụng cụ"})
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setAddItemId(val)}
+            placeholder="Chọn vật tư (Nhóm 2/3, từ Module 6 - Kho vật tư)..."
+            searchPlaceholder="Nhập tên vật tư để tìm nhanh..."
+            options={inventoryItems.map((i) => ({
+              value: i.id,
+              label: i.name,
+              sublabel: `${i.unit} · ${i.category === "consumable" ? "Tiêu hao" : "Dụng cụ"}`,
+            }))}
+          />
           {selectedAddItem && (
             <p className="text-[9px] text-mid-gray">
               Đơn vị tính: <span className="font-bold text-matte-black">{selectedAddItem.unit}</span> (lấy từ Module 6, không nhập tay)

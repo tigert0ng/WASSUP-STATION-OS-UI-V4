@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SearchableSelect from "../../common/SearchableSelect";
 import {
   Package,
   Plus,
@@ -404,18 +405,18 @@ export default function PurchaseOrderManager({
                 <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
                   Chọn Nhà Cung Cấp <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   required
                   value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.phone})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedSupplierId(val)}
+                  placeholder="-- Chọn nhà cung cấp --"
+                  searchPlaceholder="Tìm kiếm nhà cung cấp..."
+                  options={suppliers.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                    sublabel: s.phone,
+                  }))}
+                />
               </div>
 
               {/* PO Line Items */}
@@ -437,17 +438,19 @@ export default function PurchaseOrderManager({
                   {poLines.map((line, idx) => (
                     <div key={idx} className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
                       <div className="flex items-center gap-2">
-                        <select
-                          value={line.itemId}
-                          onChange={(e) => handleLineItemChange(idx, e.target.value)}
-                          className="flex-1 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-900 text-xs"
-                        >
-                          {items.map((it) => (
-                            <option key={it.id} value={it.id}>
-                              {it.name} ({it.unit})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex-1">
+                          <SearchableSelect
+                            value={line.itemId}
+                            onChange={(val) => handleLineItemChange(idx, val)}
+                            placeholder="-- Chọn vật tư mua --"
+                            searchPlaceholder="Gõ để tìm tên vật tư..."
+                            options={items.map((it) => ({
+                              value: it.id,
+                              label: it.name,
+                              sublabel: `ĐVT: ${it.unit}`,
+                            }))}
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveLineFromPo(idx)}
@@ -605,23 +608,24 @@ export default function PurchaseOrderManager({
                           <label className="text-[10px] font-black uppercase text-amber-800 flex items-center gap-1">
                             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Bắt buộc chọn lý do chênh lệch:
                           </label>
-                          <select
+                          <SearchableSelect
                             required
                             value={line.discrepancyReason || ""}
-                            onChange={(e) => {
+                            onChange={(val) => {
                               const newLines = [...receiptLines];
-                              newLines[idx].discrepancyReason = e.target.value;
+                              newLines[idx].discrepancyReason = val;
                               setReceiptLines(newLines);
                             }}
-                            className="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 font-bold text-xs text-amber-900"
-                          >
-                            <option value="">-- Chọn lý do chênh lệch --</option>
-                            <option value="Hàng lỗi / hư hỏng trong quá trình vận chuyển">Hàng lỗi / Hư hỏng vận chuyển</option>
-                            <option value="Nhà cung cấp giao thiếu hàng">Nhà cung cấp giao thiếu hàng</option>
-                            <option value="Nhà cung cấp giao thừa khuyến mãi">Nhà cung cấp giao thừa khuyến mãi</option>
-                            <option value="Giao sai quy cách / không đúng mẫu">Giao sai quy cách / Không đúng mẫu</option>
-                            <option value="Lý do khác">Lý do khác</option>
-                          </select>
+                            placeholder="-- Chọn lý do chênh lệch --"
+                            searchPlaceholder="Lọc lý do chênh lệch..."
+                            options={[
+                              { value: "Hàng lỗi / hư hỏng trong quá trình vận chuyển", label: "Hàng lỗi / Hư hỏng vận chuyển" },
+                              { value: "Nhà cung cấp giao thiếu hàng", label: "Nhà cung cấp giao thiếu hàng" },
+                              { value: "Nhà cung cấp giao thừa khuyến mãi", label: "Nhà cung cấp giao thừa khuyến mãi" },
+                              { value: "Giao sai quy cách / không đúng mẫu", label: "Giao sai quy cách / Không đúng mẫu" },
+                              { value: "Lý do khác", label: "Lý do khác" },
+                            ]}
+                          />
                         </div>
                       )}
                     </div>

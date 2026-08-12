@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import SearchableSelect from "../../common/SearchableSelect";
 import { motion, AnimatePresence } from "motion/react";
 import { X, CheckCircle2, AlertTriangle, ImageIcon, Hammer, FileText, Bold, Italic, Underline, Tag, Trash2, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
@@ -530,19 +531,20 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
 
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-mid-gray uppercase font-extrabold block">Nhóm hiển thị</label>
-                    <select
+                    <SearchableSelect
                       disabled={!canWrite}
                       value={addonCategory}
-                      onChange={(e) => setAddonCategory(e.target.value as AddonCategory | "")}
-                      className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-forest-green disabled:bg-gray-50"
-                    >
-                      <option value="">Khác (chưa phân nhóm)</option>
-                      {ADDON_CATEGORY_OPTIONS.map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setAddonCategory(val as AddonCategory | "")}
+                      placeholder="Khác (chưa phân nhóm)"
+                      searchPlaceholder="Lọc nhóm hiển thị..."
+                      options={[
+                        { value: "", label: "Khác (chưa phân nhóm)" },
+                        ...ADDON_CATEGORY_OPTIONS.map(([value, label]) => ({
+                          value,
+                          label,
+                        })),
+                      ]}
+                    />
                   </div>
                 </>
               )}
