@@ -39,7 +39,12 @@ import {
   Star,
   Volume2,
   Menu,
-  X
+  X,
+  Building2,
+  History,
+  Truck,
+  ClipboardList,
+  BookOpen
 } from "lucide-react";
 
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
@@ -71,6 +76,7 @@ import SettingsModule from "./components/admin/SettingsModule";
 import NotificationManager from "./components/admin/shared/NotificationManager";
 import LoginModule from "./components/admin/LoginModule";
 import HrModule from "./components/admin/HrModule";
+import AuditLog from "./components/admin/settings/AuditLog";
 
 const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   master_admin: ["dashboard", "reception", "ktv", "pos", "finance", "crm", "services", "inventory", "monitor", "staff", "settings", "hr"],
@@ -163,7 +169,6 @@ function AppContent() {
   }
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeModule7Tab, setActiveModule7Tab] = useState<string>("staff");
 
   // Realtime state synchronized with our client store
   const [orders, setOrders] = useState<OrderStatusView[]>([]);
@@ -262,40 +267,6 @@ function AppContent() {
     };
   }, []);
 
-  // Set up Module 0 tab layouts (System & Staff Management)
-  const allowedSubTabs = [
-    {
-      id: "staff",
-      label: "Nhân Sự & RBAC",
-      icon: Users,
-      component: <StaffModule staff={staff} orders={orders} />
-    },
-    {
-      id: "settings",
-      label: "Cấu Hình & Audit Logs",
-      icon: Settings,
-      component: (
-        <SettingsModule
-          rolePermissions={rolePermissions}
-          onPermissionsChange={(newPerms) => {
-            setRolePermissions(newPerms);
-            localStorage.setItem("wassup_role_permissions", JSON.stringify(newPerms));
-          }}
-        />
-      )
-    }
-  ].filter(tab => isAllowed(tab.id));
-
-  // Default active tab for Module 7 if current tab becomes unauthorized
-  useEffect(() => {
-    if (activeAdminModule === "system" && allowedSubTabs.length > 0) {
-      const isTabAllowed = allowedSubTabs.some(t => t.id === activeModule7Tab);
-      if (!isTabAllowed) {
-        setActiveModule7Tab(allowedSubTabs[0].id);
-      }
-    }
-  }, [activeAdminModule, currentUser]);
-
   return (
     <div className="h-screen bg-warm-white text-matte-black font-sans antialiased selection:bg-brand-green selection:text-matte-black flex flex-col overflow-hidden">
       <NotificationManager />
@@ -349,6 +320,154 @@ function AppContent() {
                         {catModules.map((m) => {
                           const Icon = m.icon;
                           const isActive = activeAdminModule === m.id;
+                          if (m.id === "inventory") {
+                            return (
+                              <div key={m.id} className="space-y-1">
+                                <button
+                                  onClick={() => {
+                                    navigate("/admin/inventory/items");
+                                    setIsMobileDrawerOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
+                                    isActive ? "bg-brand-green text-matte-black font-extrabold" : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-2.5">
+                                    <Icon className="h-4 w-4" />
+                                    {m.label}
+                                  </span>
+                                </button>
+                                {/* Module 6 Submenu */}
+                                <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5">
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/inventory/items");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.startsWith("/admin/inventory") &&
+                                      !location.pathname.includes("suppliers") &&
+                                      !location.pathname.includes("stocktake") &&
+                                      !location.pathname.includes("reports") &&
+                                      !location.pathname.includes("prd")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Boxes className="h-3.5 w-3.5" />
+                                    <span>Quản lý vật tư</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/inventory/suppliers");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("suppliers")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Truck className="h-3.5 w-3.5" />
+                                    <span>Nhà cung cấp</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/inventory/stocktake");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("stocktake")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <ClipboardList className="h-3.5 w-3.5" />
+                                    <span>Kiểm kho định kỳ</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/inventory/reports");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("reports")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Activity className="h-3.5 w-3.5" />
+                                    <span>Báo cáo kho</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/inventory/prd");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("prd")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <BookOpen className="h-3.5 w-3.5" />
+                                    <span>Quy trình PRD M6</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (m.id === "system") {
+                            return (
+                              <div key={m.id} className="space-y-1">
+                                <button
+                                  onClick={() => {
+                                    navigate("/admin/system/stations");
+                                    setIsMobileDrawerOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
+                                    isActive ? "bg-brand-green text-matte-black font-extrabold" : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-2.5">
+                                    <Icon className="h-4 w-4" />
+                                    {m.label}
+                                  </span>
+                                </button>
+                                {/* Module 0 Submenu */}
+                                <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5">
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/system/stations");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Building2 className="h-3.5 w-3.5" />
+                                    <span>Cài đặt trạm</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigate("/admin/system/audit-log");
+                                      setIsMobileDrawerOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("audit-log")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <History className="h-3.5 w-3.5" />
+                                    <span>Audit log</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
                           return (
                             <button
                               key={m.id}
@@ -521,6 +640,135 @@ function AppContent() {
                     {catModules.map((m) => {
                       const Icon = m.icon;
                       const isActive = activeAdminModule === m.id;
+                      if (m.id === "inventory") {
+                        return (
+                          <div key={m.id} className="space-y-1">
+                            <button
+                              onClick={() => navigate("/admin/inventory/items")}
+                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
+                                isActive
+                                  ? "bg-brand-green text-matte-black font-extrabold"
+                                  : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2.5 text-left">
+                                <Icon className="h-4 w-4" />
+                                {m.label}
+                              </span>
+                              {isActive && <div className="h-1.5 w-1.5 rounded-full bg-matte-black" />}
+                            </button>
+
+                            {/* Module 6 Submenu */}
+                            <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans">
+                              <button
+                                onClick={() => navigate("/admin/inventory/items")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.startsWith("/admin/inventory") &&
+                                  !location.pathname.includes("suppliers") &&
+                                  !location.pathname.includes("stocktake") &&
+                                  !location.pathname.includes("reports") &&
+                                  !location.pathname.includes("prd")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <Boxes className="h-3.5 w-3.5" />
+                                <span>Quản lý vật tư</span>
+                              </button>
+                              <button
+                                onClick={() => navigate("/admin/inventory/suppliers")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.includes("suppliers")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <Truck className="h-3.5 w-3.5" />
+                                <span>Nhà cung cấp</span>
+                              </button>
+                              <button
+                                onClick={() => navigate("/admin/inventory/stocktake")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.includes("stocktake")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <ClipboardList className="h-3.5 w-3.5" />
+                                <span>Kiểm kho định kỳ</span>
+                              </button>
+                              <button
+                                onClick={() => navigate("/admin/inventory/reports")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.includes("reports")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <Activity className="h-3.5 w-3.5" />
+                                <span>Báo cáo kho</span>
+                              </button>
+                              <button
+                                onClick={() => navigate("/admin/inventory/prd")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.includes("prd")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <BookOpen className="h-3.5 w-3.5" />
+                                <span>Quy trình PRD M6</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (m.id === "system") {
+                        return (
+                          <div key={m.id} className="space-y-1">
+                            <button
+                              onClick={() => navigate("/admin/system/stations")}
+                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
+                                isActive
+                                  ? "bg-brand-green text-matte-black font-extrabold"
+                                  : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2.5 text-left">
+                                <Icon className="h-4 w-4" />
+                                {m.label}
+                              </span>
+                              {isActive && <div className="h-1.5 w-1.5 rounded-full bg-matte-black" />}
+                            </button>
+
+                            {/* Module 0 Submenu */}
+                            <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans">
+                              <button
+                                onClick={() => navigate("/admin/system/stations")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <Building2 className="h-3.5 w-3.5" />
+                                <span>Cài đặt trạm</span>
+                              </button>
+                              <button
+                                onClick={() => navigate("/admin/system/audit-log")}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                  location.pathname.includes("audit-log")
+                                    ? "text-brand-green font-extrabold bg-[#262626]"
+                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <History className="h-3.5 w-3.5" />
+                                <span>Audit log</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <button
                           key={m.id}
@@ -673,44 +921,31 @@ function AppContent() {
                     )}
 
                     {activeAdminModule === "system" && isModuleVisible("system") && (
-                      <div className="space-y-6">
-                        {/* Module 7 Header */}
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-2">
-                          <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-matte-black font-display uppercase">THIẾT LẬP HỆ THỐNG</h1>
-                            <p className="text-mid-gray text-sm mt-1 font-sans">
-                              Quản lý nhân sự, cấu hình quyền hạn (RBAC), kiểm toán bảo mật, quản trị CRM Khách hàng và giám sát IoT
-                            </p>
+                      location.pathname.includes("audit-log") ? (
+                        <div className="space-y-6 animate-fadeIn">
+                          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white border border-[#e5e5e5] p-6 rounded-2xl shadow-sm relative overflow-hidden">
+                            <div className="px-2">
+                              <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2">
+                                <History className="h-6 w-6 text-purple-600" />
+                                S0.8 — AUDIT LOG & NHẬT KÝ KIỂM TOÁN HỆ THỐNG
+                              </h1>
+                              <p className="text-mid-gray text-xs font-sans mt-0.5">
+                                Theo dõi toàn bộ nhật ký ghi nhận hành động, truy vết thay đổi dữ liệu và lịch sử hệ thống WASSUP STATION OS.
+                              </p>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Module 7 Sub-tabs */}
-                        <div className="flex border border-stone-200/80 bg-white p-1.5 rounded-2xl gap-1.5 overflow-x-auto pb-px scrollbar-none shadow-xs">
-                          {allowedSubTabs.map((tab) => {
-                            const TabIcon = tab.icon;
-                            const isTabActive = activeModule7Tab === tab.id;
-                            return (
-                              <button
-                                key={tab.id}
-                                onClick={() => setActiveModule7Tab(tab.id)}
-                                className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[11px] font-display font-black tracking-wider uppercase transition-all duration-200 cursor-pointer border-0 ${
-                                  isTabActive
-                                    ? "bg-matte-black text-white shadow-sm"
-                                    : "bg-[#f8f8f8] text-[#8e8e8e] hover:text-matte-black hover:bg-stone-100"
-                                }`}
-                              >
-                                <TabIcon className="h-4 w-4 shrink-0" />
-                                {tab.label}
-                              </button>
-                            );
-                          })}
+                          <AuditLog />
                         </div>
-
-                        {/* Active Sub-tab View */}
-                        <div className="mt-4 animate-fadeIn">
-                          {allowedSubTabs.find(tab => tab.id === activeModule7Tab)?.component}
-                        </div>
-                      </div>
+                      ) : (
+                        <SettingsModule
+                          rolePermissions={rolePermissions}
+                          onPermissionsChange={(newPerms) => {
+                            setRolePermissions(newPerms);
+                            localStorage.setItem("wassup_role_permissions", JSON.stringify(newPerms));
+                          }}
+                        />
+                      )
                     )}
                   </motion.div>
                 )}

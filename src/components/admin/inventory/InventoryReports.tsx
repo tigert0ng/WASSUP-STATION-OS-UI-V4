@@ -15,7 +15,7 @@ import {
 interface InventoryItem {
   id: string;
   name: string;
-  category: "commercial" | "consumable" | "tool";
+  category: "commercial" | "consumable" | "tool" | "spare_part";
   categoryLabel: string;
   quantity: number;
   unit: string;
@@ -52,7 +52,11 @@ export default function InventoryReports({ items }: InventoryReportsProps) {
       return sum + val;
     }, 0);
 
-  const totalInventoryValue = totalCommercialValue + totalConsumableValue + totalToolValue;
+  const totalSparePartValue = items
+    .filter(i => i.category === "spare_part")
+    .reduce((sum, i) => sum + (i.quantity * i.pricePerUnit), 0);
+
+  const totalInventoryValue = totalCommercialValue + totalConsumableValue + totalToolValue + totalSparePartValue;
 
   // Mock data for BOM variance report
   const techVarianceData = [
@@ -78,31 +82,42 @@ export default function InventoryReports({ items }: InventoryReportsProps) {
 
   return (
     <div className="space-y-6 animate-fadeIn" id="inventory-reports">
-      {/* Sub Tabs */}
-      <div className="flex gap-2 p-1.5 bg-stone-100 rounded-xl max-w-lg">
+      {/* Tab Bar Navigation Component */}
+      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-xs gap-2 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveSubTab("variance")}
-          className={`flex-1 py-2 text-center rounded-lg font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer ${
-            activeSubTab === "variance" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+          className={`flex-1 min-w-[200px] py-2.5 px-3.5 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeSubTab === "variance"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          1. LÃNG PHÍ & BỌC TÁCH BOM
+          <AlertTriangle className={`h-4 w-4 shrink-0 transition-colors ${activeSubTab === "variance" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
+          <span>HAO PHÍ & ĐỊNH MỨC BOM</span>
         </button>
+
         <button
           onClick={() => setActiveSubTab("turnover")}
-          className={`flex-1 py-2 text-center rounded-lg font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer ${
-            activeSubTab === "turnover" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+          className={`flex-1 min-w-[180px] py-2.5 px-3.5 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeSubTab === "turnover"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          2. HỆ SỐ QUAY VÒNG
+          <TrendingUp className={`h-4 w-4 shrink-0 transition-colors ${activeSubTab === "turnover" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
+          <span>HỆ SỐ QUAY VÒNG KHO</span>
         </button>
+
         <button
           onClick={() => setActiveSubTab("asset")}
-          className={`flex-1 py-2 text-center rounded-lg font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer ${
-            activeSubTab === "asset" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+          className={`flex-1 min-w-[180px] py-2.5 px-3.5 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
+            activeSubTab === "asset"
+              ? "bg-[#18181b] text-white shadow-xs"
+              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
           }`}
         >
-          3. GIÁ TRỊ KHO CUỐI KỲ
+          <DollarSign className={`h-4 w-4 shrink-0 transition-colors ${activeSubTab === "asset" ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
+          <span>GIÁ TRỊ TỒN KHO CUỐI KỲ</span>
         </button>
       </div>
 
@@ -308,6 +323,16 @@ export default function InventoryReports({ items }: InventoryReportsProps) {
                 </div>
                 <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
                   <div className="bg-purple-600 h-full" style={{ width: `${(totalToolValue / (totalInventoryValue || 1)) * 100}%` }} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="font-bold text-slate-950">Phụ tùng thay thế</span>
+                  <span className="font-sans text-slate-500">{formatVnd(totalSparePartValue)} ({((totalSparePartValue / (totalInventoryValue || 1)) * 100).toFixed(1)}%)</span>
+                </div>
+                <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                  <div className="bg-amber-500 h-full" style={{ width: `${(totalSparePartValue / (totalInventoryValue || 1)) * 100}%` }} />
                 </div>
               </div>
             </div>

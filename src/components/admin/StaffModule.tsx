@@ -605,11 +605,11 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
         </div>
 
         <div className="max-h-60 overflow-y-auto space-y-2.5 pr-2">
-          {auditLogs.map((log) => {
+          {auditLogs.map((log, idx) => {
             const act = log.action || log.type || "SYSTEM";
             return (
               <div
-                key={log.id}
+                key={`${log.id || 'log'}-${idx}`}
                 className="p-3 bg-warm-white/40 border border-[#e5e5e5] rounded-xl text-[11px] font-sans flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
               >
                 <div className="space-y-1">

@@ -14,7 +14,7 @@ import {
 interface InventoryItem {
   id: string;
   name: string;
-  category: "commercial" | "consumable" | "tool";
+  category: "commercial" | "consumable" | "tool" | "spare_part";
   categoryLabel: string;
   quantity: number;
   unit: string;

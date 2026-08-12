@@ -104,8 +104,8 @@ export default function AuditLog() {
                   <td colSpan={5} className="p-8 text-center text-mid-gray font-sans text-xs">Chưa có nhật ký nào khớp bộ lọc.</td>
                 </tr>
               ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-warm-white/30 transition align-top">
+                rows.map((r, idx) => (
+                  <tr key={`${r.id || 'row'}-${idx}`} className="hover:bg-warm-white/30 transition align-top">
                     <td className="p-3 font-mono text-[10px] text-mid-gray whitespace-nowrap">{new Date(r.at).toLocaleString("vi-VN")}</td>
                     <td className="p-3 font-bold text-matte-black">{r.actor_id ? actorNames[r.actor_id] ?? r.actor_id : "—"}</td>
                     <td className="p-3">

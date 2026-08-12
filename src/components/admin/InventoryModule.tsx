@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Boxes,
   Plus,
@@ -24,30 +25,223 @@ import {
   Clock,
   BookOpen,
   ShoppingBag,
-  Briefcase
+  Briefcase,
+  Truck,
+  Building2,
+  Package,
+  FileText,
+  Sliders,
+  ExternalLink,
+  ShieldCheck,
+  Zap,
+  Edit3,
+  HelpCircle
 } from "lucide-react";
-import { MarkdownTextarea, MarkdownRenderer } from "./shared/Markdown";
 
 import StockCounting from "./inventory/StockCounting";
 import InventoryReports from "./inventory/InventoryReports";
 import PrdHandbook from "./inventory/PrdHandbook";
+import SupplierManagement, { Supplier, PurchaseOrder } from "./inventory/SupplierManagement";
+import PurchaseOrderManager from "./inventory/PurchaseOrderManager";
+import ManualStockModal, { InventoryItem, MANUAL_REASON_LABELS } from "./inventory/ManualStockModal";
 
-interface InventoryItem {
-  id: string;
-  name: string;
-  category: "commercial" | "consumable" | "tool";
-  categoryLabel: string;
-  quantity: number;
-  unit: string;
-  minThreshold: number;
-  pricePerUnit: number;
-  lastUpdated: string;
-  // Depreciation details for tools
-  purchaseDate?: string;
-  usefulLifeMonths?: number;
-  originalValue?: number;
-  currentValue?: number;
-}
+// Seed data
+const DEFAULT_SUPPLIERS: Supplier[] = [
+  {
+    id: "sup-001",
+    name: "WASSUP Supply Co. Ltd",
+    phone: "024.3999.8888",
+    address: "Lô C2, Cụm CN Cầu Giấy, Hà Nội",
+    taxCode: "0109887766",
+    note: "Nhà cung cấp hóa chất & dụng cụ rửa xe chính hãng WASSUP HQ",
+    active: true,
+    createdAt: "2025-01-01",
+  },
+  {
+    id: "sup-002",
+    name: "3M Việt Nam Official Store",
+    phone: "0908.123.456",
+    address: "Tòa nhà MMap, Q.7, TP.HCM",
+    taxCode: "0301234567",
+    note: "Phân phối hóa chất phớt đánh bóng, đất sét 3M",
+    active: true,
+    createdAt: "2025-02-10",
+  },
+  {
+    id: "sup-003",
+    name: "Công ty Thiết bị Car Care Karcher VN",
+    phone: "0912.888.999",
+    address: "Khu Công Nghệ Cao, Hà Nội",
+    taxCode: "0108889999",
+    note: "Cung cấp máy rửa xe áp lực, máy hút bụi, phụ tùng thay thế Karcher",
+    active: true,
+    createdAt: "2025-03-01",
+  },
+];
+
+const DEFAULT_ITEMS: InventoryItem[] = [
+  {
+    id: "inv-01",
+    code: "VTM-001",
+    name: "Dầu bóng lốp xe Sonax Xtreme",
+    category: "commercial",
+    categoryLabel: "Nhóm 1 — Hàng thương mại",
+    quantity: 45,
+    unit: "Chai 500ml",
+    minThreshold: 10,
+    costPrice: 180000,
+    avgCost: 180000,
+    pricePerUnit: 180000,
+    salePrice: 250000, // Has retail price -> Badge "Có bán lẻ"
+    supplierId: "sup-002",
+    supplierName: "3M Việt Nam Official Store",
+    lastUpdated: new Date().toISOString(),
+  },
+  {
+    id: "inv-02",
+    code: "VTH-001",
+    name: "Hóa chất bọt tuyết siêu đậm đặc WASSUP SOAP",
+    category: "consumable",
+    categoryLabel: "Nhóm 2 — Vật liệu tiêu hao",
+    quantity: 8,
+    unit: "Can 20L",
+    usageUnit: "ml",
+    minThreshold: 15,
+    costPrice: 1200000,
+    avgCost: 1200000,
+    pricePerUnit: 1200000,
+    salePrice: null, // Internal usage
+    supplierId: "sup-001",
+    supplierName: "WASSUP Supply Co. Ltd",
+    lastUpdated: new Date().toISOString(),
+  },
+  {
+    id: "inv-03",
+    code: "VTH-002",
+    name: "Đất sét tẩy ố bụi sơn 3M Claybar",
+    category: "consumable",
+    categoryLabel: "Nhóm 2 — Vật liệu tiêu hao",
+    quantity: 12,
+    unit: "Cục 200g",
+    minThreshold: 5,
+    costPrice: 250000,
+    avgCost: 250000,
+    pricePerUnit: 250000,
+    salePrice: 350000, // Also available for retail purchase
+    supplierId: "sup-002",
+    supplierName: "3M Việt Nam Official Store",
+    lastUpdated: new Date().toISOString(),
+  },
+  {
+    id: "inv-04",
+    code: "CDC-001",
+    name: "Máy xịt nước cao áp sấy gầm Karcher HD 6/15",
+    category: "tool",
+    categoryLabel: "Nhóm 3 — Công cụ dụng cụ",
+    quantity: 4,
+    unit: "Bộ máy",
+    minThreshold: 2,
+    costPrice: 35000000,
+    avgCost: 35000000,
+    pricePerUnit: 35000000,
+    salePrice: null,
+    supplierId: "sup-003",
+    supplierName: "Công ty Thiết bị Car Care Karcher VN",
+    lastUpdated: new Date().toISOString(),
+    purchaseDate: "2025-01-15",
+    usefulLifeMonths: 36,
+    originalValue: 140000000,
+    currentValue: 120000000,
+  },
+  {
+    id: "inv-05",
+    code: "CDC-002",
+    name: "Máy đánh bóng lệch tâm Rupes LHR15 Mark III",
+    category: "tool",
+    categoryLabel: "Nhóm 3 — Công cụ dụng cụ",
+    quantity: 3,
+    unit: "Máy",
+    minThreshold: 1,
+    costPrice: 12500000,
+    avgCost: 12500000,
+    pricePerUnit: 12500000,
+    salePrice: null,
+    supplierId: "sup-001",
+    supplierName: "WASSUP Supply Co. Ltd",
+    lastUpdated: new Date().toISOString(),
+    purchaseDate: "2025-03-20",
+    usefulLifeMonths: 24,
+    originalValue: 37500000,
+    currentValue: 31250000,
+  },
+  {
+    id: "inv-06",
+    code: "CDT-001",
+    name: "Chổi than cao cấp thay thế cho máy Rupes LHR15",
+    category: "spare_part",
+    categoryLabel: "Nhóm 4 — Phụ tùng thay thế",
+    quantity: 20,
+    unit: "Cặp",
+    minThreshold: 5,
+    costPrice: 80000,
+    avgCost: 80000,
+    pricePerUnit: 80000,
+    salePrice: 150000, // Available for retail
+    supplierId: "sup-001",
+    supplierName: "WASSUP Supply Co. Ltd",
+    relatedToolItemId: "inv-05",
+    relatedToolName: "Máy đánh bóng Rupes LHR15 Mark III",
+    lastUpdated: new Date().toISOString(),
+  },
+  {
+    id: "inv-07",
+    code: "CDT-002",
+    name: "Vòi xịt áp lực bọc đầu xoay Karcher",
+    category: "spare_part",
+    categoryLabel: "Nhóm 4 — Phụ tùng thay thế",
+    quantity: 6,
+    unit: "Cái",
+    minThreshold: 2,
+    costPrice: 450000,
+    avgCost: 450000,
+    pricePerUnit: 450000,
+    salePrice: null,
+    supplierId: "sup-003",
+    supplierName: "Công ty Thiết bị Car Care Karcher VN",
+    relatedToolItemId: "inv-04",
+    relatedToolName: "Máy xịt nước Karcher HD 6/15",
+    lastUpdated: new Date().toISOString(),
+  },
+];
+
+const DEFAULT_PURCHASE_ORDERS: PurchaseOrder[] = [
+  {
+    id: "PO-2026-001",
+    supplierId: "sup-001",
+    supplierName: "WASSUP Supply Co. Ltd",
+    status: "received",
+    createdBy: "Nguyễn Văn Hùng (Quản lý)",
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    note: "Nhập bổ sung hóa chất bọt tuyết & chổi than dự phòng ca tối",
+    lines: [
+      { itemId: "inv-02", itemName: "Hóa chất bọt tuyết WASSUP SOAP", qtyOrdered: 5, qtyReceived: 5, unitCost: 1200000, unit: "Can 20L" },
+      { itemId: "inv-06", itemName: "Chổi than Rupes LHR15", qtyOrdered: 10, qtyReceived: 10, unitCost: 80000, unit: "Cặp" },
+    ],
+  },
+  {
+    id: "PO-2026-002",
+    supplierId: "sup-002",
+    supplierName: "3M Việt Nam Official Store",
+    status: "confirmed",
+    createdBy: "Trần Minh Quân (Master Admin)",
+    createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+    note: "Đơn đặt mua dầu bóng Sonax và Đất sét 3M đợt 2",
+    lines: [
+      { itemId: "inv-01", itemName: "Dầu bóng lốp xe Sonax Xtreme", qtyOrdered: 20, qtyReceived: 0, unitCost: 180000, unit: "Chai 500ml" },
+      { itemId: "inv-03", itemName: "Đất sét 3M Claybar", qtyOrdered: 10, qtyReceived: 0, unitCost: 250000, unit: "Cục 200g" },
+    ],
+  },
+];
 
 interface StockLedgerRow {
   id: string;
@@ -62,174 +256,185 @@ interface StockLedgerRow {
   reason: string;
 }
 
-const DEFAULT_ITEMS: InventoryItem[] = [
-  {
-    id: "inv-01",
-    name: "Dầu bóng lốp xe Sonax Xtreme",
-    category: "commercial",
-    categoryLabel: "Sản phẩm thương mại",
-    quantity: 45,
-    unit: "Chai 500ml",
-    minThreshold: 10,
-    pricePerUnit: 250000,
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: "inv-02",
-    name: "Hóa chất bọt tuyết siêu đậm đặc WASSUP SOAP",
-    category: "consumable",
-    categoryLabel: "Vật tư tiêu hao",
-    quantity: 8,
-    unit: "Can 20L",
-    minThreshold: 15,
-    pricePerUnit: 1200000,
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: "inv-03",
-    name: "Đất sét tẩy ố bụi sơn 3M Claybar",
-    category: "consumable",
-    categoryLabel: "Vật tư tiêu hao",
-    quantity: 12,
-    unit: "Cục 200g",
-    minThreshold: 5,
-    pricePerUnit: 350000,
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: "inv-04",
-    name: "Máy xịt nước cao áp sấy gầm Karcher HD 6/15",
-    category: "tool",
-    categoryLabel: "Công cụ dụng cụ (Tools)",
-    quantity: 4,
-    unit: "Bộ máy",
-    minThreshold: 2,
-    pricePerUnit: 35000000,
-    lastUpdated: new Date().toISOString(),
-    purchaseDate: "2025-01-15",
-    usefulLifeMonths: 36,
-    originalValue: 140000000,
-    currentValue: 120000000
-  },
-  {
-    id: "inv-05",
-    name: "Máy đánh bóng lệch tâm Rupes LHR15 Mark III",
-    category: "tool",
-    categoryLabel: "Công cụ dụng cụ (Tools)",
-    quantity: 3,
-    unit: "Máy",
-    minThreshold: 1,
-    pricePerUnit: 12500000,
-    lastUpdated: new Date().toISOString(),
-    purchaseDate: "2025-03-20",
-    usefulLifeMonths: 24,
-    originalValue: 37500000,
-    currentValue: 31250000
-  },
-  {
-    id: "inv-06",
-    name: "Cầu nâng cắt kéo bọc gầm âm nền",
-    category: "tool",
-    categoryLabel: "Công cụ dụng cụ (Tools)",
-    quantity: 2,
-    unit: "Bộ cầu",
-    minThreshold: 1,
-    pricePerUnit: 65000000,
-    lastUpdated: new Date().toISOString(),
-    purchaseDate: "2024-11-05",
-    usefulLifeMonths: 60,
-    originalValue: 130000000,
-    currentValue: 119166667
-  }
-];
-
 const DEFAULT_LEDGER: StockLedgerRow[] = [
   {
     id: "lg-101",
     itemId: "inv-02",
     itemName: "Hóa chất bọt tuyết WASSUP SOAP",
-    date: new Date(Date.now() - 86400000).toISOString(),
+    date: new Date(Date.now() - 3600000 * 4).toISOString(),
     type: "export",
-    typeLabel: "Xuất kho sử dụng",
+    typeLabel: "Xuất kho BOM dịch vụ",
     quantityChanged: -2,
     balanceAfter: 8,
-    actor: "Nguyễn Văn Hùng",
-    reason: "Cấp phát cho Bay A và Bay B đầu ca sáng"
+    actor: "WO-2026-881 (Tự động)",
+    reason: "Cấp phát rửa xe theo định mức cho biển 30H-889.12",
   },
   {
     id: "lg-102",
     itemId: "inv-01",
     itemName: "Dầu bóng lốp xe Sonax Xtreme",
-    date: new Date(Date.now() - 86400000 * 2).toISOString(),
+    date: new Date(Date.now() - 3600000 * 10).toISOString(),
     type: "import",
-    typeLabel: "Nhập hàng từ nhà phân phối",
+    typeLabel: "Nhập hàng theo PO",
     quantityChanged: 20,
     balanceAfter: 45,
     actor: "Trần Thị D (Kế toán)",
-    reason: "Hóa đơn nhập mua số #HD-908"
-  }
+    reason: "Hóa đơn nhập PO-2026-001",
+  },
 ];
 
 export default function InventoryModule() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // SUBMENU STATE (5 Independent Submenus)
+  // Submenu A: Quản Lý Vật Tư (Nhập–Xuất–Tồn)
+  // Submenu B: Quản Lý Nhà Cung Cấp
+  // Submenu C: Kiểm Kho Định Kỳ
+  // Submenu D: Báo Cáo Kho
+  // Submenu E: Quy Trình PRD Module 6
+  const [activeSubmenu, setActiveSubmenu] = useState<"A" | "B" | "C" | "D" | "E">("A");
+
+  useEffect(() => {
+    if (location.pathname.includes("/admin/inventory/suppliers")) {
+      setActiveSubmenu("B");
+    } else if (location.pathname.includes("/admin/inventory/stocktake")) {
+      setActiveSubmenu("C");
+    } else if (location.pathname.includes("/admin/inventory/reports")) {
+      setActiveSubmenu("D");
+    } else if (location.pathname.includes("/admin/inventory/prd")) {
+      setActiveSubmenu("E");
+    } else if (location.pathname.startsWith("/admin/inventory")) {
+      setActiveSubmenu("A");
+    }
+  }, [location.pathname]);
+
+  const handleSubmenuSelect = (sub: "A" | "B" | "C" | "D" | "E") => {
+    setActiveSubmenu(sub);
+    if (sub === "A") navigate("/admin/inventory/items");
+    else if (sub === "B") navigate("/admin/inventory/suppliers");
+    else if (sub === "C") navigate("/admin/inventory/stocktake");
+    else if (sub === "D") navigate("/admin/inventory/reports");
+    else if (sub === "E") navigate("/admin/inventory/prd");
+  };
+
+  // Submenu A Sub-tabs
+  const [activeSubmenuATab, setActiveSubmenuATab] = useState<
+    "inventory_list" | "po_management" | "bom_requisitions" | "retail_exports" | "ledger"
+  >("inventory_list");
+
+  // Primary Data Collections
   const [items, setItems] = useState<InventoryItem[]>(() => {
     try {
       const cached = localStorage.getItem("wassup_inventory_items");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        // Map any legacy "equipment" to "tool" for complete safety
-        return parsed.map((item: any) => ({
-          ...item,
-          category: item.category === "equipment" ? "tool" : item.category,
-          categoryLabel: item.category === "equipment" ? "Công cụ dụng cụ (Tools)" : item.categoryLabel
-        }));
-      }
+      if (cached) return JSON.parse(cached);
       return DEFAULT_ITEMS;
     } catch (e) {
       return DEFAULT_ITEMS;
+    }
+  });
+
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    try {
+      const cached = localStorage.getItem("wassup_suppliers");
+      if (cached) return JSON.parse(cached);
+      return DEFAULT_SUPPLIERS;
+    } catch (e) {
+      return DEFAULT_SUPPLIERS;
+    }
+  });
+
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
+    try {
+      const cached = localStorage.getItem("wassup_purchase_orders");
+      if (cached) return JSON.parse(cached);
+      return DEFAULT_PURCHASE_ORDERS;
+    } catch (e) {
+      return DEFAULT_PURCHASE_ORDERS;
     }
   });
 
   const [ledger, setLedger] = useState<StockLedgerRow[]>(() => {
     try {
       const cached = localStorage.getItem("wassup_inventory_ledger");
-      return cached ? JSON.parse(cached) : DEFAULT_LEDGER;
+      if (cached) return JSON.parse(cached);
+      return DEFAULT_LEDGER;
     } catch (e) {
       return DEFAULT_LEDGER;
     }
   });
 
-  // State synchronization and alerts
+  // Filter States for Submenu A
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | "commercial" | "consumable" | "tool" | "spare_part"
+  >("all");
+  const [hasRetailFilter, setHasRetailFilter] = useState(false);
+  const [lowStockFilter, setLowStockFilter] = useState(false);
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Drawer / Modal Controls
+  const [showItemDrawer, setShowItemDrawer] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [showPrdModal, setShowPrdModal] = useState(false);
+
+  // Form State for Item Drawer (S6.2)
+  const [formName, setFormName] = useState("");
+  const [formCode, setFormCode] = useState("");
+  const [formCategory, setFormCategory] = useState<"commercial" | "consumable" | "tool" | "spare_part">("commercial");
+  const [formUnit, setFormUnit] = useState("");
+  const [formUsageUnit, setFormUsageUnit] = useState("");
+  const [formQuantity, setFormQuantity] = useState("");
+  const [formMinThreshold, setFormMinThreshold] = useState("5");
+  const [formCostPrice, setFormCostPrice] = useState("");
+  const [formSalePrice, setFormSalePrice] = useState("");
+  const [formSupplierId, setFormSupplierId] = useState("");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  // Tool Depreciation
+  const [formPurchaseDate, setFormPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
+  const [formUsefulLifeMonths, setFormUsefulLifeMonths] = useState("24");
+  const [formOriginalValue, setFormOriginalValue] = useState("");
+  // Spare Part relation
+  const [formRelatedToolId, setFormRelatedToolId] = useState("");
+
+  // Toast alert
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Sync to LocalStorage
   useEffect(() => {
     localStorage.setItem("wassup_inventory_items", JSON.stringify(items));
   }, [items]);
 
   useEffect(() => {
+    localStorage.setItem("wassup_suppliers", JSON.stringify(suppliers));
+  }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem("wassup_purchase_orders", JSON.stringify(purchaseOrders));
+  }, [purchaseOrders]);
+
+  useEffect(() => {
     localStorage.setItem("wassup_inventory_ledger", JSON.stringify(ledger));
   }, [ledger]);
 
-  // Synchronize from outside updates (e.g. Auto-BOM completed orders in other tabs/views)
+  // Handle external storage updates
   useEffect(() => {
     const handleOutsideUpdate = () => {
       try {
-        const cachedItemsStr = localStorage.getItem("wassup_inventory_items");
-        if (cachedItemsStr) {
-          setItems(prev => {
-            if (JSON.stringify(prev) === cachedItemsStr) return prev;
-            return JSON.parse(cachedItemsStr);
+        const cachedStr = localStorage.getItem("wassup_inventory_items");
+        if (cachedStr) {
+          setItems((prev) => {
+            if (JSON.stringify(prev) === cachedStr) return prev;
+            return JSON.parse(cachedStr);
           });
         }
-        const cachedLedgerStr = localStorage.getItem("wassup_inventory_ledger");
-        if (cachedLedgerStr) {
-          setLedger(prev => {
-            if (JSON.stringify(prev) === cachedLedgerStr) return prev;
-            return JSON.parse(cachedLedgerStr);
-          });
-        }
-      } catch (e) {
-        console.error("Error updating inventory from storage event:", e);
-      }
+      } catch (e) {}
     };
-    
     window.addEventListener("wassup-inventory-update", handleOutsideUpdate);
     window.addEventListener("storage", handleOutsideUpdate);
     return () => {
@@ -238,1461 +443,1192 @@ export default function InventoryModule() {
     };
   }, []);
 
-  // Main navigation & filtering
-  const [activeTab, setActiveTab] = useState<"all" | "commercial" | "consumable" | "tool">("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [ledgerFilter, setLedgerFilter] = useState<"all" | "import" | "export" | "adjust">("all");
-
-  // Right Side Panel Tabs
-  const [activeActionTab, setActiveActionTab] = useState<"movement" | "depreciation" | "haophi">("movement");
-  const [activeModuleTab, setActiveModuleTab] = useState<"inventory" | "counting" | "reports" | "prd">("inventory");
-
-  // Add Material Modal Form State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<"commercial" | "consumable" | "tool">("commercial");
-  const [itemName, setItemName] = useState("");
-  const [itemQuantity, setItemQuantity] = useState("");
-  const [itemUnit, setItemUnit] = useState("");
-  const [itemThreshold, setItemThreshold] = useState("");
-  const [itemPrice, setItemPrice] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
-  const [usefulLifeMonths, setUsefulLifeMonths] = useState("24");
-
-  // Stock Movement Form State (for existing items)
-  const [movementItemId, setMovementItemId] = useState("");
-  const [movementType, setMovementType] = useState<"import" | "export" | "adjust">("import");
-  const [movementQty, setMovementQty] = useState("");
-  const [movementReason, setMovementReason] = useState("");
-  const [movementActor, setMovementActor] = useState("Nguyễn Văn Hùng");
-
-  // Tool Depreciation Edit Form State
-  const [depEditItemId, setDepEditItemId] = useState("");
-  const [depEditOriginalValue, setDepEditOriginalValue] = useState("");
-  const [depEditUsefulLife, setDepEditUsefulLife] = useState("");
-  const [depEditPurchaseDate, setDepEditPurchaseDate] = useState("");
-
-  // Technical Consumption Form State
-  const [compOrderCount, setCompOrderCount] = useState("15");
-  const [compWassupSoap, setCompWassupSoap] = useState("0.5"); // Litres per wash
-  const [calculatedConsumption, setCalculatedConsumption] = useState<number | null>(null);
-
-  // Success message state (toast replacement)
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  // Currency Formatter
+  // Format VND
   const formatVnd = (num: number) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
   };
 
-  // Dynamic Dashboard Stats Calculators
-  const totalCommercialValue = items
-    .filter(i => i.category === "commercial")
-    .reduce((sum, i) => sum + i.quantity * i.pricePerUnit, 0);
-
-  const totalConsumableValue = items
-    .filter(i => i.category === "consumable")
-    .reduce((sum, i) => sum + i.quantity * i.pricePerUnit, 0);
-
-  const totalToolsBookValue = items
-    .filter(i => i.category === "tool")
-    .reduce((sum, i) => sum + (i.currentValue !== undefined ? i.currentValue : (i.originalValue || i.quantity * i.pricePerUnit)), 0);
-
-  const grandTotalAssetValue = totalCommercialValue + totalConsumableValue + totalToolsBookValue;
-
-  const lowStockItems = items.filter(item => item.quantity <= item.minThreshold);
-
-  const totalMonthlyDepreciation = items
-    .filter(i => i.category === "tool")
-    .reduce((sum, i) => {
-      const orig = i.originalValue || (i.pricePerUnit * i.quantity);
-      const life = i.usefulLifeMonths || 24;
-      return sum + Math.round(orig / life);
-    }, 0);
-
-  // Filtered items list
-  const filteredItems = items.filter(item => {
-    const matchesTab = activeTab === "all" || item.category === activeTab;
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
-
-  // Filtered ledger list
-  const filteredLedger = ledger.filter(row => {
-    return ledgerFilter === "all" || row.type === ledgerFilter;
-  });
-
-  // Form Submit Handlers
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!itemName.trim() || !itemQuantity || !itemUnit.trim() || !itemPrice) {
-      showToast("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-
-    const qty = Number(itemQuantity);
-    const unitPrice = Number(itemPrice);
-    const threshold = Number(itemThreshold) || 5;
-
-    const newItem: InventoryItem = {
-      id: "inv_" + Date.now(),
-      name: itemName.trim(),
-      category: selectedCategory,
-      categoryLabel: selectedCategory === "commercial" ? "Sản phẩm thương mại" : selectedCategory === "consumable" ? "Vật tư tiêu hao" : "Công cụ dụng cụ (Tools)",
-      quantity: qty,
-      unit: itemUnit.trim(),
-      minThreshold: threshold,
-      pricePerUnit: unitPrice,
-      lastUpdated: new Date().toISOString()
-    };
-
-    if (selectedCategory === "tool") {
-      const origValue = qty * unitPrice;
-      newItem.purchaseDate = purchaseDate;
-      newItem.usefulLifeMonths = Number(usefulLifeMonths) || 24;
-      newItem.originalValue = origValue;
-      newItem.currentValue = origValue;
-    }
-
-    setItems([...items, newItem]);
-
-    // Add row to Ledger
-    const newLedgerRow: StockLedgerRow = {
-      id: "lg_" + Date.now(),
-      itemId: newItem.id,
-      itemName: newItem.name,
-      date: new Date().toISOString(),
-      type: "import",
-      typeLabel: "Khai báo nhập kho ban đầu",
-      quantityChanged: qty,
-      balanceAfter: qty,
-      actor: "Nguyễn Văn Hùng",
-      reason: `Khai báo nhập kho hệ thống (${newItem.categoryLabel})`
-    };
-
-    setLedger([newLedgerRow, ...ledger]);
-    showToast(`Khai báo thành công vật tư: ${newItem.name}`);
-
-    // Reset Form
-    setItemName("");
-    setItemQuantity("");
-    setItemUnit("");
-    setItemThreshold("");
-    setItemPrice("");
-    setPurchaseDate(new Date().toISOString().split("T")[0]);
-    setUsefulLifeMonths("24");
-    setShowAddModal(false);
+  // Open Drawer S6.2 Add
+  const openAddItemDrawer = () => {
+    setEditingItem(null);
+    setFormName("");
+    setFormCode("SKU-" + Math.floor(1000 + Math.random() * 9000));
+    setFormCategory("commercial");
+    setFormUnit("Cái");
+    setFormUsageUnit("");
+    setFormQuantity("10");
+    setFormMinThreshold("5");
+    setFormCostPrice("100000");
+    setFormSalePrice("");
+    setFormSupplierId(suppliers[0]?.id || "");
+    setFormImageUrl("");
+    setFormPurchaseDate(new Date().toISOString().split("T")[0]);
+    setFormUsefulLifeMonths("24");
+    setFormOriginalValue("");
+    setFormRelatedToolId("");
+    setShowItemDrawer(true);
   };
 
-  const handleStockMovementSubmit = (e: React.FormEvent) => {
+  // Open Drawer S6.2 Edit
+  const openEditItemDrawer = (item: InventoryItem) => {
+    setEditingItem(item);
+    setFormName(item.name);
+    setFormCode(item.code || item.id);
+    setFormCategory(item.category);
+    setFormUnit(item.unit);
+    setFormUsageUnit(item.usageUnit || "");
+    setFormQuantity(item.quantity.toString());
+    setFormMinThreshold(item.minThreshold.toString());
+    setFormCostPrice((item.avgCost || item.costPrice || item.pricePerUnit || 0).toString());
+    setFormSalePrice(item.salePrice ? item.salePrice.toString() : "");
+    setFormSupplierId(item.supplierId || "");
+    setFormImageUrl(item.imageUrl || "");
+    setFormPurchaseDate(item.purchaseDate || new Date().toISOString().split("T")[0]);
+    setFormUsefulLifeMonths((item.usefulLifeMonths || 24).toString());
+    setFormOriginalValue((item.originalValue || 0).toString());
+    setFormRelatedToolId(item.relatedToolItemId || "");
+    setShowItemDrawer(true);
+  };
+
+  // Save Item (Drawer S6.2)
+  const handleSaveItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movementItemId || !movementQty) {
-      showToast("Vui lòng chọn vật tư và nhập số lượng!");
+    if (!formName.trim() || !formQuantity || !formUnit.trim()) {
+      showToast("Vui lòng điền đầy đủ Tên vật tư, Số lượng và Đơn vị tính!");
       return;
     }
 
-    const qty = Number(movementQty);
-    if (qty <= 0) {
-      showToast("Số lượng điều chuyển phải lớn hơn 0!");
-      return;
+    const qty = Number(formQuantity);
+    const threshold = Number(formMinThreshold) || 5;
+    const cost = Number(formCostPrice) || 0;
+    const sale = formSalePrice.trim() !== "" ? Number(formSalePrice) : null;
+    const sup = suppliers.find((s) => s.id === formSupplierId);
+    const relTool = items.find((i) => i.id === formRelatedToolId);
+
+    const categoryLabels: Record<string, string> = {
+      commercial: "Nhóm 1 — Hàng thương mại",
+      consumable: "Nhóm 2 — Vật liệu tiêu hao",
+      tool: "Nhóm 3 — Công cụ dụng cụ",
+      spare_part: "Nhóm 4 — Phụ tùng thay thế",
+    };
+
+    if (editingItem) {
+      // Edit
+      const updated = items.map((i) =>
+        i.id === editingItem.id
+          ? {
+              ...i,
+              name: formName.trim(),
+              code: formCode.trim() || i.code,
+              category: formCategory,
+              categoryLabel: categoryLabels[formCategory],
+              quantity: qty,
+              unit: formUnit.trim(),
+              usageUnit: formUsageUnit.trim() || undefined,
+              minThreshold: threshold,
+              costPrice: cost,
+              avgCost: i.avgCost || cost,
+              pricePerUnit: cost,
+              salePrice: sale,
+              supplierId: formSupplierId || undefined,
+              supplierName: sup ? sup.name : undefined,
+              imageUrl: formImageUrl.trim() || undefined,
+              lastUpdated: new Date().toISOString(),
+              purchaseDate: formCategory === "tool" ? formPurchaseDate : undefined,
+              usefulLifeMonths: formCategory === "tool" ? Number(formUsefulLifeMonths) : undefined,
+              originalValue: formCategory === "tool" ? Number(formOriginalValue) || cost * qty : undefined,
+              relatedToolItemId: formCategory === "spare_part" ? formRelatedToolId || undefined : undefined,
+              relatedToolName: formCategory === "spare_part" && relTool ? relTool.name : undefined,
+            }
+          : i
+      );
+      setItems(updated);
+      showToast(`Đã cập nhật thông tin vật tư "${formName.trim()}"`);
+    } else {
+      // Add new
+      const newItem: InventoryItem = {
+        id: "inv_" + Date.now(),
+        code: formCode.trim() || `SKU-${Date.now()}`,
+        name: formName.trim(),
+        category: formCategory,
+        categoryLabel: categoryLabels[formCategory],
+        quantity: qty,
+        unit: formUnit.trim(),
+        usageUnit: formUsageUnit.trim() || undefined,
+        minThreshold: threshold,
+        costPrice: cost,
+        avgCost: cost,
+        pricePerUnit: cost,
+        salePrice: sale,
+        supplierId: formSupplierId || undefined,
+        supplierName: sup ? sup.name : undefined,
+        imageUrl: formImageUrl.trim() || undefined,
+        lastUpdated: new Date().toISOString(),
+        purchaseDate: formCategory === "tool" ? formPurchaseDate : undefined,
+        usefulLifeMonths: formCategory === "tool" ? Number(formUsefulLifeMonths) : undefined,
+        originalValue: formCategory === "tool" ? Number(formOriginalValue) || cost * qty : undefined,
+        relatedToolItemId: formCategory === "spare_part" ? formRelatedToolId || undefined : undefined,
+        relatedToolName: formCategory === "spare_part" && relTool ? relTool.name : undefined,
+      };
+      setItems([newItem, ...items]);
+
+      // Write ledger
+      const newLedgerRow: StockLedgerRow = {
+        id: "lg_" + Date.now(),
+        itemId: newItem.id,
+        itemName: newItem.name,
+        date: new Date().toISOString(),
+        type: "import",
+        typeLabel: "Khởi tạo vật tư mới",
+        quantityChanged: qty,
+        balanceAfter: qty,
+        actor: "Trần Minh Quân (Master Admin)",
+        reason: "Khởi tạo danh mục vật tư mới",
+      };
+      setLedger([newLedgerRow, ...ledger]);
+      showToast(`Đã thêm vật tư mới "${newItem.name}" thành công!`);
     }
 
-    const targetItem = items.find(i => i.id === movementItemId);
-    if (!targetItem) {
-      showToast("Không tìm thấy vật tư được chọn!");
-      return;
-    }
+    setShowItemDrawer(false);
+  };
 
-    let change = qty;
-    if (movementType === "export") {
-      change = -qty;
-    }
+  // Confirm Manual Export (S6.11)
+  const handleConfirmManualExport = (data: {
+    itemId: string;
+    qty: number;
+    reason: any;
+    reasonNote?: string;
+    relatedToolItemId?: string;
+  }) => {
+    const foundItem = items.find((i) => i.id === data.itemId);
+    if (!foundItem) return;
 
-    const newQty = targetItem.quantity + change;
-    if (newQty < 0) {
-      showToast(`Số lượng tồn kho không đủ để xuất! Hiện tại chỉ còn: ${targetItem.quantity} ${targetItem.unit}`);
-      return;
-    }
+    const newQty = foundItem.quantity - data.qty;
+    const updated = items.map((i) =>
+      i.id === data.itemId
+        ? { ...i, quantity: newQty, lastUpdated: new Date().toISOString() }
+        : i
+    );
+    setItems(updated);
 
-    // Update item quantity & lastUpdated
-    setItems(prevItems => prevItems.map(item => {
-      if (item.id === movementItemId) {
-        const updatedItem = {
-          ...item,
-          quantity: newQty,
-          lastUpdated: new Date().toISOString()
-        };
-        // Re-scale original asset value for tools if quantity is adjusted directly
-        if (item.category === "tool") {
-          const ratio = item.quantity > 0 ? newQty / item.quantity : 1;
-          updatedItem.originalValue = Math.round((item.originalValue || (item.pricePerUnit * item.quantity)) * ratio);
-          updatedItem.currentValue = Math.round((item.currentValue !== undefined ? item.currentValue : (item.originalValue || (item.pricePerUnit * item.quantity))) * ratio);
-        }
-        return updatedItem;
-      }
-      return item;
-    }));
+    // Save manual adjustment log
+    try {
+      const cachedAdjustments = localStorage.getItem("wassup_manual_adjustments");
+      const currentAdj = cachedAdjustments ? JSON.parse(cachedAdjustments) : [];
+      const relTool = items.find((i) => i.id === data.relatedToolItemId);
 
-    // Register Stock Ledger Row
-    const newRow: StockLedgerRow = {
+      currentAdj.unshift({
+        id: "SA-2026-" + Math.floor(100 + Math.random() * 900),
+        itemId: foundItem.id,
+        itemName: foundItem.name,
+        qty: data.qty,
+        reason: data.reason,
+        reasonLabel: MANUAL_REASON_LABELS[data.reason as keyof typeof MANUAL_REASON_LABELS],
+        reasonNote: data.reasonNote,
+        relatedToolItemId: data.relatedToolItemId,
+        relatedToolName: relTool ? relTool.name : undefined,
+        createdBy: "Nguyễn Văn Hùng (Quản lý - S6.11)",
+        at: new Date().toISOString(),
+      });
+      localStorage.setItem("wassup_manual_adjustments", JSON.stringify(currentAdj));
+    } catch (e) {}
+
+    // Ledger row
+    const newLedger: StockLedgerRow = {
       id: "lg_" + Date.now(),
-      itemId: targetItem.id,
-      itemName: targetItem.name,
+      itemId: foundItem.id,
+      itemName: foundItem.name,
       date: new Date().toISOString(),
-      type: movementType,
-      typeLabel: movementType === "import" ? "Nhập kho bổ sung" : movementType === "export" ? "Xuất kho sử dụng" : "Điều chỉnh kho",
-      quantityChanged: change,
+      type: "export",
+      typeLabel: `Xuất kho thủ công (${MANUAL_REASON_LABELS[data.reason as keyof typeof MANUAL_REASON_LABELS]})`,
+      quantityChanged: -data.qty,
       balanceAfter: newQty,
-      actor: movementActor.trim() || "Thủ kho",
-      reason: movementReason.trim() || (movementType === "import" ? "Nhập hàng định kỳ" : movementType === "export" ? "Cấp phát thi công" : "Khấu kiểm kê")
+      actor: "Nguyễn Văn Hùng (Quản lý)",
+      reason: data.reasonNote || MANUAL_REASON_LABELS[data.reason as keyof typeof MANUAL_REASON_LABELS],
     };
+    setLedger([newLedger, ...ledger]);
 
-    setLedger(prev => [newRow, ...prev]);
-    showToast(`Đã hạch toán biến động kho cho: ${targetItem.name}`);
-
-    // Reset Form
-    setMovementQty("");
-    setMovementReason("");
+    showToast(
+      `Đã xuất kho thủ công ${data.qty} ${foundItem.unit} "${foundItem.name}"! Tồn còn: ${newQty} ${foundItem.unit}`
+    );
   };
 
-  const handleRunAllDepreciation = () => {
-    const toolItems = items.filter(i => i.category === "tool");
-    if (toolItems.length === 0) {
-      showToast("Không tìm thấy Công cụ dụng cụ nào trong danh mục!");
-      return;
-    }
+  // Filter items in Submenu A Tab 1
+  const filteredItems = items.filter((item) => {
+    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+    const matchesRetail = hasRetailFilter ? Boolean(item.salePrice && item.salePrice > 0) : true;
+    const matchesLowStock = lowStockFilter ? item.quantity <= item.minThreshold : true;
+    const matchesSupplier = supplierFilter === "all" ? true : item.supplierId === supplierFilter;
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    let totalExpense = 0;
-    const timestamp = new Date().toISOString();
-    const newLedgerRows: StockLedgerRow[] = [];
+    return (
+      matchesCategory &&
+      matchesRetail &&
+      matchesLowStock &&
+      matchesSupplier &&
+      matchesSearch
+    );
+  });
 
-    const updatedItems = items.map(item => {
-      if (item.category === "tool") {
-        const orig = item.originalValue || (item.pricePerUnit * item.quantity);
-        const life = item.usefulLifeMonths || 24;
-        const monthlyDep = Math.round(orig / life);
-        const curVal = item.currentValue !== undefined ? item.currentValue : orig;
+  // Category Counts
+  const commercialCount = items.filter((i) => i.category === "commercial").length;
+  const consumableCount = items.filter((i) => i.category === "consumable").length;
+  const toolCount = items.filter((i) => i.category === "tool").length;
+  const sparePartCount = items.filter((i) => i.category === "spare_part").length;
+  const lowStockCount = items.filter((i) => i.quantity <= i.minThreshold).length;
+  const retailCount = items.filter((i) => i.salePrice && i.salePrice > 0).length;
 
-        if (curVal <= 0) return item; // Already fully depreciated
+  // Total Valuations
+  const totalValueCommercial = items
+    .filter((i) => i.category === "commercial")
+    .reduce((sum, i) => sum + i.quantity * (i.avgCost || i.costPrice || i.pricePerUnit), 0);
+  const totalValueConsumable = items
+    .filter((i) => i.category === "consumable")
+    .reduce((sum, i) => sum + i.quantity * (i.avgCost || i.costPrice || i.pricePerUnit), 0);
+  const totalValueTools = items
+    .filter((i) => i.category === "tool")
+    .reduce(
+      (sum, i) =>
+        sum + (i.currentValue !== undefined ? i.currentValue : i.quantity * (i.avgCost || i.costPrice || i.pricePerUnit)),
+      0
+    );
+  const totalValueSpareParts = items
+    .filter((i) => i.category === "spare_part")
+    .reduce((sum, i) => sum + i.quantity * (i.avgCost || i.costPrice || i.pricePerUnit), 0);
+  const totalInventoryValue =
+    totalValueCommercial + totalValueConsumable + totalValueTools + totalValueSpareParts;
 
-        const nextVal = Math.max(curVal - monthlyDep, 0);
-        const actualDep = curVal - nextVal;
-        totalExpense += actualDep;
-
-        newLedgerRows.push({
-          id: `lg_dep_${item.id}_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-          itemId: item.id,
-          itemName: item.name,
-          date: timestamp,
-          type: "adjust",
-          typeLabel: "Khấu hao TSCĐ",
-          quantityChanged: 0,
-          balanceAfter: item.quantity,
-          actor: "Hệ thống tự động",
-          reason: `Trích khấu hao thẳng hàng tháng (-${formatVnd(actualDep)}) · Giá trị còn lại: ${formatVnd(nextVal)}`
-        });
-
+  const getSubmenuHeaderInfo = () => {
+    switch (activeSubmenu) {
+      case "A":
         return {
-          ...item,
-          currentValue: nextVal,
-          lastUpdated: timestamp
+          badge: "SUBMENU A — M6.1 (PRD v2.3)",
+          title: "QUẢN LÝ VẬT TƯ (NHẬP – XUẤT – TỒN)",
+          description: "Quản lý danh mục kho vật tư, đơn đặt hàng PO nhập kho, đề xuất định mức BOM, xuất kho bán lẻ & sổ cái biến động vật tư.",
+          icon: Boxes,
+          iconColor: "text-purple-600 bg-purple-50"
         };
-      }
-      return item;
-    });
-
-    if (totalExpense === 0) {
-      showToast("Toàn bộ máy móc & công cụ đã được khấu hao hết giá trị gốc!");
-      return;
-    }
-
-    setItems(updatedItems);
-    if (newLedgerRows.length > 0) {
-      setLedger(prev => [...newLedgerRows, ...prev]);
-    }
-    showToast(`Đã hạch toán khấu hao thành công! Tổng giá trị hao mòn tài sản: -${formatVnd(totalExpense)}`);
-  };
-
-  const handleUpdateDepreciationConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!depEditItemId) {
-      showToast("Vui lòng chọn Công cụ dụng cụ!");
-      return;
-    }
-
-    setItems(prev => prev.map(item => {
-      if (item.id === depEditItemId) {
-        const origVal = Number(depEditOriginalValue);
-        const usefulLife = Number(depEditUsefulLife);
+      case "B":
         return {
-          ...item,
-          originalValue: origVal,
-          currentValue: Math.min(item.currentValue ?? origVal, origVal), // Ensure remaining value isn't above new original cost
-          usefulLifeMonths: usefulLife,
-          purchaseDate: depEditPurchaseDate,
-          lastUpdated: new Date().toISOString()
+          badge: "SUBMENU B — M6.2 (PRD v2.3)",
+          title: "QUẢN LÝ NHÀ CUNG CẤP & ĐƠN HÀNG PO",
+          description: "Quản lý danh sách đối tác nhà cung cấp, hồ sơ chi tiết, đánh giá xếp hạng, đơn đặt hàng PO nhập kho & lịch sử công nợ.",
+          icon: Truck,
+          iconColor: "text-blue-600 bg-blue-50"
         };
-      }
-      return item;
-    }));
-
-    showToast("Đã cập nhật hồ sơ khấu hao thiết bị thành công!");
-    setDepEditItemId("");
-    setDepEditOriginalValue("");
-    setDepEditUsefulLife("");
-    setDepEditPurchaseDate("");
-  };
-
-  const handleCalculateHaoPhi = (e: React.FormEvent) => {
-    e.preventDefault();
-    const totalWashes = Number(compOrderCount) || 0;
-    const ratePerWash = Number(compWassupSoap) || 0;
-    const totalConsumed = totalWashes * ratePerWash;
-
-    setCalculatedConsumption(totalConsumed);
-
-    // Auto deduct soap can (20L per can) proportional to calculated soap usage
-    const cansDeducted = Math.floor(totalConsumed / 20) || 1;
-    const timestamp = new Date().toISOString();
-    let logRow: StockLedgerRow | null = null;
-
-    setItems(prevItems => prevItems.map(item => {
-      if (item.id === "inv-02") {
-        const remaining = Math.max(item.quantity - cansDeducted, 0);
-
-        logRow = {
-          id: "lg_calc_" + Date.now() + "_" + Math.floor(Math.random() * 10000),
-          itemId: item.id,
-          itemName: item.name,
-          date: timestamp,
-          type: "export",
-          typeLabel: "Hao phí định mức",
-          quantityChanged: -cansDeducted,
-          balanceAfter: remaining,
-          actor: "Hệ thống tự động",
-          reason: `Auto-BOM: Trừ bọt tuyết tự động dựa trên số đơn hàng (${totalWashes} lượt xe x ${ratePerWash}L/lượt)`
-        };
-
+      case "C":
         return {
-          ...item,
-          quantity: remaining,
-          lastUpdated: timestamp
+          badge: "SUBMENU C — M6.3 (PRD v2.3)",
+          title: "KIỂM KHO ĐỊNH KỲ & ĐIỀU CHỈNH CHÊNH LỆCH",
+          description: "Lập phiếu kiểm kê kho thực tế, đối soát chênh lệch với dữ liệu tồn kho trên hệ thống & tự động điều chỉnh số lượng.",
+          icon: ClipboardList,
+          iconColor: "text-emerald-600 bg-emerald-50"
         };
-      }
-      return item;
-    }));
-
-    if (logRow) {
-      setLedger(prev => [logRow!, ...prev]);
-    }
-
-    showToast(`Đã tự động trừ bọt tuyết trong kho: -${cansDeducted} can 20L`);
-  };
-
-  const handleDeleteItem = (id: string) => {
-    const target = items.find(i => i.id === id);
-    if (!target) return;
-
-    if (confirm(`Bạn có chắc chắn muốn xóa vật tư "${target.name}" hoàn toàn khỏi danh mục không?`)) {
-      setItems(items.filter(i => i.id !== id));
-      showToast(`Đã xóa thành công vật tư: ${target.name}`);
+      case "D":
+        return {
+          badge: "SUBMENU D — M6.4 (PRD v2.3)",
+          title: "BÁO CÁO KHO & CẢNH BÁO TỒN THẤP",
+          description: "Báo cáo tổng quan giá trị tồn kho, thống kê biến động vật tư nhập xuất & cảnh báo tự động các mặt hàng dưới định mức an toàn.",
+          icon: Activity,
+          iconColor: "text-amber-600 bg-amber-50"
+        };
+      case "E":
+        return {
+          badge: "SUBMENU E — M6.5 (PRD v2.3)",
+          title: "QUY TRÌNH PRD & CẨM NANG CHUẨN KHO MODULE 6",
+          description: "Tài liệu Yêu cầu Sản phẩm (PRD), định mức vật tư kỹ thuật BOM, luồng nhập xuất & quy định kiểm đếm kho Car Care.",
+          icon: BookOpen,
+          iconColor: "text-purple-600 bg-purple-50"
+        };
     }
   };
 
-  // Pre-load depreciation editor when a tool is selected
-  useEffect(() => {
-    if (depEditItemId) {
-      const selected = items.find(i => i.id === depEditItemId);
-      if (selected) {
-        setDepEditOriginalValue((selected.originalValue || (selected.pricePerUnit * selected.quantity)).toString());
-        setDepEditUsefulLife((selected.usefulLifeMonths || 24).toString());
-        setDepEditPurchaseDate(selected.purchaseDate || new Date().toISOString().split("T")[0]);
-      }
-    }
-  }, [depEditItemId, items]);
+  const currentHeader = getSubmenuHeaderInfo();
+  const HeaderIcon = currentHeader.icon;
 
   return (
-    <div className="space-y-6">
-      {/* TOAST NOTIFICATION BANNER */}
+    <div className="space-y-6 animate-fadeIn pb-12 font-sans" id="module-6-inventory">
+      {/* Toast popup */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
-            initial={{ opacity: 0, y: -50 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="fixed top-20 right-6 z-50 bg-matte-black text-brand-green px-5 py-3.5 rounded-xl border border-brand-green/30 shadow-2xl flex items-center gap-3 font-sans text-xs font-bold"
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-5 right-5 z-[9999] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-purple-500/30 font-sans text-xs font-bold flex items-center gap-2.5"
           >
-            <CheckCircle2 className="h-4 w-4 text-brand-green animate-bounce" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-2">
-        <div className="px-4">
-
-          <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight">KHO VẬT TƯ & KHẤU HAO THIẾT BỊ</h1>
-          <p className="text-mid-gray text-xs mt-1 font-sans">
-            Giám sát nguyên vật liệu, sản phẩm thương mại, công cụ bãi rửa, và hạch toán hao mòn khấu hao tài sản hàng kỳ.
+      {/* BORDERLESS HEADER SECTION */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-1">
+        <div className="px-1">
+          <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl shrink-0 ${currentHeader.iconColor}`}>
+              <HeaderIcon className="h-6 w-6" />
+            </div>
+            {currentHeader.title}
+          </h1>
+          <p className="text-mid-gray text-xs font-sans mt-1 max-w-3xl">
+            {currentHeader.description}
           </p>
         </div>
-
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-matte-black text-white hover:bg-gray-900 text-xs font-extrabold font-display uppercase transition shadow-md cursor-pointer self-stretch sm:self-auto text-center justify-center"
-        >
-          <Plus className="h-4 w-4 stroke-[3]" />
-          KHAI BÁO VẬT TƯ MỚI
-        </button>
       </div>
 
-      {/* MODULE TABS NAVIGATION */}
-      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveModuleTab("inventory")}
-          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
-            activeModuleTab === "inventory"
-              ? "bg-[#18181b] text-white shadow-xs"
-              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
-          }`}
-        >
-          DANH MỤC THẺ KHO
-        </button>
-        <button
-          onClick={() => setActiveModuleTab("counting")}
-          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
-            activeModuleTab === "counting"
-              ? "bg-[#18181b] text-white shadow-xs"
-              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
-          }`}
-        >
-          KIỂM KHO ĐỊNH KỲ (AUDIT)
-        </button>
-        <button
-          onClick={() => setActiveModuleTab("reports")}
-          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
-            activeModuleTab === "reports"
-              ? "bg-[#18181b] text-white shadow-xs"
-              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
-          }`}
-        >
-          BÁO CÁO PHÂN TÍCH
-        </button>
-        <button
-          onClick={() => setActiveModuleTab("prd")}
-          className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
-            activeModuleTab === "prd"
-              ? "bg-[#18181b] text-white shadow-xs"
-              : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
-          }`}
-        >
-          QUY TRÌNH CHUẨN PRD
-        </button>
-      </div>
 
-      {activeModuleTab === "inventory" && (
-        <>
-          {/* STATS OVERVIEW CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* STAT 1: Total Asset value */}
-        <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] text-mid-gray uppercase font-extrabold tracking-wider font-sans">TỔNG TRỊ GIÁ TÀI SẢN KHO</span>
-            <span className="text-xl font-black text-matte-black block font-sans">{formatVnd(grandTotalAssetValue)}</span>
-            <span className="text-[9px] text-forest-green font-sans block">Gồm cả khấu hao Công cụ dụng cụ</span>
-          </div>
-          <div className="h-10 w-10 rounded-xl bg-emerald-50 text-forest-green flex items-center justify-center border border-emerald-100 shrink-0">
-            <DollarSign className="h-5 w-5" />
-          </div>
-        </div>
 
-        {/* STAT 2: Alert Items */}
-        <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] text-mid-gray uppercase font-extrabold tracking-wider font-sans">VẬT TƯ CẦN NHẬP GẤP</span>
-            <span className="text-xl font-black block text-matte-black font-sans">
-              {lowStockItems.length} <span className="text-xs font-sans text-mid-gray">mặt hàng</span>
-            </span>
-            <span className={`text-[9px] font-sans font-semibold block ${lowStockItems.length > 0 ? "text-red-500 animate-pulse" : "text-mid-gray"}`}>
-              {lowStockItems.length > 0 ? "⚠️ Dưới ngưỡng an toàn" : "✓ Kho đạt trạng thái an toàn"}
-            </span>
-          </div>
-          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border shrink-0 ${
-            lowStockItems.length > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-50 border-gray-100 text-mid-gray"
-          }`}>
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-        </div>
-
-        {/* STAT 3: Monthly depreciation expense */}
-        <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] text-mid-gray uppercase font-extrabold tracking-wider font-sans">ƯỚC KHẤU HAO THÁNG</span>
-            <span className="text-xl font-black text-matte-black block font-sans">-{formatVnd(totalMonthlyDepreciation)}</span>
-            <span className="text-[9px] text-purple-600 font-sans block">Trích thẳng hàng tháng (Straight Line)</span>
-          </div>
-          <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 shrink-0">
-            <TrendingDown className="h-5 w-5" />
-          </div>
-        </div>
-
-        {/* STAT 4: Total stock movements */}
-        <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] text-mid-gray uppercase font-extrabold tracking-wider font-sans">TẦN SUẤT BIẾN ĐỘNG KHO</span>
-            <span className="text-xl font-black block text-matte-black font-sans">
-              {ledger.length} <span className="text-xs font-sans text-mid-gray">lần giao dịch</span>
-            </span>
-            <span className="text-[9px] text-blue-600 font-sans block">Ghi nhận vào sổ thẻ kho thực tế</span>
-          </div>
-          <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-            <History className="h-5 w-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* EMERGENCY WARNING OVERLAY */}
-      {lowStockItems.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-5 rounded-r-2xl space-y-3 shadow-sm animate-fadeIn">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5 animate-bounce" />
-            <div>
-              <h4 className="font-display font-black text-xs uppercase tracking-wider text-red-900">🔔 PHÁT HIỆN HÓA CHẤT / VẬT TƯ CHẠM NGƯỠNG ĐỎ</h4>
-              <p className="text-xs text-red-800 leading-snug mt-0.5 font-sans font-medium">
-                Nguyên vật liệu dưới đây đã giảm sâu dưới hạn định mức tiêu chuẩn. Hệ thống đã gửi cảnh báo Telegram trực tiếp đến Master Admin để phê duyệt ngân sách mua bổ sung.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 pt-1 border-t border-red-200/50">
-            {lowStockItems.map(item => (
-              <span key={item.id} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white text-red-600 font-black text-[10px] font-sans border border-red-200 shadow-sm">
-                <span className="h-1.5 w-1.5 bg-red-500 rounded-full animate-ping" />
-                {item.name}: Còn {item.quantity} {item.unit} (Hạn mức: {item.minThreshold})
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TWO-COLUMN GRID WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* LEFT COLUMN: MAIN INVENTORY & LEDGER (2/3 width) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Main List Box */}
-          <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-[#e5e5e5]">
-              <div className="flex items-center gap-2">
-                <Boxes className="h-5 w-5 text-forest-green" />
-                <h2 className="font-display font-black text-sm text-matte-black uppercase tracking-wider">
-                  THẺ KHO VẬT TƯ & THIẾT BỊ CHI TIẾT
-                </h2>
-              </div>
-
-              {/* Category selector pills */}
-              <div className="flex flex-wrap gap-1 bg-warm-white p-1 rounded-xl border border-[#e5e5e5]">
-                <button
-                  onClick={() => setActiveTab("all")}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase font-display transition cursor-pointer ${
-                    activeTab === "all" ? "bg-white text-matte-black shadow-xs" : "text-mid-gray hover:text-matte-black"
-                  }`}
-                >
-                  Tất cả
-                </button>
-                <button
-                  onClick={() => setActiveTab("commercial")}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase font-display transition cursor-pointer ${
-                    activeTab === "commercial" ? "bg-white text-matte-black shadow-xs" : "text-mid-gray hover:text-matte-black"
-                  }`}
-                >
-                  Thương mại
-                </button>
-                <button
-                  onClick={() => setActiveTab("consumable")}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase font-display transition cursor-pointer ${
-                    activeTab === "consumable" ? "bg-white text-matte-black shadow-xs" : "text-mid-gray hover:text-matte-black"
-                  }`}
-                >
-                  Tiêu hao
-                </button>
-                <button
-                  onClick={() => setActiveTab("tool")}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase font-display transition cursor-pointer ${
-                    activeTab === "tool" ? "bg-white text-matte-black shadow-xs" : "text-mid-gray hover:text-matte-black"
-                  }`}
-                >
-                  Công cụ
-                </button>
-              </div>
-            </div>
-
-            {/* Search filter row */}
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#bcbcbc]" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm vật tư theo tên, chủng loại hóa chất..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-warm-white/50 border border-[#e5e5e5] rounded-xl pl-10 pr-4 py-2.5 text-xs font-sans text-matte-black placeholder:text-[#a5a5a5] focus:outline-none focus:border-forest-green focus:bg-white transition"
-              />
-            </div>
-
-            {/* Inventory Table Container */}
-            <div className="overflow-x-auto border border-[#e5e5e5] rounded-xl">
-              <table className="w-full text-left border-collapse font-sans text-xs">
-                <thead>
-                  <tr className="bg-warm-white text-mid-gray border-b border-[#e5e5e5] font-extrabold uppercase text-[10px] tracking-wider">
-                    <th className="p-4">Tên vật tư / Thiết bị</th>
-                    <th className="p-4">Phân nhóm</th>
-                    <th className="p-4 text-center">Tồn thực tế</th>
-                    <th className="p-4 text-right">Đơn giá</th>
-                    <th className="p-4 text-right">Giá trị sổ sách</th>
-                    <th className="p-4 text-center">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e5e5e5]">
-                  {filteredItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-mid-gray">
-                        Không tìm thấy nguyên vật liệu nào khớp với bộ lọc tìm kiếm.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredItems.map(item => {
-                      const isLow = item.quantity <= item.minThreshold;
-                      const bookValue = item.category === "tool"
-                        ? (item.currentValue !== undefined ? item.currentValue : (item.originalValue || (item.quantity * item.pricePerUnit)))
-                        : item.quantity * item.pricePerUnit;
-
-                      return (
-                        <tr
-                          key={item.id}
-                          className={`hover:bg-warm-white/40 transition ${
-                            isLow ? "bg-red-500/5 text-red-900 font-medium" : ""
-                          }`}
-                        >
-                          <td className="p-4">
-                            <div className="space-y-0.5">
-                              <span className="font-extrabold text-sm text-matte-black block leading-snug">{item.name}</span>
-                              <span className="text-[9px] text-[#a5a5a5] font-sans tracking-wider block uppercase">
-                                ID: {item.id} {item.purchaseDate ? `· Nhập ngày ${new Date(item.purchaseDate).toLocaleDateString("vi-VN")}` : ""}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                              item.category === "commercial" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                              item.category === "consumable" ? "bg-blue-50 text-blue-700 border border-blue-100" :
-                              "bg-purple-50 text-purple-700 border border-purple-100"
-                            }`}>
-                              {item.category === "commercial" ? <Tag className="h-2.5 w-2.5" /> :
-                               item.category === "consumable" ? <Briefcase className="h-2.5 w-2.5" /> :
-                               <Wrench className="h-2.5 w-2.5" />}
-                              {item.category === "commercial" ? "Thương mại" :
-                               item.category === "consumable" ? "Tiêu hao" :
-                               "Công cụ"}
-                            </span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <div className="flex flex-col items-center">
-                              <span className={`text-sm font-black ${isLow ? "text-red-600 font-extrabold" : "text-matte-black"}`}>
-                                {item.quantity} {item.unit}
-                              </span>
-                              <span className={`text-[8px] font-black uppercase tracking-wide mt-0.5 px-1.5 py-0.2 rounded-full ${
-                                isLow ? "bg-red-100 text-red-800 animate-pulse" : "bg-gray-100 text-[#a5a5a5]"
-                              }`}>
-                                Min: {item.minThreshold}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-right font-sans font-bold text-matte-black">
-                            {formatVnd(item.pricePerUnit)}
-                          </td>
-                          <td className="p-4 text-right font-sans text-sm text-matte-black font-extrabold">
-                            <div className="space-y-0.5">
-                              <span className={item.category === "tool" ? "text-purple-700" : "text-forest-green"}>
-                                {formatVnd(bookValue)}
-                              </span>
-                              {item.category === "tool" && item.originalValue && item.currentValue !== undefined && item.currentValue < item.originalValue && (
-                                <span className="text-[9px] text-[#a5a5a5] block font-sans line-through decoration-red-400">
-                                  {formatVnd(item.originalValue)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center justify-center gap-2">
-                              {/* Direct action to quickly load into stock movement or edit depreciation if tool */}
-                              <button
-                                onClick={() => {
-                                  setMovementItemId(item.id);
-                                  if (item.category === "tool") {
-                                    setDepEditItemId(item.id);
-                                    setActiveActionTab("depreciation");
-                                  } else {
-                                    setActiveActionTab("movement");
-                                  }
-                                  showToast(`Đã nạp vật tư "${item.name}" vào bảng xử lý nhanh!`);
-                                }}
-                                className="p-1.5 rounded-lg border border-[#e5e5e5] hover:bg-matte-black hover:text-white transition cursor-pointer"
-                                title="Nạp nhanh cấu hình/biến động"
-                              >
-                                <ArrowRight className="h-3.5 w-3.5" />
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteItem(item.id)}
-                                className="p-1.5 rounded-lg border border-red-100 hover:bg-red-50 hover:text-red-600 text-mid-gray transition cursor-pointer"
-                                title="Xóa vĩnh viễn"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* STOCK LEDGER TIMELINE HISTORY */}
-          <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-[#e5e5e5]">
-              <div className="flex items-center gap-2">
-                <History className="h-5 w-5 text-forest-green" />
-                <h3 className="font-display font-black text-sm text-matte-black uppercase tracking-wider">
-                  SỔ THẺ KHO VẬT TƯ (TRANSACTION GENERAL LEDGER)
-                </h3>
-              </div>
-
-              {/* Ledger filter pills */}
-              <div className="flex bg-warm-white p-1 rounded-xl border border-[#e5e5e5]">
-                <button
-                  onClick={() => setLedgerFilter("all")}
-                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase font-display transition cursor-pointer ${
-                    ledgerFilter === "all" ? "bg-white text-matte-black" : "text-mid-gray"
-                  }`}
-                >
-                  Tất cả
-                </button>
-                <button
-                  onClick={() => setLedgerFilter("import")}
-                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase font-display transition cursor-pointer ${
-                    ledgerFilter === "import" ? "bg-white text-matte-black" : "text-mid-gray"
-                  }`}
-                >
-                  Nhập kho
-                </button>
-                <button
-                  onClick={() => setLedgerFilter("export")}
-                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase font-display transition cursor-pointer ${
-                    ledgerFilter === "export" ? "bg-white text-matte-black" : "text-mid-gray"
-                  }`}
-                >
-                  Xuất kho
-                </button>
-                <button
-                  onClick={() => setLedgerFilter("adjust")}
-                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase font-display transition cursor-pointer ${
-                    ledgerFilter === "adjust" ? "bg-white text-matte-black" : "text-mid-gray"
-                  }`}
-                >
-                  Khấu hao
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto border border-[#e5e5e5] rounded-xl max-h-[400px] overflow-y-auto">
-              <table className="w-full text-left border-collapse font-sans text-xs">
-                <thead>
-                  <tr className="bg-warm-white text-mid-gray border-b border-[#e5e5e5] font-extrabold uppercase text-[9px] tracking-wider sticky top-0 z-10">
-                    <th className="p-3.5">Thời gian</th>
-                    <th className="p-3.5">Vật tư liên đới</th>
-                    <th className="p-3.5">Phân loại</th>
-                    <th className="p-3.5 text-center">Biến động</th>
-                    <th className="p-3.5 text-center">Lũy kế tồn</th>
-                    <th className="p-3.5">Thành viên hạch toán</th>
-                    <th className="p-3.5 text-right">Lý do giao dịch</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e5e5e5]">
-                  {filteredLedger.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-6 text-center text-mid-gray">
-                        Sổ sách chưa ghi nhận giao dịch biến động nào.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLedger.map(row => (
-                      <tr key={row.id} className="hover:bg-warm-white/30 transition text-[11px]">
-                        <td className="p-3.5 text-[#a5a5a5] font-sans">
-                          {new Date(row.date).toLocaleString("vi-VN", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </td>
-                        <td className="p-3.5 font-bold text-matte-black">{row.itemName}</td>
-                        <td className="p-3.5">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                            row.type === "import" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                            row.type === "export" ? "bg-red-50 text-red-700 border border-red-100" :
-                            "bg-purple-50 text-purple-700 border border-purple-100"
-                          }`}>
-                            {row.typeLabel}
-                          </span>
-                        </td>
-                        <td className={`p-3.5 text-center font-black text-sm ${
-                          row.quantityChanged > 0 ? "text-emerald-600" :
-                          row.quantityChanged < 0 ? "text-red-500" :
-                          "text-purple-600"
-                        }`}>
-                          {row.quantityChanged > 0 ? `+${row.quantityChanged}` :
-                           row.quantityChanged < 0 ? row.quantityChanged : "0 (Val)"}
-                        </td>
-                        <td className="p-3.5 text-center font-black text-matte-black font-sans">
-                          {row.balanceAfter}
-                        </td>
-                        <td className="p-3.5 font-semibold text-matte-black">{row.actor}</td>
-                        <td className="p-3.5 text-right text-mid-gray max-w-[200px] truncate" title={row.reason}>
-                          <MarkdownRenderer text={row.reason} />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: INTERACTIVE ACTIONS & FORMS PANEL (1/3 width) */}
+      {/* RENDER ACTIVE SUBMENU CONTENT */}
+      {activeSubmenu === "A" && (
         <div className="space-y-6">
-          <div className="bg-white border border-[#e5e5e5] p-5 rounded-2xl shadow-sm space-y-4 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-forest-green to-emerald-400" />
-
-            <div className="flex border-b border-[#e5e5e5] -mx-5 px-5 bg-warm-white pb-3 pt-1">
-              <button
-                onClick={() => setActiveActionTab("movement")}
-                className={`flex-1 pb-1 text-center font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer relative ${
-                  activeActionTab === "movement" ? "text-forest-green" : "text-[#a5a5a5] hover:text-matte-black"
-                }`}
-              >
-                BIẾN ĐỘNG KHO
-                {activeActionTab === "movement" && (
-                  <div className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-forest-green" />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveActionTab("depreciation")}
-                className={`flex-1 pb-1 text-center font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer relative ${
-                  activeActionTab === "depreciation" ? "text-forest-green" : "text-[#a5a5a5] hover:text-matte-black"
-                }`}
-              >
-                KHẤU HAO CCDC
-                {activeActionTab === "depreciation" && (
-                  <div className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-forest-green" />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveActionTab("haophi")}
-                className={`flex-1 pb-1 text-center font-display font-black text-[10px] tracking-wider uppercase transition cursor-pointer relative ${
-                  activeActionTab === "haophi" ? "text-forest-green" : "text-[#a5a5a5] hover:text-matte-black"
-                }`}
-              >
-                HAO PHÍ ĐỊNH MỨC
-                {activeActionTab === "haophi" && (
-                  <div className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-forest-green" />
-                )}
-              </button>
+          {/* Submenu A KPI Summary Bar */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-xs">
+              <p className="text-[10px] font-black uppercase text-stone-500">Tổng Giá Trị Tồn Kho</p>
+              <p className="text-lg font-black text-slate-900 font-display mt-0.5">{formatVnd(totalInventoryValue)}</p>
+              <p className="text-[11px] text-purple-600 font-bold mt-1">4 nhóm hàng hóa</p>
             </div>
 
-            {/* TAB CONTENT PANEL */}
-            <div>
-              {/* TAB 1: STOCK MOVEMENT FORM */}
-              {activeActionTab === "movement" && (
-                <div className="space-y-4 animate-fadeIn">
-                  <div className="space-y-1">
-                    <h3 className="font-display font-black text-xs text-matte-black uppercase tracking-wider flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-forest-green" />
-                      GHI NHẬN BIẾN ĐỘNG SỐ LƯỢNG KHO
-                    </h3>
-                    <p className="text-[10px] text-mid-gray leading-normal font-sans">
-                      Dùng khi xuất kho cấp phát trực tiếp cho kỹ thuật viên hoặc nhập mua hàng hóa thương mại bổ sung không qua khai báo mới.
-                    </p>
-                  </div>
+            <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-xs">
+              <p className="text-[10px] font-black uppercase text-stone-500">Nhóm 1 — Thương Mại</p>
+              <p className="text-lg font-black text-slate-900 font-display mt-0.5">{commercialCount} SKU</p>
+              <p className="text-[11px] text-emerald-600 font-bold mt-1">{formatVnd(totalValueCommercial)}</p>
+            </div>
 
-                  <form onSubmit={handleStockMovementSubmit} className="space-y-3 text-xs font-sans">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-extrabold uppercase text-mid-gray">Vật tư điều chỉnh</label>
-                      <select
-                        required
-                        value={movementItemId}
-                        onChange={(e) => setMovementItemId(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-forest-green"
-                      >
-                        <option value="">-- Chọn một vật tư trong kho --</option>
-                        {items.map(i => (
-                          <option key={i.id} value={i.id}>
-                            {i.name} ({i.quantity} {i.unit} còn tồn)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+            <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-xs">
+              <p className="text-[10px] font-black uppercase text-stone-500">Nhóm 2 — Tiêu Hao</p>
+              <p className="text-lg font-black text-slate-900 font-display mt-0.5">{consumableCount} SKU</p>
+              <p className="text-[11px] text-blue-600 font-bold mt-1">{formatVnd(totalValueConsumable)}</p>
+            </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-extrabold uppercase text-mid-gray">Hình thức biến động</label>
-                        <div className="flex gap-1.5 bg-warm-white p-1 rounded-xl border border-[#e5e5e5]">
-                          <button
-                            type="button"
-                            onClick={() => setMovementType("import")}
-                            className={`flex-1 py-1 rounded-lg text-[9px] font-black uppercase text-center cursor-pointer transition ${
-                              movementType === "import" ? "bg-white text-emerald-700 shadow-xs" : "text-[#a5a5a5]"
-                            }`}
-                          >
-                            Nhập kho
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMovementType("export")}
-                            className={`flex-1 py-1 rounded-lg text-[9px] font-black uppercase text-center cursor-pointer transition ${
-                              movementType === "export" ? "bg-white text-red-600 shadow-xs" : "text-[#a5a5a5]"
-                            }`}
-                          >
-                            Xuất kho
-                          </button>
-                        </div>
-                      </div>
+            <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-xs">
+              <p className="text-[10px] font-black uppercase text-stone-500">Nhóm 3 & 4 — CCDC / Phụ Tùng</p>
+              <p className="text-lg font-black text-slate-900 font-display mt-0.5">{toolCount + sparePartCount} SKU</p>
+              <p className="text-[11px] text-purple-600 font-bold mt-1">{formatVnd(totalValueTools + totalValueSpareParts)}</p>
+            </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-extrabold uppercase text-mid-gray">Số lượng giao dịch</label>
-                        <input
-                          type="number"
-                          required
-                          min={1}
-                          placeholder="Nhập số lượng..."
-                          value={movementQty}
-                          onChange={(e) => setMovementQty(e.target.value)}
-                          className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2 text-xs text-matte-black focus:outline-none focus:border-forest-green"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-extrabold uppercase text-mid-gray">Nhân sự thực hiện hạch toán</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ví dụ: Nguyễn Văn Hùng"
-                        value={movementActor}
-                        onChange={(e) => setMovementActor(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-extrabold uppercase text-mid-gray">Lý do điều chuyển chi tiết</label>
-                      <MarkdownTextarea
-                        id="inventory-movement-reason"
-                        placeholder="Ghi rõ số hóa đơn nhập hoặc tên kỹ thuật nhận bọt tuyết..."
-                        value={movementReason}
-                        onChange={(val) => setMovementReason(val)}
-                        rows={2}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 rounded-xl bg-matte-black hover:bg-gray-900 text-white font-extrabold text-xs font-display uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Activity className="h-4 w-4" />
-                      HẠCH TOÁN SỔ THẺ KHO
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* TAB 2: ASSETS DEPRECIATION MANAGER */}
-              {activeActionTab === "depreciation" && (
-                <div className="space-y-5 animate-fadeIn">
-                  <div className="space-y-1">
-                    <h3 className="font-display font-black text-xs text-matte-black uppercase tracking-wider flex items-center gap-1.5">
-                      <TrendingDown className="h-4 w-4 text-purple-600" />
-                      QUẢN LÝ KHẤU HAO CCDC CHI TIẾT
-                    </h3>
-                    <p className="text-[10px] text-mid-gray leading-normal font-sans">
-                      Theo dõi độ hao mòn vật lý của máy móc bãi xe. Nhấn nút bên dưới để hạch toán khấu hao thẳng hàng tháng đồng loạt cho mọi máy móc.
-                    </p>
-                  </div>
-
-                  {/* Master Trigger Button */}
-                  <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl text-center space-y-3.5 shadow-xs">
-                    <div className="space-y-1">
-                      <span className="text-[9px] text-[#a5a5a5] font-extrabold uppercase tracking-widest block font-sans">Giá trị tài sản ước tính hao mòn kỳ này</span>
-                      <strong className="text-xl font-sans font-black text-purple-700 block">
-                        -{formatVnd(totalMonthlyDepreciation)}
-                      </strong>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleRunAllDepreciation}
-                      className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-extrabold text-[10px] font-display uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5 stroke-[2.5]" />
-                      CHẠY KHẤU HAO THÁNG NÀY
-                    </button>
-                  </div>
-
-                  {/* Individual tool config modification form */}
-                  <div className="pt-2 border-t border-[#e5e5e5] space-y-3">
-                    <h4 className="font-display font-extrabold text-[10.5px] text-matte-black uppercase tracking-wider flex items-center gap-1.5">
-                      <Wrench className="h-3.5 w-3.5 text-mid-gray" />
-                      CẤU HÌNH KHẤU HAO RIÊNG LẺ
-                    </h4>
-
-                    <form onSubmit={handleUpdateDepreciationConfig} className="space-y-3 text-xs font-sans">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-extrabold uppercase text-mid-gray">Chọn thiết bị cần điều chỉnh</label>
-                        <select
-                          value={depEditItemId}
-                          onChange={(e) => setDepEditItemId(e.target.value)}
-                          className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none"
-                        >
-                          <option value="">-- Chọn một công cụ --</option>
-                          {items.filter(i => i.category === "tool").map(i => (
-                            <option key={i.id} value={i.id}>
-                              {i.name} (Gốc: {formatVnd(i.originalValue || (i.pricePerUnit * i.quantity))})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {depEditItemId && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="space-y-3"
-                        >
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-extrabold uppercase text-mid-gray">Nguyên giá gốc tài sản (VND)</label>
-                            <input
-                              type="number"
-                              required
-                              value={depEditOriginalValue}
-                              onChange={(e) => setDepEditOriginalValue(e.target.value)}
-                              className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-extrabold uppercase text-mid-gray">Số tháng sử dụng hữu ích</label>
-                              <input
-                                type="number"
-                                required
-                                value={depEditUsefulLife}
-                                onChange={(e) => setDepEditUsefulLife(e.target.value)}
-                                className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none"
-                              />
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-extrabold uppercase text-mid-gray">Ngày đưa vào vận hành</label>
-                              <input
-                                type="date"
-                                required
-                                value={depEditPurchaseDate}
-                                onChange={(e) => setDepEditPurchaseDate(e.target.value)}
-                                className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none"
-                              />
-                            </div>
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full py-2 bg-matte-black text-white text-[10px] font-extrabold font-display uppercase tracking-wide rounded-xl transition cursor-pointer"
-                          >
-                            LƯU HỒ SƠ KHẤU HAO
-                          </button>
-                        </motion.div>
-                      )}
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: TECHNICAL CONSUMPTION / AUTO-BOM */}
-              {activeActionTab === "haophi" && (
-                <div className="space-y-4 animate-fadeIn">
-                  <div className="space-y-1">
-                    <h3 className="font-display font-black text-xs text-matte-black uppercase tracking-wider flex items-center gap-1.5">
-                      <ClipboardList className="h-4 w-4 text-forest-green" />
-                      HAO PHÍ ĐỊNH MỨC KỸ THUẬT (AUTO-BOM)
-                    </h3>
-                    <p className="text-[10px] text-mid-gray leading-normal font-sans">
-                      Khớp số lượt thi công thực tế với định lượng sử dụng hóa chất tiêu chuẩn, hệ thống tự động hạch toán xuất kho bọt tuyết SOAP can 20L khi tích lũy tiêu hao vượt định mức.
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleCalculateHaoPhi} className="space-y-3 text-xs font-sans">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-extrabold uppercase text-mid-gray">Tổng lượt xe thi công hoàn thành thực tế</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={compOrderCount}
-                        onChange={(e) => setCompOrderCount(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-forest-green"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-extrabold uppercase text-mid-gray">Hạn định mức xà phòng tiêu chuẩn (Lít / Lượt xe)</label>
-                      <input
-                        type="text"
-                        required
-                        value={compWassupSoap}
-                        onChange={(e) => setCompWassupSoap(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-forest-green"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 rounded-xl bg-matte-black hover:bg-gray-900 text-white font-extrabold text-xs font-display uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Activity className="h-4 w-4" />
-                      TÍNH HAO PHÍ & TRỪ KHO
-                    </button>
-                  </form>
-
-                  {calculatedConsumption !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl space-y-1.5 font-sans"
-                    >
-                      <span className="text-[8px] text-forest-green font-black block uppercase tracking-wider">Hạch toán hao phí tự động</span>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-mid-gray font-medium">Hóa chất bọt bọt bạt lý thuyết:</span>
-                        <strong className="text-matte-black font-sans">{calculatedConsumption.toFixed(1)} Lít</strong>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-mid-gray font-medium">Đổi can tương đương trừ kho:</span>
-                        <strong className="text-red-600 font-sans">-{Math.floor(calculatedConsumption / 20) || 1} Can (20L)</strong>
-                      </div>
-                      <p className="text-[9px] text-[#a5a5a5] leading-normal pt-1 border-t border-emerald-100/50">
-                        * Thẻ kho bọt tuyết WASSUP SOAP (can 20L) đã được cập nhật lùi tồn kho tương đương trên bảng hệ thống.
-                      </p>
-                    </motion.div>
-                  )}
-                </div>
-              )}
+            <div
+              className={`p-4 rounded-2xl border shadow-xs cursor-pointer transition ${
+                lowStockCount > 0 ? "bg-red-50 border-red-200" : "bg-white border-stone-200"
+              }`}
+              onClick={() => setLowStockFilter(!lowStockFilter)}
+            >
+              <p className="text-[10px] font-black uppercase text-red-600 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> Cảnh Báo Tồn Thấp
+              </p>
+              <p className="text-lg font-black text-red-700 font-display mt-0.5">{lowStockCount} SKU Cần Nhập</p>
+              <p className="text-[11px] text-red-600 font-bold mt-1 underline">Click để lọc danh sách</p>
             </div>
           </div>
-        </div>
-      </div>
-      </>
-      )}
 
-      {activeModuleTab === "counting" && (
-        <StockCounting 
-          items={items} 
-          setItems={setItems} 
-          ledger={ledger} 
-          setLedger={setLedger} 
-          showToast={showToast} 
-        />
-      )}
+          {/* Submenu A Navigation Tabs & Actions */}
+          <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Submenu A Internal Tabs */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActiveSubmenuATab("inventory_list")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border ${
+                    activeSubmenuATab === "inventory_list"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  S6.1 — Danh Sách Tồn Kho ({items.length})
+                </button>
 
-      {activeModuleTab === "reports" && (
-        <InventoryReports items={items} />
-      )}
+                <button
+                  onClick={() => setActiveSubmenuATab("po_management")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border ${
+                    activeSubmenuATab === "po_management"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  S6.4/S6.5 — Đơn Mua Hàng & Nhận Hàng (PO)
+                </button>
 
-      {activeModuleTab === "prd" && (
-        <PrdHandbook />
-      )}
+                <button
+                  onClick={() => setActiveSubmenuATab("bom_requisitions")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border ${
+                    activeSubmenuATab === "bom_requisitions"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  S6.6/S6.7 — Xuất Kho BOM & Cấp Phát
+                </button>
 
-      {/* CREATE NEW ITEM DRAWER (SLIDES FROM RIGHT) */}
-      <AnimatePresence>
-        {showAddModal && (
-          <div className="fixed inset-0 z-[100] overflow-hidden" id="inventory-add-drawer">
-            {/* Backdrop with fade transition */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowAddModal(false)}
-              className="absolute inset-0 bg-matte-black/60 backdrop-blur-xs cursor-pointer"
-            />
+                <button
+                  onClick={() => setActiveSubmenuATab("retail_exports")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border ${
+                    activeSubmenuATab === "retail_exports"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  S6.14 — Xuất Kho Bán Lẻ (POS)
+                </button>
 
-            {/* Sliding Drawer Panel */}
-            <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-              <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", damping: 28, stiffness: 240, mass: 0.9 }}
-                className="w-screen max-w-md md:max-w-xl bg-white border-l border-[#e5e5e5] shadow-2xl flex flex-col h-full overflow-hidden"
-              >
-                {/* Drawer Header */}
-                <div className="px-6 py-5 border-b border-[#e5e5e5] flex items-center justify-between bg-stone-50">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-forest-green/10 rounded-xl">
-                      <Boxes className="h-5 w-5 text-forest-green" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black font-display tracking-wider text-matte-black uppercase">
-                        KHAI BÁO VẬT TƯ MỚI
-                      </h3>
-                      <p className="text-[10px] text-mid-gray font-sans mt-0.5">
-                        Thêm mặt hàng mới vào danh mục thẻ kho hệ thống
-                      </p>
-                    </div>
-                  </div>
+                <button
+                  onClick={() => setActiveSubmenuATab("ledger")}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer border ${
+                    activeSubmenuATab === "ledger"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  Sổ Nhật Ký Xuất Nhập Tồn
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowManualModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs"
+                >
+                  <FileText className="h-4 w-4" /> Xuất Kho Thủ Công (S6.11)
+                </button>
+
+                <button
+                  onClick={openAddItemDrawer}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs"
+                >
+                  <Plus className="h-4 w-4" /> Thêm Vật Tư Mới (S6.2)
+                </button>
+              </div>
+            </div>
+
+            {/* Filters for Tab 1 (Inventory List) */}
+            {activeSubmenuATab === "inventory_list" && (
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-stone-100">
+                {/* 4 Category Filters */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-stone-400 mr-1">Nhóm hàng:</span>
                   <button
-                    onClick={() => setShowAddModal(false)}
-                    className="p-2 rounded-xl text-mid-gray hover:text-matte-black hover:bg-stone-200/50 transition cursor-pointer"
+                    onClick={() => setCategoryFilter("all")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                      categoryFilter === "all"
+                        ? "bg-purple-900 text-white border-purple-900"
+                        : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
+                    }`}
                   >
-                    <X className="h-5 w-5" />
+                    Tất cả ({items.length})
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter("commercial")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                      categoryFilter === "commercial"
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
+                    }`}
+                  >
+                    Nhóm 1 — Thương Mại ({commercialCount})
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter("consumable")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                      categoryFilter === "consumable"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
+                    }`}
+                  >
+                    Nhóm 2 — Tiêu Hao ({consumableCount})
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter("tool")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                      categoryFilter === "tool"
+                        ? "bg-purple-600 text-white border-purple-600"
+                        : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
+                    }`}
+                  >
+                    Nhóm 3 — CCDC ({toolCount})
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter("spare_part")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                      categoryFilter === "spare_part"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
+                    }`}
+                  >
+                    Nhóm 4 — Phụ Tùng ({sparePartCount})
                   </button>
                 </div>
 
-                {/* Drawer Form Body (Scrollable) */}
-                <form onSubmit={handleAddItem} className="flex-1 flex flex-col h-full overflow-hidden">
-                  <div className="flex-1 overflow-y-auto p-6 space-y-5 font-sans text-xs">
-                    
-                    {/* ROW 1: Phân nhóm vật tư tài sản */}
-                    <div className="space-y-2 pb-2 border-b border-stone-100">
-                      <label className="text-[10px] font-sans text-mid-gray uppercase font-extrabold tracking-wider block">
-                        Phân nhóm vật tư tài sản *
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategory("commercial")}
-                          className={`py-3 rounded-xl border font-extrabold font-display uppercase tracking-wider text-[10px] cursor-pointer transition text-center ${
-                            selectedCategory === "commercial" 
-                              ? "bg-matte-black text-white border-matte-black shadow-xs" 
-                              : "bg-white border-[#e5e5e5] text-[#a5a5a5] hover:bg-warm-white"
-                          }`}
-                        >
-                          Thương mại
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategory("consumable")}
-                          className={`py-3 rounded-xl border font-extrabold font-display uppercase tracking-wider text-[10px] cursor-pointer transition text-center ${
-                            selectedCategory === "consumable" 
-                              ? "bg-matte-black text-white border-matte-black shadow-xs" 
-                              : "bg-white border-[#e5e5e5] text-[#a5a5a5] hover:bg-warm-white"
-                          }`}
-                        >
-                          Tiêu hao
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategory("tool")}
-                          className={`py-3 rounded-xl border font-extrabold font-display uppercase tracking-wider text-[10px] cursor-pointer transition text-center ${
-                            selectedCategory === "tool" 
-                              ? "bg-matte-black text-white border-matte-black shadow-xs" 
-                              : "bg-white border-[#e5e5e5] text-[#a5a5a5] hover:bg-warm-white"
-                          }`}
-                        >
-                          Công cụ (CCDC)
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-mid-gray italic mt-1">
-                        {selectedCategory === "commercial" && "• Mặt hàng bán trực tiếp cho khách hàng (Khăn, tinh dầu, sáp, phụ kiện...)"}
-                        {selectedCategory === "consumable" && "• Vật tư kỹ thuật dùng cho thi công dịch vụ rửa xe/detailing (Hóa chất, xà bông...)"}
-                        {selectedCategory === "tool" && "• Thiết bị, máy móc bãi xe có tính khấu hao tài sản cố định hàng kỳ"}
-                      </p>
-                    </div>
+                {/* Additional Filter Checkboxes & Search */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasRetailFilter}
+                      onChange={(e) => setHasRetailFilter(e.target.checked)}
+                      className="h-3.5 w-3.5 text-purple-600 rounded"
+                    />
+                    <span>Chỉ hiện SKU "Có bán lẻ" ({retailCount})</span>
+                  </label>
 
-                    {/* ROW 2: Tên vật tư */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans text-mid-gray uppercase font-extrabold tracking-wider block">
-                        Tên vật tư / Tên máy móc thiết bị *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ví dụ: Dung dịch tẩy lazang đĩa phanh 3D GLIDE..."
-                        value={itemName}
-                        onChange={(e) => setItemName(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-3 text-xs text-matte-black focus:outline-none focus:border-forest-green transition-colors"
-                      />
-                    </div>
-
-                    {/* ROW 3: Đơn vị tính */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans text-mid-gray uppercase font-extrabold tracking-wider block">
-                        Đơn vị tính (UOM) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ví dụ: Chai 500ml, Can 5L, Máy, Chiếc, Bộ..."
-                        value={itemUnit}
-                        onChange={(e) => setItemUnit(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-3 text-xs text-matte-black focus:outline-none focus:border-forest-green transition-colors"
-                      />
-                    </div>
-
-                    {/* ROW 4: Đơn giá nhập */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans text-mid-gray uppercase font-extrabold tracking-wider block">
-                        Đơn giá nhập hàng gốc (VND) *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          placeholder="Ví dụ: 125000"
-                          value={itemPrice}
-                          onChange={(e) => setItemPrice(e.target.value)}
-                          className="w-full bg-white border border-[#e5e5e5] rounded-xl pl-3.5 pr-12 py-3 text-xs text-matte-black focus:outline-none focus:border-forest-green transition-colors font-sans font-bold"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-mid-gray font-bold text-[10px] uppercase">
-                          VND
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* ROW 5: Số lượng ban đầu */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans text-mid-gray uppercase font-extrabold tracking-wider block">
-                        Số lượng nhập kho ban đầu *
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="Ví dụ: 10"
-                        value={itemQuantity}
-                        onChange={(e) => setItemQuantity(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-3 text-xs text-matte-black focus:outline-none focus:border-forest-green transition-colors font-sans font-bold"
-                      />
-                    </div>
-
-                    {/* ROW 6: Ngưỡng cảnh báo tồn tối thiểu */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans text-[#a5a5a5] uppercase font-extrabold tracking-wider block">
-                        Ngưỡng cảnh báo tồn tối thiểu *
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Mặc định cảnh báo khi dưới: 5"
-                        value={itemThreshold}
-                        onChange={(e) => setItemThreshold(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-3 text-xs text-matte-black focus:outline-none focus:border-forest-green transition-colors font-sans"
-                      />
-                    </div>
-
-                    {/* ROW 7: Depreciation settings if CCDC/Tool */}
-                    {selectedCategory === "tool" && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-purple-50/75 p-4 rounded-2xl border border-purple-100 space-y-4"
-                      >
-                        <span className="text-[9px] text-purple-800 font-black uppercase tracking-widest block">
-                          ⚙ CẤU HÌNH TRÍCH KHẤU HAO THIẾT BỊ
-                        </span>
-
-                        <div className="space-y-3">
-                          {/* Sub-row 1: Useful Life */}
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-sans text-purple-900 uppercase font-extrabold block">
-                              Số tháng sử dụng ước tính (Tháng)
-                            </label>
-                            <input
-                              type="number"
-                              required
-                              min="1"
-                              value={usefulLifeMonths}
-                              onChange={(e) => setUsefulLifeMonths(e.target.value)}
-                              className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-purple-500 font-sans"
-                            />
-                          </div>
-
-                          {/* Sub-row 2: Purchase Date */}
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-sans text-purple-900 uppercase font-extrabold block">
-                              Ngày mua đưa vào sử dụng
-                            </label>
-                            <input
-                              type="date"
-                              required
-                              value={purchaseDate}
-                              onChange={(e) => setPurchaseDate(e.target.value)}
-                              className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-matte-black focus:outline-none focus:border-purple-500"
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* ROW 8: Dynamic Total Cost (BOLD Highlight) */}
-                    <div className="bg-stone-50 border border-[#e5e5e5] p-4 rounded-2xl space-y-1">
-                      <div className="flex items-center justify-between text-mid-gray text-[10px] uppercase font-extrabold tracking-wider">
-                        <span>Giá trị nhập kho ban đầu</span>
-                        <span>Tạm tính</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-sans text-slate-500 font-medium">
-                          {itemQuantity ? `${itemQuantity} ${itemUnit || "đơn vị"}` : "0 đơn vị"} × {itemPrice ? formatVnd(Number(itemPrice)) : "0đ"}
-                        </span>
-                        <span className="text-lg font-black text-slate-900 font-sans tracking-tight">
-                          {formatVnd((Number(itemPrice) || 0) * (Number(itemQuantity) || 0))}
-                        </span>
-                      </div>
-                      <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-slate-800 text-xs font-black uppercase tracking-wide">
-                        <span>TỔNG TIỀN THANH TOÁN GỐC:</span>
-                        <span className="text-xl font-extrabold text-forest-green font-sans">
-                          {formatVnd((Number(itemPrice) || 0) * (Number(itemQuantity) || 0))}
-                        </span>
-                      </div>
-                    </div>
-
+                  <div className="relative min-w-[200px]">
+                    <Search className="h-3.5 w-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Tìm Tên / Mã SKU..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-8 pr-3 py-1 text-xs font-sans text-stone-800 focus:outline-none focus:border-purple-500"
+                    />
                   </div>
-
-                  {/* Drawer Footer (Sticky bottom) */}
-                  <div className="border-t border-[#e5e5e5] bg-stone-50 p-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddModal(false)}
-                      className="flex-1 py-3 rounded-xl border border-[#e5e5e5] text-mid-gray bg-white hover:bg-stone-100/50 transition text-xs font-extrabold font-display uppercase cursor-pointer text-center"
-                    >
-                      HỦY BỎ
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-3 rounded-xl bg-forest-green hover:bg-forest-green/90 text-white font-extrabold transition text-xs font-display uppercase shadow-md cursor-pointer text-center"
-                    >
-                      TẠO MỚI & NHẬP KHO
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </AnimatePresence>
+
+          {/* TAB 1: DANH SÁCH TỒN KHO (S6.1) */}
+          {activeSubmenuATab === "inventory_list" && (
+            <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-sans">
+                  <thead className="bg-stone-100 text-stone-600 font-extrabold uppercase text-[10px] tracking-wider border-b border-stone-200">
+                    <tr>
+                      <th className="p-3.5">Mã / Tên Vật Tư</th>
+                      <th className="p-3.5">Nhóm Danh Mục</th>
+                      <th className="p-3.5 text-center">Đơn Vị</th>
+                      <th className="p-3.5 text-center">Tồn Khả Dụng</th>
+                      <th className="p-3.5 text-right">Giá Vốn (Avg Cost)</th>
+                      <th className="p-3.5 text-right">Giá Bán Bán Lẻ</th>
+                      <th className="p-3.5 text-center">Thông Tin Đặc Thù (Khấu hao/CCDC)</th>
+                      <th className="p-3.5 text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {filteredItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-stone-400 text-xs">
+                          Không tìm thấy vật tư phù hợp với bộ lọc hiện tại.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredItems.map((item) => {
+                        const isLow = item.quantity <= item.minThreshold;
+                        const hasRetail = Boolean(item.salePrice && item.salePrice > 0);
+
+                        return (
+                          <tr key={item.id} className="hover:bg-purple-50/20 transition">
+                            <td className="p-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-9 w-9 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {item.imageUrl ? (
+                                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <Package className="h-4 w-4 text-stone-400" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono font-bold text-stone-500 text-[10px] bg-stone-100 px-1.5 py-0.5 rounded">
+                                      {item.code || item.id}
+                                    </span>
+                                    {hasRetail && (
+                                      <span className="bg-purple-100 text-purple-800 border border-purple-200 font-extrabold text-[9px] uppercase px-1.5 py-0.5 rounded">
+                                        Có Bán Lẻ
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-extrabold text-slate-900 text-xs mt-0.5 hover:text-purple-600 cursor-pointer" onClick={() => openEditItemDrawer(item)}>
+                                    {item.name}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="p-3.5">
+                              <span
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${
+                                  item.category === "commercial"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : item.category === "consumable"
+                                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                    : item.category === "tool"
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}
+                              >
+                                {item.category === "commercial"
+                                  ? "Nhóm 1 Thương mại"
+                                  : item.category === "consumable"
+                                  ? "Nhóm 2 Tiêu hao"
+                                  : item.category === "tool"
+                                  ? "Nhóm 3 CCDC"
+                                  : "Nhóm 4 Phụ tùng"}
+                              </span>
+                            </td>
+
+                            <td className="p-3.5 text-center font-bold text-stone-600">
+                              {item.unit}
+                            </td>
+
+                            <td className="p-3.5 text-center">
+                              <div className="inline-flex flex-col items-center">
+                                <span
+                                  className={`font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg ${
+                                    isLow ? "bg-red-100 text-red-800 font-black animate-pulse" : "text-slate-900"
+                                  }`}
+                                >
+                                  {item.quantity} {item.unit}
+                                </span>
+                                <span className="text-[10px] text-stone-400">Ngưỡng: {item.minThreshold}</span>
+                              </div>
+                            </td>
+
+                            <td className="p-3.5 text-right font-mono font-bold text-slate-900">
+                              {formatVnd(item.avgCost || item.costPrice || item.pricePerUnit || 0)}
+                            </td>
+
+                            <td className="p-3.5 text-right">
+                              {hasRetail ? (
+                                <span className="font-mono font-extrabold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg">
+                                  {formatVnd(item.salePrice!)}
+                                </span>
+                              ) : (
+                                <span className="text-stone-400 italic text-[11px]">Dùng nội bộ</span>
+                              )}
+                            </td>
+
+                            <td className="p-3.5 text-center">
+                              {item.category === "tool" ? (
+                                <div className="text-[10px] space-y-0.5 text-left font-mono bg-stone-50 p-2 rounded-lg border border-stone-200">
+                                  <p className="font-bold text-purple-900">Giá trị còn lại: {formatVnd(item.currentValue || item.originalValue || 0)}</p>
+                                  <p className="text-stone-500">Khấu hao: {item.usefulLifeMonths || 24} tháng (từ {item.purchaseDate || "2025-01-01"})</p>
+                                </div>
+                              ) : item.category === "spare_part" && item.relatedToolName ? (
+                                <div className="text-[10px] text-left font-mono bg-amber-50 p-2 rounded-lg border border-amber-200 text-amber-900">
+                                  <span className="font-bold">CCDC sửa chữa:</span> {item.relatedToolName}
+                                </div>
+                              ) : (
+                                <span className="text-stone-400">—</span>
+                              )}
+                            </td>
+
+                            <td className="p-3.5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => openEditItemDrawer(item)}
+                                  className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 transition cursor-pointer"
+                                  title="Sửa thông tin SKU"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ĐƠN MUA HÀNG PO & NHẬN HÀNG (S6.4 & S6.5) */}
+          {activeSubmenuATab === "po_management" && (
+            <PurchaseOrderManager
+              purchaseOrders={purchaseOrders}
+              setPurchaseOrders={setPurchaseOrders}
+              suppliers={suppliers}
+              items={items}
+              setItems={setItems}
+              showToast={showToast}
+              formatVnd={formatVnd}
+            />
+          )}
+
+          {/* TAB 3: PHIẾU XUẤT KHO BOM & CẤP PHÁT (S6.6 & S6.7) */}
+          {activeSubmenuATab === "bom_requisitions" && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-black font-display uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                    <Zap className="h-4.5 w-4.5 text-purple-600" />
+                    PHIẾU XUẤT KHO TỰ ĐỘNG THEO BỘ ĐỊNH MỨC BOM (S6.6 & S6.7)
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Hệ thống tự động sinh và tự xác nhận phiếu trừ kho khi Lệnh dịch vụ chốt. Phần vượt định mức cần Quản lý duyệt qua Telegram.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-slate-900 text-xs">REQ-2026-0801 • WO-2026-881</span>
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                      Đã Xuất Kho Định Mức
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600">Biển số xe: <strong>30H-889.12</strong> (Hạng xe: 7-9 chỗ/Bán tải) • KTV Nguyễn Tuấn Anh</p>
+
+                  <div className="bg-white p-3 rounded-xl border border-stone-200 space-y-1.5 font-mono text-xs">
+                    <div className="flex justify-between">
+                      <span>WASSUP SOAP (20L)</span>
+                      <span className="font-bold text-slate-900">350 ml (Chuẩn BOM)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Đất sét 3M Claybar</span>
+                      <span className="font-bold text-slate-900">1 cục (Chuẩn BOM)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-slate-900 text-xs">REQ-2026-0802 • WO-2026-885</span>
+                    <span className="px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-black uppercase">
+                      Có Đề Xuất Vượt Định Mức (S6.7)
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600">Biển số xe: <strong>29A-554.33</strong> (Hạng xe: 4-5 chỗ) • KTV Vũ Đức Duy</p>
+
+                  <div className="bg-white p-3 rounded-xl border border-stone-200 space-y-1.5 font-mono text-xs">
+                    <div className="flex justify-between items-center text-amber-900 font-bold">
+                      <span>WASSUP SOAP (20L)</span>
+                      <span>400 ml (Định mức 250ml + Vượt 150ml)</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 italic">Lý do vượt: Xe bẩn bùn đất quá nặng phát sinh xịt rửa kép ca tối.</p>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => showToast("Đã duyệt xuất bổ sung vật tư vượt định mức!")}
+                      className="flex-1 py-1.5 bg-emerald-600 text-white font-extrabold text-[11px] uppercase rounded-lg hover:bg-emerald-700 transition"
+                    >
+                      Duyệt Xuất Bổ Sung
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: XUẤT KHO BÁN LẺ POS (S6.14) */}
+          {activeSubmenuATab === "retail_exports" && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-black font-display uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                    <ShoppingBag className="h-4.5 w-4.5 text-purple-600" />
+                    LỊCH SỬ XUẤT KHO BÁN LẺ TRỰC TIẾP TỪ POS (S6.14 - READ ONLY)
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Hệ thống tự động trừ kho 100% khi đơn bán lẻ tại Module 3 POS được tạo. Bất kỳ SKU nào có Giá bán (Nhóm 1–4) đều cho phép bán lẻ.
+                  </p>
+                </div>
+              </div>
+
+              <div className="border border-stone-200 rounded-2xl overflow-hidden text-xs">
+                <table className="w-full text-left font-sans">
+                  <thead className="bg-stone-100 text-stone-600 font-extrabold uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Mã Đơn POS</th>
+                      <th className="p-3">Sản Phẩm Bán Lẻ</th>
+                      <th className="p-3 text-center">Số Lượng</th>
+                      <th className="p-3 text-right">Đơn Giá Bán</th>
+                      <th className="p-3 text-right">Thành Tiền</th>
+                      <th className="p-3 text-center">Thời Gian Ex</th>
+                      <th className="p-3 text-right">Người Bán (Thu Ngân)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    <tr className="hover:bg-stone-50 font-mono">
+                      <td className="p-3 font-bold text-slate-900">POS-2026-9901</td>
+                      <td className="p-3 font-bold text-purple-900">Dầu bóng lốp xe Sonax Xtreme</td>
+                      <td className="p-3 text-center font-bold">2 Chai</td>
+                      <td className="p-3 text-right">{formatVnd(250000)}</td>
+                      <td className="p-3 text-right font-extrabold text-emerald-700">{formatVnd(500000)}</td>
+                      <td className="p-3 text-center text-stone-500">Ca sáng hôm nay</td>
+                      <td className="p-3 text-right text-stone-700 font-sans">Phạm Thu Trang (POS)</td>
+                    </tr>
+                    <tr className="hover:bg-stone-50 font-mono">
+                      <td className="p-3 font-bold text-slate-900">POS-2026-9904</td>
+                      <td className="p-3 font-bold text-purple-900">Chổi than cao cấp Rupes LHR15 (Nhóm 4)</td>
+                      <td className="p-3 text-center font-bold">1 Cặp</td>
+                      <td className="p-3 text-right">{formatVnd(150000)}</td>
+                      <td className="p-3 text-right font-extrabold text-emerald-700">{formatVnd(150000)}</td>
+                      <td className="p-3 text-center text-stone-500">2 giờ trước</td>
+                      <td className="p-3 text-right text-stone-700 font-sans">Phạm Thu Trang (POS)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: SỔ NHẬT KÝ XUẤT NHẬP TỒN */}
+          {activeSubmenuATab === "ledger" && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <h3 className="text-sm font-black font-display uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-stone-100 pb-3">
+                <History className="h-4.5 w-4.5 text-purple-600" /> SỔ NHẬT KÝ XUẤT NHẬP TỒN (STOCK LEDGER)
+              </h3>
+
+              <div className="border border-stone-200 rounded-2xl overflow-hidden text-xs font-mono">
+                <table className="w-full text-left">
+                  <thead className="bg-stone-100 text-stone-600 font-extrabold uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Thời Gian</th>
+                      <th className="p-3">Tên Vật Tư</th>
+                      <th className="p-3 text-center">Loại Thao Tác</th>
+                      <th className="p-3 text-center">Biến Động</th>
+                      <th className="p-3 text-center">Tồn Sau Biến Động</th>
+                      <th className="p-3">Lý Do / Chứng Từ</th>
+                      <th className="p-3 text-right">Thực Hiện</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {ledger.map((row) => (
+                      <tr key={row.id} className="hover:bg-stone-50">
+                        <td className="p-3 text-stone-500">{new Date(row.date).toLocaleString("vi-VN")}</td>
+                        <td className="p-3 font-bold text-slate-900 font-sans">{row.itemName}</td>
+                        <td className="p-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              row.type === "import"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : row.type === "export"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {row.typeLabel}
+                          </span>
+                        </td>
+                        <td
+                          className={`p-3 text-center font-bold ${
+                            row.quantityChanged > 0 ? "text-emerald-600" : "text-red-600"
+                          }`}
+                        >
+                          {row.quantityChanged > 0 ? `+${row.quantityChanged}` : row.quantityChanged}
+                        </td>
+                        <td className="p-3 text-center font-bold text-slate-900">{row.balanceAfter}</td>
+                        <td className="p-3 text-stone-600 font-sans">{row.reason}</td>
+                        <td className="p-3 text-right text-stone-500 font-sans">{row.actor}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SUBMENU B: QUẢN LÝ NHÀ CUNG CẤP (S6.12 & S6.13) */}
+      {activeSubmenu === "B" && (
+        <SupplierManagement
+          suppliers={suppliers}
+          setSuppliers={setSuppliers}
+          purchaseOrders={purchaseOrders}
+          showToast={showToast}
+          formatVnd={formatVnd}
+        />
+      )}
+
+      {/* SUBMENU C: KIỂM KHO ĐỊNH KỲ (S6.8 & S6.9) */}
+      {activeSubmenu === "C" && (
+        <StockCounting
+          items={items as any}
+          setItems={setItems as any}
+          ledger={ledger}
+          setLedger={setLedger}
+          showToast={showToast}
+        />
+      )}
+
+      {/* SUBMENU D: BÁO CÁO KHO (S6.10) */}
+      {activeSubmenu === "D" && (
+        <InventoryReports items={items as any} />
+      )}
+
+      {/* SUBMENU E: QUY TRÌNH PRD MODULE 6 */}
+      {activeSubmenu === "E" && (
+        <div className="space-y-6 animate-fadeIn">
+          <PrdHandbook />
+        </div>
+      )}
+
+      {/* MODAL / DRAWER S6.2: FORM THÊM / SỬA VẬT TƯ */}
+      {showItemDrawer && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[999] flex justify-end animate-fadeIn">
+          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col font-sans">
+            <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Boxes className="h-5 w-5 text-purple-400" />
+                <h3 className="font-black font-display text-sm uppercase tracking-wider">
+                  {editingItem ? "SỬA THÔNG TIN VẬT TƯ (S6.2)" : "THÊM VẬT TƯ MỚI (S6.2)"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowItemDrawer(false)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-stone-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveItem} className="p-6 flex-1 overflow-y-auto space-y-4 text-xs">
+              <div>
+                <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                  Nhóm Danh Mục Vật Tư <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value as any)}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  <option value="commercial">Nhóm 1 — Hàng thương mại (Bán lẻ / Phụ kiện)</option>
+                  <option value="consumable">Nhóm 2 — Vật liệu tiêu hao (Dung dịch / Xi / Ceramic)</option>
+                  <option value="tool">Nhóm 3 — Công cụ dụng cụ (Máy móc / Thiết bị)</option>
+                  <option value="spare_part">Nhóm 4 — Phụ tùng thay thế (Sửa chữa CCDC)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Mã Vật Tư / SKU
+                  </label>
+                  <input
+                    type="text"
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Nhà Cung Cấp Mặc Định
+                  </label>
+                  <select
+                    value={formSupplierId}
+                    onChange={(e) => setFormSupplierId(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="">-- Chọn nhà cung cấp --</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                  Tên Vật Tư / Phụ Tùng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Dung dịch bọt tuyết WASSUP SOAP, Chổi than Rupes..."
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Đơn Vị Quản Lý (Tồn) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Can 20L, Chai, Cục, Bộ..."
+                    value={formUnit}
+                    onChange={(e) => setFormUnit(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Đơn Vị Tiêu Hao BOM
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: ml, gram, cái..."
+                    value={formUsageUnit}
+                    onChange={(e) => setFormUsageUnit(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Số Lượng Tồn Ban Đầu <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={formQuantity}
+                    onChange={(e) => setFormQuantity(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Ngưỡng Cảnh Báo Tồn Thấp
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formMinThreshold}
+                    onChange={(e) => setFormMinThreshold(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                    Giá Vốn Nhập Kho (₫)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="VD: 1200000"
+                    value={formCostPrice}
+                    onChange={(e) => setFormCostPrice(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-extrabold uppercase text-[10px] text-purple-900 block mb-1 flex items-center justify-between">
+                    <span>Giá Bán Lẻ (POS ₫)</span>
+                    <span className="text-[9px] text-purple-600 font-bold">Mọi nhóm optional</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Để trống = Không bán lẻ"
+                    value={formSalePrice}
+                    onChange={(e) => setFormSalePrice(e.target.value)}
+                    className="w-full bg-purple-50/50 border border-purple-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-purple-900 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Special Fields for Group 3 (Tools) */}
+              {formCategory === "tool" && (
+                <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl space-y-3">
+                  <span className="font-extrabold uppercase text-[10px] text-purple-900 block">
+                    Thông Tin Khấu Hao CCDC (Nhóm 3)
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-purple-900 font-bold block mb-1">Ngày mua máy:</span>
+                      <input
+                        type="date"
+                        value={formPurchaseDate}
+                        onChange={(e) => setFormPurchaseDate(e.target.value)}
+                        className="w-full bg-white border border-purple-200 rounded-lg p-2 font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-purple-900 font-bold block mb-1">Thời gian KH (tháng):</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formUsefulLifeMonths}
+                        onChange={(e) => setFormUsefulLifeMonths(e.target.value)}
+                        className="w-full bg-white border border-purple-200 rounded-lg p-2 font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Special Fields for Group 4 (Spare Parts) */}
+              {formCategory === "spare_part" && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+                  <label className="font-extrabold uppercase text-[10px] text-amber-900 block">
+                    Gắn Với CCDC Cụ Thể (Nhóm 3)
+                  </label>
+                  <select
+                    value={formRelatedToolId}
+                    onChange={(e) => setFormRelatedToolId(e.target.value)}
+                    className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                  >
+                    <option value="">-- Chọn CCDC/Máy móc mà phụ tùng này sửa chữa --</option>
+                    {items
+                      .filter((i) => i.category === "tool")
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="font-extrabold uppercase text-[10px] text-stone-600 block mb-1">
+                  Link Ảnh Sản Phẩm (Crop 1:1)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowItemDrawer(false)}
+                  className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold uppercase text-[11px]"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-extrabold uppercase text-[11px] shadow-sm"
+                >
+                  Lưu Vật Tư (S6.2)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MANUAL STOCK EXPORT (S6.11) */}
+      <ManualStockModal
+        isOpen={showManualModal}
+        onClose={() => setShowManualModal(false)}
+        items={items}
+        onConfirmExport={handleConfirmManualExport}
+        formatVnd={formatVnd}
+      />
+
+      {/* PRD HANDBOOK MODAL */}
+      <PrdHandbook isOpen={showPrdModal} onClose={() => setShowPrdModal(false)} />
     </div>
   );
 }

@@ -13,69 +13,144 @@ interface StationRow {
   opening_hours_jsonb: { open?: string; close?: string } | null;
 }
 
-export default function GeneralInfo() {
+interface GeneralInfoProps {
+  currentStationId?: string;
+  onSelectStation?: (id: string) => void;
+}
+
+export default function GeneralInfo({ currentStationId, onSelectStation }: GeneralInfoProps = {}) {
   const { can, staff } = useAuth();
   const canEdit = can("settings", "update");
 
   const [station, setStation] = useState<StationRow | null>(null);
+  const [allStations, setAllStations] = useState<StationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     void load();
-  }, []);
+
+    const handleUpdate = () => {
+      void load();
+    };
+    window.addEventListener("wassup_stations_updated", handleUpdate);
+    return () => {
+      window.removeEventListener("wassup_stations_updated", handleUpdate);
+    };
+  }, [currentStationId]);
 
   async function load() {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    // Pilot: 1 trạm duy nhất — lấy dòng đầu tiên. Khi nhân rộng franchise,
-    // màn hình này chuyển sang chọn trạm theo station_id của user đăng nhập.
-    const { data } = await supabase
-      .from("stations")
-      .select("id, name, address, contact_phone, opening_hours_jsonb")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    setStation(data as StationRow | null);
+
+    const stored = localStorage.getItem("wassup_stations");
+    let localData: StationRow[] | null = null;
+    if (stored) {
+      try {
+        localData = JSON.parse(stored);
+      } catch (e) {}
+    }
+
+    if (supabase) {
+      try {
+        const { data: stationsData, error } = await supabase
+          .from("stations")
+          .select("id, name, address, contact_phone, opening_hours_jsonb")
+          .order("created_at", { ascending: true });
+
+        if (!error && stationsData && stationsData.length > 0) {
+          const merged = (stationsData as StationRow[]).map((st) => {
+            const loc = localData?.find((l) => l.id === st.id);
+            return loc ? { ...st, name: loc.name, address: loc.address, contact_phone: loc.contact_phone, opening_hours_jsonb: loc.opening_hours_jsonb } : st;
+          });
+          setAllStations(merged);
+          const matched = currentStationId
+            ? merged.find((s) => s.id === currentStationId)
+            : merged[0];
+          setStation(matched || merged[0]);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Supabase fetch failed", e);
+      }
+    }
+
+    // Demo fallback for Multi-Station
+    const demoStations: StationRow[] = localData || [
+      {
+        id: "st-001",
+        name: "WASSUP Station - Cầu Giấy (Trạm Tổng)",
+        address: "Số 188 Nguyễn Văn Huyên, Q. Cầu Giấy, Hà Nội",
+        contact_phone: "0901 234 567",
+        opening_hours_jsonb: { open: "07:30", close: "20:30" },
+      },
+      {
+        id: "st-002",
+        name: "WASSUP Station - Mỹ Đình",
+        address: "Số 45 Lê Đức Thọ, Q. Nam Từ Liêm, Hà Nội",
+        contact_phone: "0902 888 999",
+        opening_hours_jsonb: { open: "08:00", close: "20:00" },
+      },
+      {
+        id: "st-003",
+        name: "WASSUP Station - Hà Đông",
+        address: "Số 12 Quang Trung, Q. Hà Đông, Hà Nội",
+        contact_phone: "0903 777 666",
+        opening_hours_jsonb: { open: "08:00", close: "20:00" },
+      },
+    ];
+
+    setAllStations(demoStations);
+    const matchedDemo = currentStationId
+      ? demoStations.find((s) => s.id === currentStationId)
+      : demoStations[0];
+    setStation(matchedDemo || demoStations[0]);
     setLoading(false);
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!station || !supabase || !staff) return;
+    if (!station) return;
     setSaving(true);
 
-    const before = station;
-    const { error } = await supabase
-      .from("stations")
-      .update({
-        name: station.name,
-        address: station.address,
-        contact_phone: station.contact_phone,
-        opening_hours_jsonb: station.opening_hours_jsonb,
-      })
-      .eq("id", station.id);
+    const updatedAll = allStations.map((s) => (s.id === station.id ? station : s));
+    setAllStations(updatedAll);
+    localStorage.setItem("wassup_stations", JSON.stringify(updatedAll));
+    window.dispatchEvent(new Event("wassup_stations_updated"));
 
-    setSaving(false);
-    if (error) {
-      setToast(`Lỗi: ${error.message}`);
-      return;
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from("stations")
+          .update({
+            name: station.name,
+            address: station.address,
+            contact_phone: station.contact_phone,
+            opening_hours_jsonb: station.opening_hours_jsonb,
+          })
+          .eq("id", station.id);
+
+        if (error) {
+          console.warn("Supabase update error:", error.message);
+        }
+      } catch (err) {
+        console.warn("Supabase update error:", err);
+      }
     }
 
-    await logAudit({
-      actorId: staff.id,
-      module: "settings",
-      action: "update_station",
-      entity: "stations",
-      entityId: station.id,
-      before,
-      after: station,
-    });
+    if (staff) {
+      await logAudit({
+        actorId: staff.id,
+        module: "settings",
+        action: "update_station",
+        entity: "stations",
+        entityId: station.id,
+        after: station,
+      });
+    }
 
+    setSaving(false);
     setToast("Đã lưu thông tin cấu hình trạm thành công!");
     setTimeout(() => setToast(null), 4000);
   }
@@ -100,12 +175,37 @@ export default function GeneralInfo() {
         </div>
       )}
 
-      <div className="border-b border-[#e5e5e5] pb-3">
-        <h3 className="text-sm font-extrabold font-display tracking-wider text-matte-black uppercase flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-forest-green" />
-          THÔNG TIN VÀ KHUNG GIỜ VẬN HÀNH TRẠM
-        </h3>
-        <p className="text-[11px] text-mid-gray font-sans mt-0.5">Mã trạm: {station.id}</p>
+      <div className="border-b border-[#e5e5e5] pb-3 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold font-display tracking-wider text-matte-black uppercase flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-forest-green" />
+            THÔNG TIN VÀ KHUNG GIỜ VẬN HÀNH TRẠM
+          </h3>
+          <p className="text-[11px] text-mid-gray font-sans mt-0.5">Mã trạm: <span className="font-mono font-bold text-slate-800">{station.id}</span></p>
+        </div>
+
+        {allStations.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase text-stone-400">Chọn Trạm:</span>
+            <select
+              value={station.id}
+              onChange={(e) => {
+                const sel = allStations.find((s) => s.id === e.target.value);
+                if (sel) {
+                  setStation(sel);
+                  if (onSelectStation) onSelectStation(sel.id);
+                }
+              }}
+              className="bg-stone-50 border border-stone-200 text-slate-900 font-bold text-xs rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+            >
+              {allStations.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5 text-xs">

@@ -3,11 +3,8 @@ import { Sliders, DollarSign, Sparkles, Shield, Boxes, CheckCircle2 } from "luci
 import { supabase } from "../../../lib/supabase/client";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { logAudit } from "../../../lib/audit/logAction";
+import GeneralInfo from "./GeneralInfo";
 
-// S0.6 — Cấu hình tổng hợp (US-0.4, FR-0.3).
-// "Control tower": đọc/ghi TRỰC TIẾP các bảng gốc của Module 1/3/5/6 — không
-// tạo bảng nhân bản. Các bảng này hiện là placeholder tối thiểu (migration
-// 0002) cho tới khi build đúng module sở hữu chúng.
 interface ThresholdRow {
   id: string;
   red_max: number;
@@ -19,7 +16,12 @@ interface SurchargeRow {
   percent: number;
 }
 
-export default function ConfigOverview() {
+interface ConfigOverviewProps {
+  currentStationId?: string;
+  onSelectStation?: (id: string) => void;
+}
+
+export default function ConfigOverview({ currentStationId, onSelectStation }: ConfigOverviewProps = {}) {
   const { can, staff } = useAuth();
   const canEdit = can("settings", "update");
 
@@ -89,7 +91,10 @@ export default function ConfigOverview() {
   if (loading) return <p className="text-mid-gray font-sans text-sm">Đang tải...</p>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 font-sans">
+      {/* SECTION 1: Cấu hình Thông tin chung Trạm Vận Hành (Gom từ Thông tin chung) */}
+      <GeneralInfo currentStationId={currentStationId} onSelectStation={onSelectStation} />
+
       {toast && (
         <div className="fixed top-20 right-6 z-50 bg-matte-black text-brand-green px-5 py-3.5 rounded-xl border border-brand-green/30 shadow-2xl flex items-center gap-3 font-sans text-xs font-bold">
           <CheckCircle2 className="h-4 w-4" />

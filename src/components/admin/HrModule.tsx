@@ -42,14 +42,21 @@ import {
   Bot,
   Send
 } from "lucide-react";
-import { simActions } from "../../lib/supabase/client";
+import { supabase, simActions } from "../../lib/supabase/client";
 import { MarkdownTextarea, MarkdownRenderer } from "./shared/Markdown";
 
 // STATION CONFIGURATION
-const STATIONS = [
-  { id: "WASSUP_TÂN_BÌNH_01", name: "WASSUP Station - Tân Bình (CN1)" },
-  { id: "WASSUP_QUAN_1_02", name: "WASSUP Station - Quận 1 (CN2)" },
-  { id: "WASSUP_THU_DUC_03", name: "WASSUP Station - Thủ Đức (CN3)" }
+export interface StationOption {
+  id: string;
+  name: string;
+  address?: string;
+  is_headquarters?: boolean;
+}
+
+const DEFAULT_STATIONS: StationOption[] = [
+  { id: "st-001", name: "WASSUP Station - Cầu Giấy (Trạm Tổng)", is_headquarters: true },
+  { id: "st-002", name: "WASSUP Station - Đống Đa", is_headquarters: false },
+  { id: "st-003", name: "WASSUP Station - Hà Đông", is_headquarters: false },
 ];
 
 // TYPES FOR MODULE 8 (HR)
@@ -176,15 +183,90 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
   // Left menu within the detail view: "info_perf" | "skills" | "work_history" | "discipline"
   const [activeDetailTab, setActiveDetailTab] = useState<"info_perf" | "skills" | "work_history" | "discipline">("info_perf");
 
+  // Dynamic Stations state from Module 0
+  const [stations, setStations] = useState<StationOption[]>(DEFAULT_STATIONS);
+  const [localStationId, setLocalStationId] = useState<string>(
+    () => localStorage.getItem("wassup_station_id") || "st-001"
+  );
+
   // Current session config & role-based station lock
   const loggedInUser = currentUser || JSON.parse(localStorage.getItem("wassup_current_user") || "null");
   const isAccountMaster = loggedInUser?.role === "master_admin";
-  const localStationId = localStorage.getItem("wassup_station_id") || "WASSUP_TÂN_BÌNH_01";
 
   // Station Filter state (defaults to "all" for Account Master, or locks to localStationId for normal manager)
   const [selectedStationId, setSelectedStationId] = useState<string>(() => {
     return loggedInUser?.role === "master_admin" ? "all" : localStationId;
   });
+
+  async function loadStations() {
+    const stored = localStorage.getItem("wassup_stations");
+    let localData: StationOption[] = DEFAULT_STATIONS;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localData = parsed.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            address: s.address,
+            is_headquarters: s.is_headquarters ?? false,
+          }));
+        }
+      } catch (e) {}
+    }
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("stations")
+          .select("id, name, address, is_headquarters")
+          .order("is_headquarters", { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const merged = data.map((d: any) => {
+            const loc = localData.find((l) => l.id === d.id);
+            return {
+              id: d.id,
+              name: loc ? loc.name : d.name,
+              address: d.address,
+              is_headquarters: d.is_headquarters ?? false,
+            };
+          });
+          setStations(merged);
+          return;
+        }
+      } catch (e) {
+        console.warn("HrModule stations load error", e);
+      }
+    }
+
+    setStations(localData);
+  }
+
+  useEffect(() => {
+    void loadStations();
+
+    const handleUpdate = () => {
+      void loadStations();
+      const storedId = localStorage.getItem("wassup_station_id");
+      if (storedId) {
+        setLocalStationId(storedId);
+        if (!isAccountMaster) {
+          setSelectedStationId(storedId);
+        }
+      }
+    };
+
+    window.addEventListener("wassup_stations_updated", handleUpdate);
+    window.addEventListener("wassup_station_id_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("wassup_stations_updated", handleUpdate);
+      window.removeEventListener("wassup_station_id_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, [isAccountMaster]);
 
   // Filtering & searching within Directory
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,7 +289,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
     name: "",
     phone: "",
     pin: "123456",
-    stationId: "WASSUP_TÂN_BÌNH_01",
+    stationId: localStationId || "st-001",
     rank: "junior" as HrProfile["rank"]
   });
   const [newCert, setNewCert] = useState({
@@ -295,17 +377,21 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
     // 2. Seed HR Profiles
     const storedProfiles = localStorage.getItem("wassup_hr_profiles");
     let activeProfiles: HrProfile[] = [];
+    const firstStId = stations[0]?.id || "st-001";
+    const secondStId = stations[1]?.id || firstStId;
+    const thirdStId = stations[2]?.id || firstStId;
+    const validStationIds = new Set(stations.map(st => st.id));
+
     if (storedProfiles) {
       activeProfiles = JSON.parse(storedProfiles);
-      // Ensure all active profiles have a stationId. If not, assign one.
+      // Ensure all active profiles have a valid stationId from Module 0 stations.
       let migrated = false;
       activeProfiles = activeProfiles.map(p => {
-        if (!p.stationId) {
+        if (!p.stationId || !validStationIds.has(p.stationId)) {
           migrated = true;
-          if (p.staffId === sIdHa) p.stationId = "WASSUP_QUAN_1_02";
-          else if (p.staffId === sIdPhuc) p.stationId = "WASSUP_TÂN_BÌNH_01";
-          else if (p.staffId === sIdKhoa) p.stationId = "WASSUP_TÂN_BÌNH_01";
-          else p.stationId = "WASSUP_TÂN_BÌNH_01";
+          if (p.stationId === "WASSUP_QUAN_1_02" || p.staffId === sIdHa) p.stationId = secondStId;
+          else if (p.stationId === "WASSUP_THU_DUC_03") p.stationId = thirdStId;
+          else p.stationId = firstStId;
         }
         return p;
       });
@@ -333,7 +419,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
           nationalIdFrontUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           nationalIdBackUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           selectedSkills: ["sk_1"],
-          stationId: "WASSUP_TÂN_BÌNH_01"
+          stationId: firstStId
         },
         {
           staffId: sIdHa,
@@ -354,7 +440,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
           nationalIdFrontUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           nationalIdBackUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           selectedSkills: ["sk_1", "sk_2", "sk_3"],
-          stationId: "WASSUP_QUAN_1_02"
+          stationId: secondStId
         },
         {
           staffId: sIdPhuc,
@@ -375,7 +461,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
           nationalIdFrontUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           nationalIdBackUrl: "https://images.unsplash.com/photo-1557683316-973673baf926?w=400",
           selectedSkills: ["sk_1", "sk_2", "sk_3", "sk_4", "sk_5", "sk_6"],
-          stationId: "WASSUP_TÂN_BÌNH_01"
+          stationId: firstStId
         }
       ];
       localStorage.setItem("wassup_hr_profiles", JSON.stringify(activeProfiles));
@@ -387,11 +473,11 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
     staff.forEach(s => {
       const isTechOrHr = s.role === "technician";
       if (isTechOrHr && !updatedProfiles.some(p => p.staffId === s.id)) {
-        let assignedStation = "WASSUP_TÂN_BÌNH_01";
+        let assignedStation = firstStId;
         if (s.id === "s4" || s.name.includes("B")) {
-          assignedStation = "WASSUP_QUAN_1_02";
+          assignedStation = secondStId;
         } else if (s.id === "s5" || s.name.includes("C")) {
-          assignedStation = "WASSUP_THU_DUC_03";
+          assignedStation = thirdStId;
         }
         updatedProfiles.push({
           staffId: s.id,
@@ -682,7 +768,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
     setProfiles(updatedProfiles);
     localStorage.setItem("wassup_hr_profiles", JSON.stringify(updatedProfiles));
     setShowAddKtvModal(false);
-    setNewKtv({ name: "", phone: "", pin: "123456", stationId: "WASSUP_TÂN_BÌNH_01", rank: "junior" });
+    setNewKtv({ name: "", phone: "", pin: "123456", stationId: stations[0]?.id || localStationId || "st-001", rank: "junior" });
     showToastMsg("Thêm Kỹ thuật viên trạm thành công!");
   };
 
@@ -798,7 +884,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
     })
     .filter(t => {
       const p = profiles.find(pr => pr.staffId === t.id);
-      const stationId = p?.stationId || "WASSUP_TÂN_BÌNH_01";
+      const stationId = p?.stationId || stations[0]?.id || localStationId || "st-001";
 
       // Station check
       if (selectedStationId !== "all" && stationId !== selectedStationId) {
@@ -883,7 +969,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
             <div className="flex items-center gap-2 text-xs font-sans">
               <span className="text-stone-500 font-bold">Trạm:</span>
               <span className="bg-stone-100 border border-stone-200 rounded-lg px-3 py-1 font-extrabold text-stone-800">
-                {STATIONS.find(s => s.id === detailedProfile.stationId)?.name || "Chi nhánh khác"}
+                {stations.find(s => s.id === detailedProfile.stationId)?.name || "Chi nhánh khác"}
               </span>
               <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border ${
                 detailedProfile.employmentStatus === "active" ? "bg-green-50 text-green-700 border-green-200" :
@@ -1059,7 +1145,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
                             onChange={(e) => handleUpdateProfileFieldEx(detailedStaffObj.id, "stationId", e.target.value)}
                             className="col-span-2 border border-stone-200 rounded px-2 py-1 text-xs font-extrabold focus:outline-none bg-stone-50 disabled:bg-stone-100 disabled:opacity-75 cursor-pointer"
                           >
-                            {STATIONS.map(st => (
+                            {stations.map(st => (
                               <option key={st.id} value={st.id}>{st.name}</option>
                             ))}
                           </select>
@@ -1435,17 +1521,26 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
               {isAccountMaster ? (
                 <select
                   value={selectedStationId}
-                  onChange={(e) => setSelectedStationId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedStationId(val);
+                    if (val !== "all") {
+                      setLocalStationId(val);
+                      localStorage.setItem("wassup_station_id", val);
+                      window.dispatchEvent(new Event("wassup_station_id_updated"));
+                      window.dispatchEvent(new Event("wassup_stations_updated"));
+                    }
+                  }}
                   className="bg-white border border-stone-200 rounded-lg p-2 font-extrabold text-stone-800 focus:outline-none focus:border-stone-950 cursor-pointer shadow-3xs"
                 >
                   <option value="all">Toàn bộ hệ thống (Tất cả trạm)</option>
-                  {STATIONS.map(st => (
+                  {stations.map(st => (
                     <option key={st.id} value={st.id}>{st.name}</option>
                   ))}
                 </select>
               ) : (
                 <div className="bg-stone-100 border border-stone-200 rounded-lg px-3 py-2 font-extrabold text-stone-800 flex items-center gap-1.5">
-                  <span>{STATIONS.find(s => s.id === localStationId)?.name}</span>
+                  <span>{stations.find(s => s.id === localStationId)?.name || stations[0]?.name || "Chi nhánh"}</span>
                 </div>
               )}
             </div>
@@ -1703,7 +1798,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
                               <div>
                                 <div>{s.name}</div>
                                 <span className="text-[9px] text-stone-400 font-bold block uppercase mt-0.5">
-                                  {STATIONS.find(st => st.id === p?.stationId)?.name || "Chi nhánh"}
+                                  {stations.find(st => st.id === p?.stationId)?.name || "Chi nhánh"}
                                 </span>
                               </div>
                             </td>
@@ -1731,12 +1826,12 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
                                 </button>
                                 {isAccountMaster && (
                                   <select
-                                    value={p?.stationId || "WASSUP_TÂN_BÌNH_01"}
+                                    value={p?.stationId || stations[0]?.id || "st-001"}
                                     onChange={(e) => handleUpdateProfileFieldEx(s.id, "stationId", e.target.value)}
                                     className="bg-stone-100 border border-stone-200 rounded px-1.5 py-1 text-[10px] font-bold text-stone-700 focus:outline-none cursor-pointer"
                                     title="Điều chuyển trạm làm việc"
                                   >
-                                    {STATIONS.map(st => (
+                                    {stations.map(st => (
                                       <option key={st.id} value={st.id}>Chuyển: {st.name.replace("WASSUP Station - ", "")}</option>
                                     ))}
                                   </select>
@@ -2016,7 +2111,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
                       onChange={(e) => setNewKtv({ ...newKtv, stationId: e.target.value })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-lg px-2 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
                     >
-                      {STATIONS.map(st => (
+                      {stations.map(st => (
                         <option key={st.id} value={st.id}>{st.name.replace("WASSUP Station - ", "")}</option>
                       ))}
                     </select>

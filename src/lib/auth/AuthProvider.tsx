@@ -7,6 +7,7 @@ export interface StaffUser {
   username: string;
   phone?: string | null;
   station_scope_all?: boolean;
+  station_id?: string | null;
   role_id?: string;
   status?: string;
 }

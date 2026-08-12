@@ -2197,8 +2197,8 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
             </div>
 
             <div className="space-y-2.5">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="p-4 bg-stone-50 border border-stone-200/60 rounded-xl flex items-start gap-3 text-xs">
+              {auditLogs.map((log, idx) => (
+                <div key={`${log.id || 'al'}-${idx}`} className="p-4 bg-stone-50 border border-stone-200/60 rounded-xl flex items-start gap-3 text-xs">
                   <div className="p-2 bg-slate-900 text-[#A2C62C] font-black font-sans text-[9px] rounded-lg shadow-sm">
                     {log.id}
                   </div>

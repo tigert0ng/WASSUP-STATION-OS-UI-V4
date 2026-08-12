@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   BookOpen, 
   ArrowRight, 
   Layers, 
-  UserCheck, 
   Settings, 
   CheckCircle2, 
   Sparkles,
@@ -12,21 +11,45 @@ import {
   LineChart
 } from "lucide-react";
 
-export default function PrdHandbook() {
+interface PrdHandbookProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function PrdHandbook({ isOpen, onClose }: PrdHandbookProps) {
   const [activeSec, setActiveSec] = useState<"overview" | "categories" | "flow" | "rules">("overview");
 
-  return (
-    <div className="bg-white border border-[#e5e5e5] rounded-2xl shadow-sm overflow-hidden font-sans text-xs text-slate-700 animate-fadeIn" id="prd-handbook">
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (isOpen === false) return null;
+
+  const content = (
+    <div className="bg-white border border-[#e5e5e5] rounded-2xl shadow-sm overflow-hidden font-sans text-xs text-slate-700 animate-fadeIn relative" id="prd-handbook">
       {/* Banner */}
       <div className="bg-slate-900 text-white p-6 relative">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <BookOpen className="h-24 w-24" />
-        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer z-30 flex items-center gap-1.5 border border-slate-700 shadow-sm"
+          >
+            ✕ Đóng
+          </button>
+        )}
         <div className="flex items-center gap-2 text-forest-green font-extrabold tracking-widest text-[9px] uppercase mb-1.5">
           <Sparkles className="h-3 w-3 text-[#A2C62C]" />
           <span>SỐ HÓA KHO VẬT TƯ CAR CARE</span>
         </div>
-        <h2 className="text-lg font-black font-display uppercase tracking-tight text-white">
+        <h2 className="text-lg font-black font-display uppercase tracking-tight text-white pr-20">
           SỔ TAY CẨM NANG PRD & QUY TRÌNH KHO CHUẨN
         </h2>
         <p className="text-slate-400 text-[10px] mt-1 max-w-xl">
@@ -257,4 +280,22 @@ export default function PrdHandbook() {
       </div>
     </div>
   );
+
+  if (isOpen) {
+    return (
+      <div 
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[999] flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
+        onClick={onClose}
+      >
+        <div 
+          className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl cursor-default"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }
