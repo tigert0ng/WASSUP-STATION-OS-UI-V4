@@ -1,30 +1,31 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Search, X, Check } from "lucide-react";
+import { ChevronDown, X, Check } from "lucide-react";
 
-export interface SelectOption {
+export interface SearchableSelectOption {
   value: string;
   label: string;
   sublabel?: string;
   disabled?: boolean;
-  group?: string;
 }
 
 export interface SearchableSelectProps {
-  options: SelectOption[] | string[];
+  options: SearchableSelectOption[] | string[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
+  emptyMessage?: string;
   className?: string;
   disabled?: boolean;
   required?: boolean;
   clearable?: boolean;
   id?: string;
   name?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md";
 }
 
-// Utility function to normalize Vietnamese text for diacritic-insensitive search
+// Diacritic-insensitive normalization for Vietnamese search (NFD strips tone
+// marks; "đ"/"Đ" don't decompose under NFD so they need an explicit swap).
 function removeAccents(str: string): string {
   return str
     .normalize("NFD")
@@ -33,12 +34,28 @@ function removeAccents(str: string): string {
     .replace(/Đ/g, "D");
 }
 
-export const SearchableSelect: React.FC<SearchableSelectProps> = ({
+const sizeClasses: Record<NonNullable<SearchableSelectProps["size"]>, string> = {
+  sm: "px-2.5 py-1.5 text-[11px] rounded-lg pr-8",
+  md: "px-3.5 py-2.5 text-xs rounded-xl pr-9",
+};
+
+/**
+ * Searchable/filterable single-select combobox — replaces plain `<select>`
+ * elements where the option list is long enough to benefit from typing to
+ * filter (supplier picker, item picker, reason picker, related-tool picker).
+ *
+ * Styled to this project's real design tokens (forest-green / matte-black /
+ * mid-gray / brand-green, the `bg-white border border-[#e5e5e5] rounded-xl`
+ * input convention) — not the purple/slate scheme of the AI-Studio UI
+ * reference this was ported from.
+ */
+const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   value,
   onChange,
-  placeholder = "-- Chọn giá trị --",
-  searchPlaceholder = "Gõ để tìm kiếm nhanh...",
+  placeholder = "-- Chọn --",
+  searchPlaceholder = "Gõ để tìm kiếm...",
+  emptyMessage,
   className = "",
   disabled = false,
   required = false,
@@ -52,38 +69,25 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Normalize options array to standard SelectOption format
-  const normalizedOptions: SelectOption[] = useMemo(() => {
-    return options.map((opt) => {
-      if (typeof opt === "string") {
-        return { value: opt, label: opt };
-      }
-      return opt;
-    });
+  const normalizedOptions: SearchableSelectOption[] = useMemo(() => {
+    return options.map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt));
   }, [options]);
 
-  // Find selected option object
-  const selectedOption = useMemo(() => {
-    return normalizedOptions.find((opt) => String(opt.value) === String(value));
-  }, [normalizedOptions, value]);
+  const selectedOption = useMemo(
+    () => normalizedOptions.find((opt) => String(opt.value) === String(value)),
+    [normalizedOptions, value]
+  );
 
-  // Filtered options based on search query (quick suggest)
   const filteredOptions = useMemo(() => {
     if (!searchQuery.trim()) return normalizedOptions;
     const queryNormalized = removeAccents(searchQuery.toLowerCase().trim());
     return normalizedOptions.filter((opt) => {
       const labelNormalized = removeAccents(opt.label.toLowerCase());
-      const valueNormalized = removeAccents(opt.value.toLowerCase());
       const sublabelNormalized = opt.sublabel ? removeAccents(opt.sublabel.toLowerCase()) : "";
-      return (
-        labelNormalized.includes(queryNormalized) ||
-        valueNormalized.includes(queryNormalized) ||
-        sublabelNormalized.includes(queryNormalized)
-      );
+      return labelNormalized.includes(queryNormalized) || sublabelNormalized.includes(queryNormalized);
     });
   }, [normalizedOptions, searchQuery]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -95,18 +99,6 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Keyboard navigation support
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setIsOpen(false);
-      setSearchQuery("");
-      inputRef.current?.blur();
-    } else if (e.key === "Enter" && isOpen && filteredOptions.length > 0) {
-      e.preventDefault();
-      handleSelect(filteredOptions[0].value);
-    }
-  };
-
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
     setIsOpen(false);
@@ -117,81 +109,63 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     e.stopPropagation();
     onChange("");
     setSearchQuery("");
-    if (inputRef.current) {
-      inputRef.current.focus();
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setIsOpen(false);
+      setSearchQuery("");
+      inputRef.current?.blur();
+    } else if (e.key === "Enter" && isOpen) {
+      e.preventDefault();
+      const firstEnabled = filteredOptions.find((opt) => !opt.disabled);
+      if (firstEnabled) handleSelect(firstEnabled.value);
+    } else if (e.key === "ArrowDown" && !isOpen) {
+      setIsOpen(true);
     }
   };
 
-  // Size specific styles for input
-  const sizeClasses = {
-    sm: "px-2.5 py-1.5 text-xs rounded-lg pr-8",
-    md: "px-3.5 py-2.5 text-xs rounded-xl pr-9",
-    lg: "px-4 py-3 text-sm rounded-xl pr-10",
-  }[size];
-
-  // Display value for the input field
-  const displayInputValue = isOpen
-    ? searchQuery
-    : selectedOption
-    ? selectedOption.label
-    : "";
-
-  const displayPlaceholder = isOpen
-    ? selectedOption
-      ? selectedOption.label
-      : searchPlaceholder
-    : placeholder;
+  const displayInputValue = isOpen ? searchQuery : selectedOption ? selectedOption.label : "";
+  const displayPlaceholder = isOpen ? selectedOption ? selectedOption.label : searchPlaceholder : placeholder;
 
   return (
-    <div ref={containerRef} className="relative w-full text-left font-sans" onKeyDown={handleKeyDown}>
-      {/* Hidden input for HTML form validation compatibility */}
-      {required && (
-        <input
-          type="text"
-          id={id}
-          name={name}
-          value={value}
-          required={required}
-          onChange={() => {}}
-          className="sr-only"
-          tabIndex={-1}
-        />
-      )}
-
-      {/* Direct Editable Input Field at Dropdown Location */}
+    <div ref={containerRef} className="relative w-full" onKeyDown={handleKeyDown}>
       <div className="relative w-full flex items-center">
         <input
           ref={inputRef}
+          id={id}
+          name={name}
           type="text"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          autoComplete="off"
           disabled={disabled}
+          required={required}
           value={displayInputValue}
           onChange={(e) => {
             setSearchQuery(e.target.value);
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => {
-            if (!disabled) {
-              setIsOpen(true);
-            }
+            if (!disabled) setIsOpen(true);
           }}
           onClick={() => {
-            if (!disabled && !isOpen) {
-              setIsOpen(true);
-            }
+            if (!disabled && !isOpen) setIsOpen(true);
           }}
           placeholder={displayPlaceholder}
-          className={`w-full bg-stone-50 border border-stone-200 hover:border-slate-400 focus:border-purple-600 focus:bg-white transition-all font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none ${sizeClasses} ${
-            disabled ? "opacity-50 cursor-not-allowed bg-stone-100" : "cursor-text"
-          } ${isOpen ? "ring-2 ring-purple-500/20 border-purple-500 bg-white" : ""} ${className}`}
+          className={`w-full bg-white border border-[#e5e5e5] focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors ${sizeClasses[size]} ${
+            isOpen ? "border-forest-green" : ""
+          } ${className}`}
         />
 
-        {/* Right Controls (Clear & Chevron) */}
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 pointer-events-none">
-          {clearable && (selectedOption || searchQuery) && !disabled && (
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-mid-gray">
+          {clearable && !!selectedOption && !disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-0.5 hover:text-slate-700 hover:bg-stone-200 rounded transition cursor-pointer pointer-events-auto"
+              className="p-0.5 hover:text-matte-black hover:bg-gray-100 rounded transition cursor-pointer"
               title="Xóa lựa chọn"
             >
               <X className="h-3.5 w-3.5" />
@@ -199,48 +173,42 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           )}
           <ChevronDown
             onClick={() => {
-              if (!disabled) {
-                setIsOpen((prev) => !prev);
-                if (!isOpen) inputRef.current?.focus();
-              }
+              if (disabled) return;
+              setIsOpen((prev) => !prev);
+              if (!isOpen) inputRef.current?.focus();
             }}
-            className={`h-4 w-4 transition-transform duration-200 cursor-pointer pointer-events-auto ${
-              isOpen ? "rotate-180 text-purple-600" : ""
-            }`}
+            className={`h-3.5 w-3.5 transition-transform duration-150 cursor-pointer ${isOpen ? "rotate-180 text-forest-green" : ""}`}
           />
         </div>
       </div>
 
-      {/* Dropdown Options List Popover (No Search Box Inside) */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-[9999] bg-white border border-stone-200 rounded-xl shadow-xl overflow-hidden animate-fadeIn max-h-60 flex flex-col">
-          <div className="overflow-y-auto flex-1 p-1 space-y-0.5 scrollbar-thin">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-[70] bg-white border border-[#e5e5e5] rounded-xl shadow-2xl overflow-hidden max-h-60 flex flex-col">
+          <div className="overflow-y-auto flex-1 p-1 space-y-0.5">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt) => {
                 const isSelected = String(opt.value) === String(value);
                 return (
                   <button
-                    key={String(opt.value)}
+                    key={opt.value}
                     type="button"
                     disabled={opt.disabled}
                     onClick={() => handleSelect(opt.value)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                      isSelected
-                        ? "bg-purple-50 text-purple-900 font-bold"
-                        : "text-slate-700 hover:bg-stone-100 hover:text-slate-900"
-                    } ${opt.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isSelected ? "bg-brand-green-light text-matte-black font-extrabold" : "text-matte-black hover:bg-warm-white"
+                    }`}
                   >
-                    <div className="flex flex-col truncate">
+                    <span className="flex flex-col truncate">
                       <span className="truncate">{opt.label}</span>
-                      {opt.sublabel && <span className="text-[10px] text-slate-400 font-normal">{opt.sublabel}</span>}
-                    </div>
-                    {isSelected && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
+                      {opt.sublabel && <span className="text-[10px] text-mid-gray font-normal">{opt.sublabel}</span>}
+                    </span>
+                    {isSelected && <Check className="h-3.5 w-3.5 text-forest-green shrink-0" />}
                   </button>
                 );
               })
             ) : (
-              <div className="px-3 py-4 text-center text-xs text-slate-400 font-medium italic">
-                Không tìm thấy kết quả phù hợp "{searchQuery}"
+              <div className="px-3 py-4 text-center text-xs text-mid-gray font-medium italic">
+                {emptyMessage ?? `Không tìm thấy kết quả phù hợp "${searchQuery}"`}
               </div>
             )}
           </div>

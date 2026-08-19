@@ -175,6 +175,30 @@ Toàn bộ danh sách thả xuống (`<select>`) trong hệ thống được tha
 - **Menu Popover:** Chỉ chứa danh sách các tùy chọn được lọc (filtered list) hiển thị nhãn chính (label) và nhãn phụ (sublabel: SKU, ĐVT, SĐT...).
 - **Tương thích Form & Phím:** Hỗ trợ phím `Escape` để đóng, `Enter` để chọn nhanh, nút xóa nhanh lựa chọn (clearable), và đồng bộ form validation.
 
+### 5.8 Drawer Component (Slide-over Panel Thống Nhất)
+
+Component Drawer (`/src/components/common/Drawer.tsx`) chuẩn hóa toàn bộ luồng xem chi tiết, form nhập liệu nghiệp vụ sâu và kiểm toán:
+- **Hiệu ứng trượt:** Slide-over mượt mà từ mép phải màn hình (`x: "100%"` → `x: 0`, ease cubic bezier), kèm lớp phủ nền mờ `backdrop-blur-xs bg-black/40`.
+- **Header chuẩn hóa:** Tiêu đề viết hoa (`font-display font-black text-sm uppercase`), icon token trong khối bo tròn, dòng mô tả phụ (`text-[11px] text-mid-gray`) và nút đóng `X` bo tròn với hiệu ứng hover.
+- **Footer Sticky Action:** Component `DrawerFooterButtons` cố định chân drawer với cặp nút Hủy (neutral/ghost) và Xác nhận/Lưu (Primary / Destructive) đồng bộ typography và spacing.
+
+### 5.9 CRM & Loyalty Design Patterns (Module 4)
+
+- **Đa phương tiện liên kết:** Mỗi hội viên hỗ trợ liên kết danh sách nhiều xe, mỗi xe gồm Biển số, Phân hạng (`Sedan / SUV / Truck`), Hãng xe (`car_brand`) và Dòng xe (`car_model`).
+- **Phân nhóm khách hàng (Customer Groups):** Hỗ trợ 2 cơ chế: Nhóm tĩnh (Static - chọn tay từng hội viên) và Nhóm động (Dynamic - tự động tính toán theo điều kiện Chi tiêu, Lượt ghé, Lần ghé gần nhất, Tháng sinh nhật).
+- **Phân tích RFM (Recency, Frequency, Monetary):** Ma trận 6 phân khúc chuẩn hóa (`Champions`, `Loyal`, `Potential`, `New`, `At-Risk`, `Hibernating`) kèm tính năng kích hoạt chiến dịch Win-Back mục tiêu.
+- **Cohort Retention Table:** Phân tích tỷ lệ quay lại của khách hàng theo chu kỳ 30 ngày (M+1), 60 ngày (M+2), 90 ngày (M+3) với bảng biểu heatmap trực quan.
+- **SUP Point Ledger & Emergency Compensation:** Ghi nhận kiểm toán toàn vẹn mọi biến động điểm SUP; Bàn bồi hoàn khẩn cấp (Emergency Compensation Desk) phục vụ xử lý khiếu nại khách hàng tức thời.
+- **Quy chuẩn chọn dòng xe áp dụng Voucher:** Áp dụng logic minh bạch: Chọn = Áp dụng, Không chọn = Không áp dụng; Mặc định khi tạo mới chọn tất cả = Áp dụng hết (3/3 phân hạng Sedan, SUV/CUV, Bán tải/Xe tải). Hỗ trợ nút chọn/bỏ chọn nhanh toàn bộ.
+
+### 5.10 ConfirmDeleteModal (Bảo Vệ Thao Tác Nguy Hiểm / Destructive Action Protection)
+
+Đối với toàn bộ thao tác phá hủy dữ liệu, có tính rủi ro cao (Xóa Voucher, Xóa Nhóm khách hàng, Gỡ Phương tiện, Xóa Dịch vụ/BOM, Xóa Tài khoản/Vai trò), hệ thống **bắt buộc tuân thủ mẫu thiết kế ma sát cao (high-friction confirmation)** thông qua component dùng chung **`ConfirmDeleteModal`** (`/src/components/common/ConfirmDeleteModal.tsx`):
+- **Cơ chế xác nhận bắt buộc:** Người dùng phải gõ chính xác tên/mã định danh của thực thể (hoặc biển số xe / mã voucher) vào ô input thì nút **"Xóa vĩnh viễn" / "Xóa"** mới được kích hoạt (active).
+- **Trạng thái nút xóa:** Khi chưa nhập đúng tên, nút xóa ở trạng thái Disabled (`opacity-40 cursor-not-allowed`) và không thể bấm được.
+- **Cảnh báo mức độ nghiêm trọng:** Modal hiển thị banner cảnh báo rủi ro màu đỏ (`bg-red-50 text-red-700 border-red-200`) mô tả chi tiết hệ quả phá hủy (VD: mất dữ liệu phân loại, hủy quyền lợi voucher, không thể hoàn tác).
+- **Không dùng `window.confirm` hay popup mặc định của trình duyệt:** Tất cả modal xác nhận nguy hiểm đều dựng bằng custom UI với hiệu ứng Framer Motion, backdrop làm mờ và phím tắt `Escape` để hủy nhanh an toàn.
+
 ---
 
 ## 6. Motion & Interaction
@@ -230,10 +254,21 @@ Mọi trường nhập liệu dạng "mô tả dài"/"ghi chú" trong toàn hệ
 
 - "Kỹ thuật viên" / "kĩ thuật viên" viết tắt thống nhất là **KTV** trong toàn bộ tài liệu PRD, giao diện, thông báo Telegram, báo cáo — không dùng biến thể khác ("KTV." có dấu chấm, "kỹthuậtviên" viết liền, v.v.).
 
+### 8.4 Bảo Vệ Thao Tác Nguy Hiểm — Nhập Tên Xác Nhận Xóa (ConfirmDeleteModal)
+
+*Bổ sung 20/07/2026 theo yêu cầu nguyên tắc an toàn dữ liệu toàn hệ thống.*
+
+Mọi thao tác có tính chất phá hủy, xóa vĩnh viễn, hoặc rủi ro cao trong toàn bộ hệ thống (Xóa Voucher, Xóa Nhóm khách hàng, Xóa Phương tiện liên kết, Xóa Dịch vụ/BOM, Xóa Tài khoản/Vai trò, Xóa SKU vật tư, Xóa Nhà cung cấp...) **bắt buộc** áp dụng quy chuẩn (high-friction confirmation) sử dụng chung component **`ConfirmDeleteModal`** (`/src/components/common/ConfirmDeleteModal.tsx`):
+
+1. **Cơ chế xác nhận bắt buộc:** Bắt buộc người dùng phải gõ chính xác tên/mã định danh của thực thể (hoặc biển số xe / mã voucher) vào ô input thì nút hành động xóa (`Xóa vĩnh viễn` / `Xóa`) mới được kích hoạt (active).
+2. **Khóa nút khi chưa khớp:** Khi chưa nhập đúng chính xác chuỗi định danh, nút xóa luôn ở trạng thái disabled (`opacity-40 cursor-not-allowed`) và không thể bấm hay submit được.
+3. **Cảnh báo mức độ nghiêm trọng:** Modal hiển thị khung cảnh báo màu đỏ (`bg-red-50 text-red-700 border-red-200`) mô tả chi tiết hệ quả phá hủy và xác nhận hành động không thể hoàn tác.
+4. **Cấm tuyệt đối `window.confirm` / Popup mặc định của trình duyệt:** Không sử dụng hộp thoại `confirm()` mặc định của trình duyệt (vừa gây gián đoạn iFrame, vừa không an toàn). Tất cả thao tác nguy hiểm đều phải kích hoạt qua custom modal `ConfirmDeleteModal` với hiệu ứng `motion/react`, nền mờ `backdrop-blur-sm` và hỗ trợ phím `Escape` để hủy an toàn.
+
 ---
 
 ## 9. Quan Hệ Với Tài Liệu Khác
 
 - **Kiosk:** đặc tả đầy đủ tại [`kiosk-payment/prd.md`](../kiosk-payment/prd.md) §11 tham chiếu ngược lại file này cho token/màu/font; các con số kích thước tối thiểu ở §4.2 trên đây là nguồn tham chiếu chính thức (thay thế ghi chú "2 token còn thiếu" cũ trong file đó — đã đủ trong bảng §2).
 - **TV:** xem [`kiosk-tv-appendix.md`](kiosk-tv-appendix.md) — TV chưa có PRD màn hình riêng đầy đủ (chỉ có bố cục kỹ thuật trong `google-studio-ui-wassup-wip/src/App.tsx` hàm `TvQueueDisplayView`); §4.3 ở trên là **yêu cầu bắt buộc** khi build/refactor, không phải mô tả nguyên trạng.
-- **Toàn hệ thống:** `00_master_prd.md` mục 4 (Nguyên Tắc Bắt Buộc Toàn Hệ Thống) trỏ tới mục 8 của file này cho 3 quy tắc chung (số, Markdown editor, KTV).
+- **Toàn hệ thống:** `00_master_prd.md` mục 4 (Nguyên Tắc Bắt Buộc Toàn Hệ Thống) trỏ tới mục 8 của file này cho 4 quy tắc chung (định dạng số/tiền tệ, Markdown editor, viết tắt KTV, và modal xác nhận thao tác nguy hiểm ConfirmDeleteModal).

@@ -31,7 +31,42 @@ if (!isRealSupabase) {
 // ------------------------------------------------------------
 // HIGH FIDELITY SIMULATION STORE
 // ------------------------------------------------------------
-interface SimState {
+export interface CustomerGroup {
+  id: string;
+  name: string;
+  type?: "static" | "dynamic";
+  mode?: "static" | "dynamic";
+  customer_ids?: string[];
+  customerIds?: string[];
+  condition?: {
+    spent?: string;
+    visits?: string;
+    lastVisit?: string;
+    dobMonth?: string;
+    [key: string]: any;
+  };
+  filterCriteria?: {
+    spent?: string;
+    visits?: string;
+    lastVisit?: string;
+    dobMonth?: string;
+    [key: string]: any;
+  };
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface VoucherRedemption {
+  id: string;
+  voucherId: string;
+  customerId: string;
+  orderId: string;
+  discountApplied?: number;
+  amountApplied?: number;
+  redeemedAt: string;
+}
+
+export interface SimState {
   orders: Order[];
   workOrders: any[];
   customers: Customer[];
@@ -40,8 +75,8 @@ interface SimState {
   thresholds: { daily_target: number; warning_level: number };
   vouchers: Voucher[];
   revenueToday: number;
-  voucherRedemptions?: any[];
-  customerGroups?: any[];
+  voucherRedemptions?: VoucherRedemption[];
+  customerGroups?: CustomerGroup[];
 }
 
 // Initial Mock Seed Data
@@ -412,26 +447,28 @@ export function getRevenueStats() {
 // ------------------------------------------------------------
 
 export const simActions = {
+  getState: () => currentState,
   getStaff: () => currentState.staff,
   getBooths: () => currentState.booths,
   getCustomers: () => currentState.customers,
   getVouchers: () => currentState.vouchers,
+  getOrders: () => currentState.orders,
   getThresholds: () => currentState.thresholds,
   
-  addCustomer: (data: { name: string; phone: string; pin?: string; licensePlate?: string; licensePlates?: string[]; dob?: string; address?: string; points?: number; vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck' }[] }) => {
+  addCustomer: (data: any) => {
     const plates = data.licensePlates || (data.licensePlate ? [data.licensePlate] : []);
-    const vehiclesList = data.vehicles || plates.map(p => ({ plate: p, vehicleClass: 'sedan' as const }));
-    const newCust = {
-      id: 'c_' + Date.now(),
-      name: data.name,
-      phone: data.phone,
+    const vehiclesList = data.vehicles || plates.map((p: string) => ({ plate: p, vehicleClass: 'sedan' as const }));
+    const newCust: Customer = {
+      id: data.id || ('c_' + Date.now()),
+      name: data.name || '',
+      phone: data.phone || '',
       pin: data.pin || "123456",
-      licensePlate: data.licensePlate || "",
+      licensePlate: data.licensePlate || (plates[0] || ""),
       licensePlates: plates,
       dob: data.dob || "",
       address: data.address || "",
       points: data.points || 0,
-      createdAt: new Date().toISOString(),
+      createdAt: data.createdAt || new Date().toISOString(),
       vehicles: vehiclesList
     };
     currentState.customers.push(newCust);
@@ -457,27 +494,29 @@ export const simActions = {
     return newCust;
   },
 
-  updateCustomer: (id: string, data: { name?: string; phone?: string; licensePlate?: string; licensePlates?: string[]; dob?: string; address?: string; points?: number; vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck' }[] }) => {
+  updateCustomer: (customerOrId: any, data?: any) => {
+    const id = typeof customerOrId === 'string' ? customerOrId : customerOrId?.id;
+    const patch = typeof customerOrId === 'object' && !data ? customerOrId : (data || {});
     const cust = currentState.customers.find(c => c.id === id);
     if (cust) {
-      if (data.name !== undefined) cust.name = data.name;
-      if (data.phone !== undefined) cust.phone = data.phone;
-      if (data.licensePlate !== undefined) cust.licensePlate = data.licensePlate;
-      if (data.licensePlates !== undefined) cust.licensePlates = data.licensePlates;
-      if (data.dob !== undefined) cust.dob = data.dob;
-      if (data.address !== undefined) cust.address = data.address;
-      if (data.points !== undefined) cust.points = data.points;
-      if (data.vehicles !== undefined) cust.vehicles = data.vehicles;
+      if (patch.name !== undefined) cust.name = patch.name;
+      if (patch.phone !== undefined) cust.phone = patch.phone;
+      if (patch.licensePlate !== undefined) cust.licensePlate = patch.licensePlate;
+      if (patch.licensePlates !== undefined) cust.licensePlates = patch.licensePlates;
+      if (patch.dob !== undefined) cust.dob = patch.dob;
+      if (patch.address !== undefined) cust.address = patch.address;
+      if (patch.points !== undefined) cust.points = patch.points;
+      if (patch.vehicles !== undefined) cust.vehicles = patch.vehicles;
       saveState();
 
       if (isRealSupabase && supabase) {
         (async () => {
           try {
             const updates: any = {};
-            if (data.name !== undefined) updates.name = data.name;
-            if (data.phone !== undefined) updates.phone = data.phone;
-            if (data.licensePlate !== undefined) updates.license_plate = data.licensePlate;
-            if (data.points !== undefined) updates.points = data.points;
+            if (patch.name !== undefined) updates.name = patch.name;
+            if (patch.phone !== undefined) updates.phone = patch.phone;
+            if (patch.licensePlate !== undefined) updates.license_plate = patch.licensePlate;
+            if (patch.points !== undefined) updates.points = patch.points;
 
             await supabase
               .from("customers")
@@ -1031,12 +1070,14 @@ export const simActions = {
     return newVoucher;
   },
 
-  updateVoucher: (id: string, updatedData: Partial<Voucher>) => {
+  updateVoucher: (voucherOrId: any, updatedData?: Partial<Voucher>) => {
+    const id = typeof voucherOrId === 'string' ? voucherOrId : voucherOrId?.id;
+    const patch = typeof voucherOrId === 'object' && !updatedData ? voucherOrId : (updatedData || {});
     const idx = currentState.vouchers.findIndex(v => v.id === id);
     if (idx !== -1) {
       currentState.vouchers[idx] = {
         ...currentState.vouchers[idx],
-        ...updatedData
+        ...patch
       };
       saveState();
       return currentState.vouchers[idx];
@@ -1149,13 +1190,15 @@ export const simActions = {
     return newGroup;
   },
 
-  updateCustomerGroup: (id: string, updatedData: any) => {
+  updateCustomerGroup: (groupOrId: any, updatedData?: any) => {
     if (!currentState.customerGroups) return null;
+    const id = typeof groupOrId === 'string' ? groupOrId : groupOrId?.id;
+    const patch = typeof groupOrId === 'object' && !updatedData ? groupOrId : (updatedData || {});
     const idx = currentState.customerGroups.findIndex(g => g.id === id);
     if (idx !== -1) {
       currentState.customerGroups[idx] = {
         ...currentState.customerGroups[idx],
-        ...updatedData
+        ...patch
       };
       saveState();
       return currentState.customerGroups[idx];

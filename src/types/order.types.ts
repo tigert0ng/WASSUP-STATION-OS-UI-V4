@@ -11,7 +11,7 @@ export interface Customer {
   address?: string;         // Address
   points: number;
   createdAt: string;
-  vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck' }[];
+  vehicles?: { plate: string; vehicleClass: 'sedan' | 'suv' | 'truck'; car_brand?: string; car_model?: string }[];
 }
 
 export interface Booth {

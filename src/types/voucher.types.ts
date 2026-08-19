@@ -22,4 +22,11 @@ export interface Voucher {
   target_type?: 'all_customers' | 'group' | 'specific_customers';
   target_group_id?: string;
   target_specific_customers?: string[];
+  applicable_vehicle_classes?: ('sedan' | 'suv' | 'truck')[];
+  schedule_restriction?: {
+    daysOfWeek?: number[]; // 1 = Monday, 7 = Sunday
+    timeFrom?: string;     // e.g. "08:00"
+    timeTo?: string;       // e.g. "17:00"
+  };
+  applicable_station_ids?: string[];
 }
