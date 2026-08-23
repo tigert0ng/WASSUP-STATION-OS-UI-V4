@@ -1754,7 +1754,7 @@ export const supabaseRealtime = {
           .select("*")
           .order("created_at", { ascending: false });
         if (error) throw error;
-        if (data) {
+        if (data && data.length > 0) {
           const mapped: Customer[] = data.map((row: any) => ({
             id: row.id,
             name: row.name,
@@ -1767,11 +1767,14 @@ export const supabaseRealtime = {
             createdAt: row.created_at,
             vehicles: row.vehicles || (row.license_plate ? [{ plate: row.license_plate, vehicleClass: 'sedan' }] : [])
           }));
+          currentState.customers = mapped;
           callback(mapped);
+        } else {
+          callback(currentState.customers && currentState.customers.length > 0 ? currentState.customers : INITIAL_STATE.customers);
         }
       } catch (err) {
         console.warn("Notice fetching customers from Supabase, falling back to simulator:", err);
-        callback(currentState.customers);
+        callback(currentState.customers && currentState.customers.length > 0 ? currentState.customers : INITIAL_STATE.customers);
       }
     };
 

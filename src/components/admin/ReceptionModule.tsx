@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Activity,
@@ -174,7 +175,26 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
     }
     return SERVICES_CATALOG[1].duration?.toString() || "30";
   });
-  const [activeTab, setActiveTab] = useState<'dispatch' | 'orders' | 'kpi'>('dispatch');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const RECEPTION_TABS = ['dispatch', 'orders', 'kpi'] as const;
+  type ReceptionTabType = typeof RECEPTION_TABS[number];
+
+  const tabFromUrl = location.pathname.split("/")[3] as ReceptionTabType | undefined;
+  const [activeTab, setActiveTab] = useState<ReceptionTabType>(
+    tabFromUrl && RECEPTION_TABS.includes(tabFromUrl) ? tabFromUrl : 'dispatch'
+  );
+
+  useEffect(() => {
+    if (tabFromUrl && RECEPTION_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const selectTab = (id: ReceptionTabType) => {
+    setActiveTab(id);
+    navigate(`/admin/reception/${id}`);
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [addonSearch, setAddonSearch] = useState("");
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
@@ -539,7 +559,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
       {/* TAB SELECTOR */}
       <div className="flex flex-col sm:flex-row border border-stone-200/80 bg-white rounded-2xl p-1.5 shadow-xs gap-1.5">
         <button
-          onClick={() => setActiveTab('dispatch')}
+          onClick={() => selectTab('dispatch')}
           className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
             activeTab === 'dispatch'
               ? "bg-matte-black text-white shadow-sm"
@@ -550,7 +570,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
           BẢNG ĐIỀU PHỐI TRỰC QUAN
         </button>
         <button
-          onClick={() => setActiveTab('orders')}
+          onClick={() => selectTab('orders')}
           className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
             activeTab === 'orders'
               ? "bg-matte-black text-white shadow-sm"
@@ -561,7 +581,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
           DANH SÁCH LỆNH XE & NHẬT KÝ
         </button>
         <button
-          onClick={() => setActiveTab('kpi')}
+          onClick={() => selectTab('kpi')}
           className={`flex-1 py-3 px-4 text-center font-display font-black text-[11px] tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
             activeTab === 'kpi'
               ? "bg-matte-black text-white shadow-sm"

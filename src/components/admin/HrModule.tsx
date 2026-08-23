@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Users,
@@ -140,8 +141,27 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [disciplineLogs, setDisciplineLogs] = useState<DisciplineLog[]>([]);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const HR_TABS = ["performance", "directory", "catalog", "bots"] as const;
+  type HrTabType = typeof HR_TABS[number];
+
+  const tabFromUrl = location.pathname.split("/")[3] as HrTabType | undefined;
   // Active top-level sub-menu tab: "performance" | "directory" | "catalog" | "bots"
-  const [activeM8Tab, setActiveM8Tab] = useState<"performance" | "directory" | "catalog" | "bots">("performance");
+  const [activeM8Tab, setActiveM8Tab] = useState<HrTabType>(
+    tabFromUrl && HR_TABS.includes(tabFromUrl) ? tabFromUrl : "performance"
+  );
+
+  useEffect(() => {
+    if (tabFromUrl && HR_TABS.includes(tabFromUrl) && tabFromUrl !== activeM8Tab) {
+      setActiveM8Tab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const selectTab = (id: HrTabType) => {
+    setActiveM8Tab(id);
+    navigate(`/admin/hr/${id}`);
+  };
 
   // Bot Integrations state
   const [telegramToken, setTelegramToken] = useState(() => localStorage.getItem("wassup_telegram_token") || "7128392182:AAH9238dj92hG-92_Hsd8291hd923h");
@@ -1549,7 +1569,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
           {/* MODULE TABS NAVIGATION */}
           <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
             <button
-              onClick={() => setActiveM8Tab("performance")}
+              onClick={() => selectTab("performance")}
               className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "performance"
                   ? "bg-[#18181b] text-white shadow-xs"
@@ -1560,7 +1580,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
               HIỆU SUẤT KTV
             </button>
             <button
-              onClick={() => setActiveM8Tab("directory")}
+              onClick={() => selectTab("directory")}
               className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "directory"
                   ? "bg-[#18181b] text-white shadow-xs"
@@ -1571,7 +1591,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
               DANH SÁCH KTV TRẠM
             </button>
             <button
-              onClick={() => setActiveM8Tab("catalog")}
+              onClick={() => selectTab("catalog")}
               className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "catalog"
                   ? "bg-[#18181b] text-white shadow-xs"
@@ -1582,7 +1602,7 @@ export default function HrModule({ staff, orders, currentUser }: HrModuleProps) 
               DANH MỤC KỸ NĂNG
             </button>
             <button
-              onClick={() => setActiveM8Tab("bots")}
+              onClick={() => selectTab("bots")}
               className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
                 activeM8Tab === "bots"
                   ? "bg-[#18181b] text-white shadow-xs"

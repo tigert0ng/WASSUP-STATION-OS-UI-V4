@@ -171,13 +171,13 @@ function AppContent() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Realtime state synchronized with our client store
-  const [orders, setOrders] = useState<OrderStatusView[]>([]);
-  const [revenueStats, setRevenueStats] = useState<any>(getRevenueStats());
-  const [booths, setBooths] = useState<Booth[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerGroups, setCustomerGroups] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderStatusView[]>(() => getMergedOrderStatusView() || []);
+  const [revenueStats, setRevenueStats] = useState<any>(() => getRevenueStats());
+  const [booths, setBooths] = useState<Booth[]>(() => simActions.getBooths() || []);
+  const [staff, setStaff] = useState<any[]>(() => simActions.getStaff() || []);
+  const [vouchers, setVouchers] = useState<Voucher[]>(() => simActions.getVouchers() || []);
+  const [customers, setCustomers] = useState<Customer[]>(() => simActions.getCustomers() || []);
+  const [customerGroups, setCustomerGroups] = useState<any[]>(() => simActions.getCustomerGroups() || []);
 
   // Default redirect from / to admin/dashboard
   useEffect(() => {

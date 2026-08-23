@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users,
   Gift,
@@ -78,8 +79,25 @@ export default function CrmModule({
   orders: initialOrders = [],
   customerGroups: initialGroups = []
 }: CrmModuleProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const tabFromUrl = location.pathname.split("/")[3];
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<string>("customers");
+  const [activeTab, setActiveTab] = useState<string>(
+    CRM_TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : "customers"
+  );
+
+  useEffect(() => {
+    if (tabFromUrl && CRM_TABS.some((t) => t.id === tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const selectTab = (id: string) => {
+    setActiveTab(id);
+    navigate(`/admin/crm/${id}`);
+  };
 
   // Role: Master Admin vs Quản lý vận hành (Manager)
   const [currentRole, setCurrentRole] = useState<"master_admin" | "manager">("master_admin");
@@ -230,16 +248,39 @@ export default function CrmModule({
 
     // Direct subscriptions for real-time reactivity without page reload
     const unsubCust = supabaseRealtime.subscribeCustomers((cList) => {
-      setCustomers([...cList]);
+      if (cList && cList.length > 0) {
+        setCustomers([...cList]);
+      } else {
+        const stored = simActions.getCustomers();
+        if (stored && stored.length > 0) {
+          setCustomers([...stored]);
+        }
+      }
     });
     const unsubVouch = supabaseRealtime.subscribeVouchers((vList) => {
-      setVouchers([...vList]);
+      if (vList && vList.length > 0) {
+        setVouchers([...vList]);
+      } else {
+        const stored = simActions.getVouchers();
+        if (stored && stored.length > 0) {
+          setVouchers([...stored]);
+        }
+      }
     });
     const unsubGroups = supabaseRealtime.subscribeCustomerGroups((gList) => {
-      setGroups([...gList]);
+      if (gList && gList.length > 0) {
+        setGroups([...gList]);
+      } else {
+        const stored = simActions.getCustomerGroups();
+        if (stored && stored.length > 0) {
+          setGroups([...stored]);
+        }
+      }
     });
-    const unsubOrders = supabaseRealtime.subscribeOrders(() => {
-      setOrders([...simActions.getOrders()]);
+    const unsubOrders = supabaseRealtime.subscribeOrders((ordersList) => {
+      if (ordersList && ordersList.length > 0) {
+        setOrders([...simActions.getOrders()]);
+      }
     });
 
     const handleExternalUpdate = () => {
@@ -877,7 +918,7 @@ export default function CrmModule({
           <PillTabBar
             tabs={CRM_TABS}
             activeId={activeTab}
-            onSelect={(id) => setActiveTab(id)}
+            onSelect={selectTab}
           />
 
           {/* ACTIVE SUB-TAB CONTENT */}

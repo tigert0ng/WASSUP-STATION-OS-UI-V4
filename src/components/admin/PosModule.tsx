@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   CreditCard,
@@ -130,8 +131,27 @@ interface AuditLog {
 }
 
 export default function PosModule({ orders, revenueStats }: PosModuleProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const POS_TABS = ["pos", "receipts", "expenses", "reports", "audit", "shifts"] as const;
+  type PosTabType = typeof POS_TABS[number];
+
+  const tabFromUrl = location.pathname.split("/")[3] as PosTabType | undefined;
   // Navigation & Role simulation
-  const [activeTab, setActiveTab] = useState<"pos" | "receipts" | "expenses" | "reports" | "audit" | "shifts">("pos");
+  const [activeTab, setActiveTab] = useState<PosTabType>(
+    tabFromUrl && POS_TABS.includes(tabFromUrl) ? tabFromUrl : "pos"
+  );
+
+  useEffect(() => {
+    if (tabFromUrl && POS_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const selectTab = (id: PosTabType) => {
+    setActiveTab(id);
+    navigate(`/admin/pos/${id}`);
+  };
   const [currentRole, setCurrentRole] = useState<"cashier" | "manager">("manager");
 
   // Cash register/shift state
@@ -932,7 +952,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
         {/* WORKSPACE NAVIGATION TABS */}
         <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none my-3">
           <button
-            onClick={() => setActiveTab("pos")}
+            onClick={() => selectTab("pos")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "pos"
                 ? "bg-[#18181b] text-white shadow-xs"
@@ -943,7 +963,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
           
           <button
-            onClick={() => setActiveTab("receipts")}
+            onClick={() => selectTab("receipts")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "receipts"
                 ? "bg-[#18181b] text-white shadow-xs"
@@ -954,7 +974,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
 
           <button
-            onClick={() => setActiveTab("expenses")}
+            onClick={() => selectTab("expenses")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "expenses"
                 ? "bg-[#18181b] text-white shadow-xs"
@@ -965,7 +985,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
 
           <button
-            onClick={() => setActiveTab("reports")}
+            onClick={() => selectTab("reports")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "reports"
                 ? "bg-[#18181b] text-white shadow-xs"
@@ -976,7 +996,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
 
           <button
-            onClick={() => setActiveTab("audit")}
+            onClick={() => selectTab("audit")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "audit"
                 ? "bg-[#18181b] text-white shadow-xs"
@@ -987,7 +1007,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
           </button>
 
           <button
-            onClick={() => setActiveTab("shifts")}
+            onClick={() => selectTab("shifts")}
             className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2.5 border-0 ${
               activeTab === "shifts"
                 ? "bg-[#18181b] text-white shadow-xs"
