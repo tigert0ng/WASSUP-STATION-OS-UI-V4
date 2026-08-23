@@ -91,11 +91,11 @@ const INITIAL_STATE: SimState = {
       licensePlates: ['30A-123.45', '29A-555.55'],
       dob: '1990-05-15',
       address: '12 Cầu Giấy, Hà Nội',
-      points: 150,
-      createdAt: new Date().toISOString(),
+      points: 280,
+      createdAt: new Date(Date.now() - 90 * 86400000).toISOString(),
       vehicles: [
-        { plate: '30A-123.45', vehicleClass: 'suv' },
-        { plate: '29A-555.55', vehicleClass: 'sedan' }
+        { plate: '30A-123.45', vehicleClass: 'suv', car_brand: 'Mazda', car_model: 'CX-5' },
+        { plate: '29A-555.55', vehicleClass: 'sedan', car_brand: 'Toyota', car_model: 'Camry' }
       ]
     },
     {
@@ -104,13 +104,14 @@ const INITIAL_STATE: SimState = {
       phone: '0911223344',
       pin: '123456',
       licensePlate: '51G-999.99',
-      licensePlates: ['51G-999.99'],
+      licensePlates: ['51G-999.99', '51K-334.88'],
       dob: '1995-10-20',
       address: '456 Lê Lợi, Quận 1, TP. HCM',
-      points: 40,
-      createdAt: new Date().toISOString(),
+      points: 140,
+      createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
       vehicles: [
-        { plate: '51G-999.99', vehicleClass: 'sedan' }
+        { plate: '51G-999.99', vehicleClass: 'sedan', car_brand: 'Mercedes-Benz', car_model: 'C300' },
+        { plate: '51K-334.88', vehicleClass: 'suv', car_brand: 'Porsche', car_model: 'Macan' }
       ]
     },
     {
@@ -122,14 +123,93 @@ const INITIAL_STATE: SimState = {
       licensePlates: ['29H-888.88', '30F-999.88', '30L-111.22'],
       dob: '1988-12-01',
       address: '789 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-      points: 300,
-      createdAt: new Date().toISOString(),
+      points: 450,
+      createdAt: new Date(Date.now() - 120 * 86400000).toISOString(),
       vehicles: [
-        { plate: '29H-888.88', vehicleClass: 'truck' },
-        { plate: '30F-999.88', vehicleClass: 'suv' },
-        { plate: '30L-111.22', vehicleClass: 'sedan' }
+        { plate: '29H-888.88', vehicleClass: 'truck', car_brand: 'Ford', car_model: 'Ranger Raptor' },
+        { plate: '30F-999.88', vehicleClass: 'suv', car_brand: 'Hyundai', car_model: 'Santa Fe' },
+        { plate: '30L-111.22', vehicleClass: 'sedan', car_brand: 'VinFast', car_model: 'VF 8' }
       ]
     },
+    {
+      id: 'c4',
+      name: 'Phạm Đức Anh',
+      phone: '0934567890',
+      pin: '123456',
+      licensePlate: '30K-688.68',
+      licensePlates: ['30K-688.68', '30E-246.80'],
+      dob: '1985-03-22',
+      address: 'Biệt thự 08, Vinhomes Riverside, Long Biên, Hà Nội',
+      points: 520,
+      createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
+      vehicles: [
+        { plate: '30K-688.68', vehicleClass: 'suv', car_brand: 'VinFast', car_model: 'VF 9' },
+        { plate: '30E-246.80', vehicleClass: 'sedan', car_brand: 'Honda', car_model: 'Civic' }
+      ]
+    },
+    {
+      id: 'c5',
+      name: 'Vũ Hoàng Yến',
+      phone: '0977112233',
+      pin: '123456',
+      licensePlate: '29B-135.79',
+      licensePlates: ['29B-135.79', '30H-868.68'],
+      dob: '1993-08-14',
+      address: '88 Phố Huế, Hai Bà Trưng, Hà Nội',
+      points: 160,
+      createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+      vehicles: [
+        { plate: '29B-135.79', vehicleClass: 'sedan', car_brand: 'Toyota', car_model: 'Vios' },
+        { plate: '30H-868.68', vehicleClass: 'suv', car_brand: 'Kia', car_model: 'Seltos' }
+      ]
+    },
+    {
+      id: 'c6',
+      name: 'Đặng Quốc Cường',
+      phone: '0966889900',
+      pin: '123456',
+      licensePlate: '51H-777.77',
+      licensePlates: ['51H-777.77', '51L-234.56'],
+      dob: '1982-11-05',
+      address: '120 Nguyễn Thị Minh Khai, Quận 3, TP. HCM',
+      points: 380,
+      createdAt: new Date(Date.now() - 75 * 86400000).toISOString(),
+      vehicles: [
+        { plate: '51H-777.77', vehicleClass: 'suv', car_brand: 'BMW', car_model: 'X5' },
+        { plate: '51L-234.56', vehicleClass: 'sedan', car_brand: 'Lexus', car_model: 'ES 250' }
+      ]
+    },
+    {
+      id: 'c7',
+      name: 'Bùi Mai Phương',
+      phone: '0945671234',
+      pin: '123456',
+      licensePlate: '30G-567.89',
+      licensePlates: ['30G-567.89'],
+      dob: '1998-02-18',
+      address: '15 Trung Hòa, Cầu Giấy, Hà Nội',
+      points: 75,
+      createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+      vehicles: [
+        { plate: '30G-567.89', vehicleClass: 'sedan', car_brand: 'Mazda', car_model: 'Mazda 3' }
+      ]
+    },
+    {
+      id: 'c8',
+      name: 'Hoàng Trọng Nghĩa',
+      phone: '0918998877',
+      pin: '123456',
+      licensePlate: '29D-444.44',
+      licensePlates: ['29D-444.44', '30A-987.65'],
+      dob: '1987-07-30',
+      address: '68 Lạc Long Quân, Tây Hồ, Hà Nội',
+      points: 230,
+      createdAt: new Date(Date.now() - 100 * 86400000).toISOString(),
+      vehicles: [
+        { plate: '29D-444.44', vehicleClass: 'truck', car_brand: 'Mitsubishi', car_model: 'Triton' },
+        { plate: '30A-987.65', vehicleClass: 'suv', car_brand: 'Toyota', car_model: 'Fortuner' }
+      ]
+    }
   ],
   staff: [
     { id: 's1', name: 'Trần Minh Quân (Admin)', role: 'master_admin', phone: '0901234567', pin: '123456' },
@@ -150,9 +230,14 @@ const INITIAL_STATE: SimState = {
     warning_level: 35000000, // 35,000,000 VND
   },
   orders: [
-    { id: 'o1', customerId: 'c1', licensePlate: '30A-123.45', vehicleSegment: 'suv', packageCode: 'W2', subtotal: 250000, discount: 0, total: 250000, status: 'paid', boothId: 'b1', createdAt: new Date(Date.now() - 25 * 60000).toISOString() },
-    { id: 'o2', customerId: 'c2', licensePlate: '51G-999.99', vehicleSegment: 'sedan', packageCode: 'W1', subtotal: 150000, discount: 0, total: 150000, status: 'paid', boothId: 'b2', createdAt: new Date(Date.now() - 10 * 60000).toISOString() },
-    { id: 'o3', customerId: 'c3', licensePlate: '29H-888.88', vehicleSegment: 'truck', packageCode: 'W3', subtotal: 450000, discount: 50000, total: 400000, status: 'paid', boothId: 'b3', createdAt: new Date(Date.now() - 5 * 60000).toISOString() },
+    { id: 'o1', customerId: 'c1', customerName: 'Trần Minh Quân', customerPhone: '0901234567', licensePlate: '30A-123.45', vehicleSegment: 'suv', packageCode: 'W2', subtotal: 250000, discount: 0, total: 250000, status: 'paid', boothId: 'b1', createdAt: new Date(Date.now() - 25 * 60000).toISOString() },
+    { id: 'o2', customerId: 'c2', customerName: 'Nguyễn Thị Bích', customerPhone: '0911223344', licensePlate: '51G-999.99', vehicleSegment: 'sedan', packageCode: 'W1', subtotal: 150000, discount: 0, total: 150000, status: 'paid', boothId: 'b2', createdAt: new Date(Date.now() - 10 * 60000).toISOString() },
+    { id: 'o3', customerId: 'c3', customerName: 'Lê Hoàng Long', customerPhone: '0988776655', licensePlate: '29H-888.88', vehicleSegment: 'truck', packageCode: 'W3', subtotal: 450000, discount: 50000, total: 400000, status: 'paid', boothId: 'b3', createdAt: new Date(Date.now() - 5 * 60000).toISOString() },
+    { id: 'o4', customerId: 'c4', customerName: 'Phạm Đức Anh', customerPhone: '0934567890', licensePlate: '30K-688.68', vehicleSegment: 'suv', packageCode: 'W3', subtotal: 550000, discount: 0, total: 550000, status: 'paid', boothId: 'b1', createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+    { id: 'o5', customerId: 'c4', customerName: 'Phạm Đức Anh', customerPhone: '0934567890', licensePlate: '30E-246.80', vehicleSegment: 'sedan', packageCode: 'W2', subtotal: 280000, discount: 30000, total: 250000, status: 'paid', boothId: 'b2', createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },
+    { id: 'o6', customerId: 'c5', customerName: 'Vũ Hoàng Yến', customerPhone: '0977112233', licensePlate: '29B-135.79', vehicleSegment: 'sedan', packageCode: 'W1', subtotal: 150000, discount: 0, total: 150000, status: 'paid', boothId: 'b1', createdAt: new Date(Date.now() - 5 * 86400000).toISOString() },
+    { id: 'o7', customerId: 'c6', customerName: 'Đặng Quốc Cường', customerPhone: '0966889900', licensePlate: '51H-777.77', vehicleSegment: 'suv', packageCode: 'W3', subtotal: 650000, discount: 50000, total: 600000, status: 'paid', boothId: 'b3', createdAt: new Date(Date.now() - 8 * 86400000).toISOString() },
+    { id: 'o8', customerId: 'c8', customerName: 'Hoàng Trọng Nghĩa', customerPhone: '0918998877', licensePlate: '29D-444.44', vehicleSegment: 'truck', packageCode: 'W2', subtotal: 320000, discount: 0, total: 320000, status: 'paid', boothId: 'b2', createdAt: new Date(Date.now() - 12 * 86400000).toISOString() },
   ],
   workOrders: [
     { id: 'wo1', orderId: 'o1', status: 'in_progress', technicianId: 's3', boothId: 'b1', reworkCount: 0, estimatedDuration: 30, startedAt: new Date(Date.now() - 20 * 60000).toISOString(), createdAt: new Date(Date.now() - 25 * 60000).toISOString() },
@@ -162,6 +247,7 @@ const INITIAL_STATE: SimState = {
   vouchers: [
     { id: 'v1', customerId: 'c1', code: 'WASSUPNEW', type: 'percent', value: 10, maxDiscount: 50000, minOrderValue: 150000, validFrom: new Date(Date.now() - 86400000).toISOString(), validTo: new Date(Date.now() + 864000000).toISOString(), source: 'manual_grant', createdAt: new Date().toISOString() },
     { id: 'v2', customerId: 'c2', code: 'FIX50', type: 'fixed_amount', value: 50000, minOrderValue: 100000, validFrom: new Date(Date.now() - 86400000).toISOString(), validTo: new Date(Date.now() + 864000000).toISOString(), source: 'sup_redeem', createdAt: new Date().toISOString() },
+    { id: 'v3', customerId: 'c4', code: 'VIP100', type: 'fixed_amount', value: 100000, minOrderValue: 300000, validFrom: new Date(Date.now() - 86400000).toISOString(), validTo: new Date(Date.now() + 864000000).toISOString(), source: 'manual_grant', createdAt: new Date().toISOString() },
   ],
   revenueToday: 18450000, // Cumulative mock baseline revenue
   voucherRedemptions: [
@@ -329,6 +415,101 @@ const getStoredState = (): SimState => {
 
           localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
         }
+
+        // Guarantee collection arrays exist
+        if (!Array.isArray(parsed.customers) || parsed.customers.length === 0) {
+          parsed.customers = [...INITIAL_STATE.customers];
+          localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+        } else {
+          let customerListChanged = false;
+          const existingCustIds = new Set(parsed.customers.map((c: any) => c.id));
+          
+          INITIAL_STATE.customers.forEach((initCust) => {
+            if (!existingCustIds.has(initCust.id)) {
+              parsed.customers.push(initCust);
+              customerListChanged = true;
+            } else {
+              // Ensure vehicles with brands/models are updated if empty
+              const foundCust = parsed.customers.find((c: any) => c.id === initCust.id);
+              if (foundCust) {
+                if (!foundCust.vehicles || foundCust.vehicles.length === 0 || !foundCust.vehicles[0]?.car_brand) {
+                  foundCust.vehicles = initCust.vehicles;
+                  foundCust.licensePlates = initCust.licensePlates;
+                  foundCust.licensePlate = initCust.licensePlate;
+                  customerListChanged = true;
+                }
+              }
+            }
+          });
+
+          // Normalize all customers in store
+          parsed.customers.forEach((c: any) => {
+            if (!c.vehicles || !Array.isArray(c.vehicles) || c.vehicles.length === 0) {
+              const plates = Array.isArray(c.licensePlates) && c.licensePlates.length > 0 
+                ? c.licensePlates 
+                : (c.licensePlate ? [c.licensePlate] : []);
+              c.vehicles = plates.map((p: string) => ({
+                plate: p,
+                vehicleClass: "sedan"
+              }));
+              customerListChanged = true;
+            }
+            if (!Array.isArray(c.licensePlates)) {
+              c.licensePlates = c.vehicles.map((v: any) => v.plate).filter(Boolean);
+              customerListChanged = true;
+            }
+            if (!c.licensePlate && c.licensePlates.length > 0) {
+              c.licensePlate = c.licensePlates[0];
+              customerListChanged = true;
+            }
+            if (typeof c.points !== "number") {
+              c.points = Number(c.points) || 0;
+              customerListChanged = true;
+            }
+          });
+
+          // Auto-merge sample orders if missing
+          if (!Array.isArray(parsed.orders) || parsed.orders.length === 0) {
+            parsed.orders = [...INITIAL_STATE.orders];
+            customerListChanged = true;
+          } else {
+            const existingOrderIds = new Set(parsed.orders.map((o: any) => o.id));
+            INITIAL_STATE.orders.forEach((initOrder) => {
+              if (!existingOrderIds.has(initOrder.id)) {
+                parsed.orders.push(initOrder);
+                customerListChanged = true;
+              }
+            });
+          }
+
+          // Auto-merge sample vouchers if missing
+          if (!Array.isArray(parsed.vouchers) || parsed.vouchers.length === 0) {
+            parsed.vouchers = [...INITIAL_STATE.vouchers];
+            customerListChanged = true;
+          } else {
+            const existingVoucherIds = new Set(parsed.vouchers.map((v: any) => v.id));
+            INITIAL_STATE.vouchers.forEach((initVoucher) => {
+              if (!existingVoucherIds.has(initVoucher.id)) {
+                parsed.vouchers.push(initVoucher);
+                customerListChanged = true;
+              }
+            });
+          }
+
+          if (!Array.isArray(parsed.customerGroups)) {
+            parsed.customerGroups = [...INITIAL_STATE.customerGroups];
+            customerListChanged = true;
+          }
+
+          if (!Array.isArray(parsed.voucherRedemptions)) {
+            parsed.voucherRedemptions = [...INITIAL_STATE.voucherRedemptions];
+            customerListChanged = true;
+          }
+
+          if (customerListChanged) {
+            localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+          }
+        }
       }
       return parsed;
     } catch (e) {
@@ -340,14 +521,29 @@ const getStoredState = (): SimState => {
 
 let currentState: SimState = getStoredState();
 
+// Listeners Registry
+const listeners = new Set<(orders: OrderStatusView[]) => void>();
+const revenueListeners = new Set<(stats: any) => void>();
+const staffListeners = new Set<(staff: any[]) => void>();
+const voucherListeners = new Set<(vouchers: Voucher[]) => void>();
+const customerListeners = new Set<(customers: Customer[]) => void>();
+const customerGroupListeners = new Set<(groups: CustomerGroup[]) => void>();
+
 const saveState = () => {
   localStorage.setItem(STORE_KEY, JSON.stringify(currentState));
-  // Broadcast update
+  // Broadcast update to in-memory listeners
   listeners.forEach(cb => cb(getMergedOrderStatusView()));
   revenueListeners.forEach(cb => cb(getRevenueStats()));
   staffListeners.forEach(cb => cb(currentState.staff));
   voucherListeners.forEach(cb => cb(currentState.vouchers));
   customerListeners.forEach(cb => cb(currentState.customers));
+  customerGroupListeners.forEach(cb => cb(currentState.customerGroups || []));
+
+  // Global window event broadcasts for seamless instant UI reactivity without page refresh
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('wassup-store-update', { detail: currentState }));
+    window.dispatchEvent(new CustomEvent('wassup-crm-update', { detail: currentState }));
+  }
 };
 
 // Cross-tab Synchronization Listener for High Fidelity Simulator Mode
@@ -361,16 +557,13 @@ if (typeof window !== 'undefined') {
       staffListeners.forEach(cb => cb(currentState.staff));
       voucherListeners.forEach(cb => cb(currentState.vouchers));
       customerListeners.forEach(cb => cb(currentState.customers));
+      customerGroupListeners.forEach(cb => cb(currentState.customerGroups || []));
+
+      window.dispatchEvent(new CustomEvent('wassup-store-update', { detail: currentState }));
+      window.dispatchEvent(new CustomEvent('wassup-crm-update', { detail: currentState }));
     }
   });
 }
-
-// Listeners Registry
-const listeners = new Set<(orders: OrderStatusView[]) => void>();
-const revenueListeners = new Set<(stats: any) => void>();
-const staffListeners = new Set<(staff: any[]) => void>();
-const voucherListeners = new Set<(vouchers: Voucher[]) => void>();
-const customerListeners = new Set<(customers: Customer[]) => void>();
 
 export function getMergedOrderStatusView(): OrderStatusView[] {
   return currentState.orders.map(o => {
@@ -531,6 +724,40 @@ export const simActions = {
       return cust;
     }
     return null;
+  },
+
+  deleteCustomer: (id: string) => {
+    const idx = currentState.customers.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      currentState.customers.splice(idx, 1);
+      // Clean up customer from customerGroups
+      if (currentState.customerGroups) {
+        currentState.customerGroups.forEach(g => {
+          if (g.customer_ids) {
+            g.customer_ids = g.customer_ids.filter(cid => cid !== id);
+          }
+          if (g.customerIds) {
+            g.customerIds = g.customerIds.filter(cid => cid !== id);
+          }
+        });
+      }
+      saveState();
+
+      if (isRealSupabase && supabase) {
+        (async () => {
+          try {
+            await supabase
+              .from("customers")
+              .delete()
+              .eq("id", id);
+          } catch (err) {
+            console.error("Error in Supabase deleteCustomer:", err);
+          }
+        })();
+      }
+      return true;
+    }
+    return false;
   },
 
   updateThresholds: (daily_target: number, warning_level: number) => {
@@ -1558,6 +1785,16 @@ export const supabaseRealtime = {
     return {
       unsubscribe: () => {
         channel.unsubscribe();
+      }
+    };
+  },
+
+  subscribeCustomerGroups: (callback: (groups: CustomerGroup[]) => void) => {
+    customerGroupListeners.add(callback);
+    callback(currentState.customerGroups || []);
+    return {
+      unsubscribe: () => {
+        customerGroupListeners.delete(callback);
       }
     };
   }

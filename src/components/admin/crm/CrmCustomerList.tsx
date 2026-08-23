@@ -75,52 +75,68 @@ export default function CrmCustomerList({
 
   // Helper metrics per customer
   const getCustomerMetrics = (c: Customer) => {
-    const cVehicles = (c.vehicles && c.vehicles.length > 0)
+    if (!c) {
+      return {
+        vehicles: [],
+        totalSpent: 0,
+        visitsCount: 0,
+        lastVisitDate: null
+      };
+    }
+
+    const cVehicles = (Array.isArray(c.vehicles) && c.vehicles.length > 0)
       ? c.vehicles
-      : (c.licensePlates || (c.licensePlate ? [c.licensePlate] : [])).map(p => ({
-          plate: p,
+      : (Array.isArray(c.licensePlates) ? c.licensePlates : (c.licensePlate ? [c.licensePlate] : [])).map(p => ({
+          plate: p || "",
           vehicleClass: "sedan" as const
         }));
 
-    const cOrders = orders.filter(
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    const cOrders = safeOrders.filter(
       (o) =>
-        (o.customerId && o.customerId === c.id) ||
-        (o.customerPhone && o.customerPhone === c.phone) ||
-        cVehicles.some((v) => v.plate.toUpperCase() === (o.licensePlate || "").toUpperCase())
+        (o?.customerId && o.customerId === c.id) ||
+        (o?.customerPhone && c.phone && o.customerPhone === c.phone) ||
+        (o?.licensePlate && cVehicles.some((v) => v?.plate && v.plate.toUpperCase() === (o.licensePlate || "").toUpperCase()))
     );
 
     const totalSpent = cOrders
-      .filter((o) => o.status === "paid" || o.status === "closed")
+      .filter((o) => o && (o.status === "paid" || o.status === "closed"))
       .reduce((sum, o) => sum + (o.total || 0), 0);
 
     const visitsCount = cOrders.length;
 
     let lastVisitDate: Date | null = null;
     if (cOrders.length > 0) {
-      const dates = cOrders.map(o => new Date(o.createdAt).getTime()).filter(t => !isNaN(t));
+      const dates = cOrders
+        .map(o => o?.createdAt ? new Date(o.createdAt).getTime() : NaN)
+        .filter(t => !isNaN(t));
       if (dates.length > 0) {
         lastVisitDate = new Date(Math.max(...dates));
       }
     }
 
     return {
-      vehicles: cVehicles,
+      vehicles: cVehicles.filter(v => Boolean(v?.plate)),
       totalSpent,
       visitsCount,
       lastVisitDate
     };
   };
 
+  // Safe customers array
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+
   // Filter logic
-  const filteredCustomers = customers.filter((c) => {
+  const filteredCustomers = safeCustomers.filter((c) => {
+    if (!c) return false;
     const metrics = getCustomerMetrics(c);
 
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      const matchName = c.name.toLowerCase().includes(q);
-      const matchPhone = c.phone.toLowerCase().includes(q);
-      const matchPlate = metrics.vehicles.some(v => v.plate.toLowerCase().includes(q));
+      const matchName = (c.name || "").toLowerCase().includes(q);
+      const matchPhone = (c.phone || "").toLowerCase().includes(q);
+      const matchPlate = metrics.vehicles.some(v => (v.plate || "").toLowerCase().includes(q));
       if (!matchName && !matchPhone && !matchPlate) return false;
     }
 
@@ -146,7 +162,9 @@ export default function CrmCustomerList({
     // Filter DOB month
     if (filterDobMonth !== "all") {
       if (!c.dob) return false;
-      const birthMonth = (new Date(c.dob).getMonth() + 1).toString();
+      const birthDate = new Date(c.dob);
+      if (isNaN(birthDate.getTime())) return false;
+      const birthMonth = (birthDate.getMonth() + 1).toString();
       if (birthMonth !== filterDobMonth) return false;
     }
 

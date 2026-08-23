@@ -2,7 +2,7 @@
 
 *Cập nhật: 11/08/2026 (Đợt 3) · Bổ sung quy chuẩn Tab Bar Navigation Pill, SearchableSelect (Inline Editable Dropdown), tối giản Header phân hệ.*
 
-> **Nguồn thiết kế chính thức:** `/Users/tigertong/VScode/google-studio-ui-wassup-wip` — repo React/Vite/Tailwind v4 riêng, là **bản thiết kế cập nhật mới nhất** (theo xác nhận trực tiếp của Tiger 19/07/2026), thay thế mọi mô tả UI/UX rời rạc trước đó (kể cả bản archive PRD v1.2 đã nén trong `prd/draft.zip`). Tài liệu này tổng hợp lại 2 nguồn trong repo đó: `design.md` (design system chính thức) và `src/index.css` (token Tailwind `@theme` thực thi được), đối chiếu với code thực tế đã build (`src/App.tsx`, `src/components/`) để đảm bảo tài liệu khớp với những gì đã dựng, không chỉ mô tả ý định. *(`wassup-build-spec-v3.md` — tài liệu đặc tả Module 2 cũ trong cùng repo — đã lỗi thời, không dùng làm nguồn tham chiếu ở đây, xem ghi chú 19/07/2026 trong sync log CLAUDE.md.)*
+> **Đây là nguồn thiết kế chính thức:** 
 >
 > Khi cần xem/chỉnh trực tiếp code hoặc token gốc, mở repo đó. File này là **bản dịch/PRD hóa** phục vụ đội phát triển Station OS (Admin Hub + Kiosk + TV) trong `WASSUP-BRAND/prd/`, không phải bản sao code.
 
@@ -184,6 +184,7 @@ Component Drawer (`/src/components/common/Drawer.tsx`) chuẩn hóa toàn bộ l
 
 ### 5.9 CRM & Loyalty Design Patterns (Module 4)
 
+- **Màn hình Hồ sơ chi tiết (Full-Screen Detail View):** Khi bấm vào 1 khách hàng từ danh sách hội viên hoặc bảng RFM, giao diện chuyển sang màn hình chi tiết chuyên biệt toàn trang (tương tự chuẩn Module 8 Nhân sự/KTV), **không dùng Drawer cạnh phải**. Màn hình có nút **"Quay lại"** (`<ChevronLeft />`) góc trên bên trái để quay về danh sách tab CRM, kèm bố cục 2 cột (Cột trái: Card định danh hội viên, điểm SUP, doanh thu lũy kế & Menu điều hướng dọc; Cột phải: Nội dung chi tiết theo từng tab Tổng quan, Danh sách xe & Lịch sử, Sổ cái SUP, Voucher & Bồi hoàn).
 - **Đa phương tiện liên kết:** Mỗi hội viên hỗ trợ liên kết danh sách nhiều xe, mỗi xe gồm Biển số, Phân hạng (`Sedan / SUV / Truck`), Hãng xe (`car_brand`) và Dòng xe (`car_model`).
 - **Phân nhóm khách hàng (Customer Groups):** Hỗ trợ 2 cơ chế: Nhóm tĩnh (Static - chọn tay từng hội viên) và Nhóm động (Dynamic - tự động tính toán theo điều kiện Chi tiêu, Lượt ghé, Lần ghé gần nhất, Tháng sinh nhật).
 - **Phân tích RFM (Recency, Frequency, Monetary):** Ma trận 6 phân khúc chuẩn hóa (`Champions`, `Loyal`, `Potential`, `New`, `At-Risk`, `Hibernating`) kèm tính năng kích hoạt chiến dịch Win-Back mục tiêu.

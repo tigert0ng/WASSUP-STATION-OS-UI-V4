@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { OrderStatusView, WoStatus } from "../../types/workOrder.types";
 import { Booth, Service } from "../../types/order.types";
-import { MarkdownTextarea, MarkdownRenderer } from "./shared/Markdown";
+import { MarkdownTextarea, MarkdownRenderer } from "../common/Markdown";
 import { simActions } from "../../lib/supabase/client";
 import { SERVICES_CATALOG, ADDONS_CATALOG } from "../../lib/services";
 

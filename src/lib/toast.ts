@@ -1,1 +1,1 @@
-export { toast } from "../components/admin/shared/NotificationManager";
+export { toast } from "../components/common/NotificationManager";

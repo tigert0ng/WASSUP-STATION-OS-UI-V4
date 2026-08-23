@@ -37,17 +37,20 @@ export default function CrmRetentionDashboard({
 
     // Group orders by customer phone or customer ID
     const customerOrderDates: Record<string, number[]> = {};
+    const safeOrders = Array.isArray(orders) ? orders : [];
 
-    orders
-      .filter((o) => o.status === "paid" || o.status === "closed")
+    safeOrders
+      .filter((o) => o && (o.status === "paid" || o.status === "closed"))
       .forEach((o) => {
         const key = o.customerId || o.customerPhone || o.licensePlate;
         if (!key) return;
         customerOrderCounts[key] = (customerOrderCounts[key] || 0) + 1;
 
-        const time = new Date(o.createdAt).getTime();
-        if (!customerOrderDates[key]) customerOrderDates[key] = [];
-        customerOrderDates[key].push(time);
+        const time = o.createdAt ? new Date(o.createdAt).getTime() : NaN;
+        if (!isNaN(time)) {
+          if (!customerOrderDates[key]) customerOrderDates[key] = [];
+          customerOrderDates[key].push(time);
+        }
       });
 
     const activeKeys = Object.keys(customerOrderCounts);

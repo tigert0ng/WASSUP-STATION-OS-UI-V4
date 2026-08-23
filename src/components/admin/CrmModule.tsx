@@ -17,15 +17,15 @@ import {
 } from "lucide-react";
 import PillTabBar, { PillTab } from "../common/PillTabBar";
 import Drawer, { DrawerFooterButtons } from "../common/Drawer";
-import { MarkdownTextarea } from "./shared/Markdown";
+import { MarkdownTextarea } from "../common/Markdown";
 import { Customer, Order } from "../../types/order.types";
 import { Voucher } from "../../types/voucher.types";
-import { simActions, CustomerGroup, VoucherRedemption } from "../../lib/supabase/client";
+import { simActions, supabaseRealtime, CustomerGroup, VoucherRedemption } from "../../lib/supabase/client";
 import { toast } from "../../lib/toast";
 
 // Sub-components
 import CrmCustomerList from "./crm/CrmCustomerList";
-import CrmCustomerDrawer from "./crm/CrmCustomerDrawer";
+import CrmCustomerDetail from "./crm/CrmCustomerDetail";
 import CrmVehicleModal from "./crm/CrmVehicleModal";
 import CrmVoucherManagement from "./crm/CrmVoucherManagement";
 import CrmCustomerGroups from "./crm/CrmCustomerGroups";
@@ -37,6 +37,7 @@ interface CrmModuleProps {
   customers: Customer[];
   vouchers: Voucher[];
   orders?: any[];
+  customerGroups?: CustomerGroup[];
 }
 
 interface SupLedgerRow {
@@ -66,15 +67,16 @@ const CRM_TABS: readonly PillTab[] = [
   { id: "customers", label: "Danh sách hội viên", icon: Users },
   { id: "vouchers", label: "Quản lý Voucher", icon: Gift },
   { id: "groups", label: "Nhóm khách hàng", icon: Compass },
-  { id: "sup_config", label: "Quy đổi điểm SUP", icon: Award },
   { id: "rfm", label: "Phân tích RFM", icon: BarChart3 },
-  { id: "retention", label: "Tỷ lệ giữ chân", icon: TrendingUp }
+  { id: "retention", label: "Tỷ lệ giữ chân", icon: TrendingUp },
+  { id: "sup_config", label: "Cài đặt điểm SUP", icon: Award }
 ];
 
 export default function CrmModule({
   customers: initialCustomers,
   vouchers: initialVouchers,
-  orders: initialOrders = []
+  orders: initialOrders = [],
+  customerGroups: initialGroups = []
 }: CrmModuleProps) {
   // Active sub-tab
   const [activeTab, setActiveTab] = useState<string>("customers");
@@ -84,13 +86,70 @@ export default function CrmModule({
   const isMasterAdmin = currentRole === "master_admin";
 
   // Core data states
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers || []);
-  const [vouchers, setVouchers] = useState<Voucher[]>(initialVouchers || []);
-  const [orders, setOrders] = useState<Order[]>(initialOrders || []);
-  const [groups, setGroups] = useState<CustomerGroup[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    if (initialCustomers && initialCustomers.length > 0) return initialCustomers;
+    return simActions.getCustomers() || [];
+  });
+  const [vouchers, setVouchers] = useState<Voucher[]>(() => {
+    if (initialVouchers && initialVouchers.length > 0) return initialVouchers;
+    return simActions.getVouchers() || [];
+  });
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (initialOrders && initialOrders.length > 0) return initialOrders;
+    return simActions.getOrders() || [];
+  });
+  const [groups, setGroups] = useState<CustomerGroup[]>(() => {
+    if (initialGroups && initialGroups.length > 0) return initialGroups;
+    return simActions.getCustomerGroups() || [];
+  });
   const [redemptions, setRedemptions] = useState<VoucherRedemption[]>([]);
   const [ledger, setLedger] = useState<SupLedgerRow[]>([]);
   const [proposals, setProposals] = useState<PointProposal[]>([]);
+
+  // Keep local state in sync when parent props update
+  useEffect(() => {
+    if (initialCustomers && initialCustomers.length > 0) {
+      setCustomers(initialCustomers);
+    } else {
+      const stored = simActions.getCustomers();
+      if (stored && stored.length > 0) {
+        setCustomers([...stored]);
+      }
+    }
+  }, [initialCustomers]);
+
+  useEffect(() => {
+    if (initialVouchers && initialVouchers.length > 0) {
+      setVouchers(initialVouchers);
+    } else {
+      const stored = simActions.getVouchers();
+      if (stored && stored.length > 0) {
+        setVouchers([...stored]);
+      }
+    }
+  }, [initialVouchers]);
+
+  useEffect(() => {
+    if (initialOrders && initialOrders.length > 0) {
+      setOrders(initialOrders);
+    } else {
+      const stored = simActions.getOrders();
+      if (stored && stored.length > 0) {
+        setOrders([...stored]);
+      }
+    }
+  }, [initialOrders]);
+
+  useEffect(() => {
+    if (initialGroups && initialGroups.length > 0) {
+      setGroups(initialGroups);
+    } else {
+      const stored = simActions.getCustomerGroups();
+      if (stored && stored.length > 0) {
+        setGroups([...stored]);
+      }
+    }
+  }, [initialGroups]);
 
   // Selected customer for detail drawer
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -156,11 +215,11 @@ export default function CrmModule({
   const syncStateFromSimActions = () => {
     try {
       const state = simActions.getState();
-      if (state.customers) setCustomers(state.customers);
-      if (state.vouchers) setVouchers(state.vouchers);
-      if (state.orders) setOrders(state.orders);
-      if (state.customerGroups) setGroups(state.customerGroups);
-      if (state.voucherRedemptions) setRedemptions(state.voucherRedemptions);
+      if (state.customers) setCustomers([...state.customers]);
+      if (state.vouchers) setVouchers([...state.vouchers]);
+      if (state.orders) setOrders([...state.orders]);
+      if (state.customerGroups) setGroups([...state.customerGroups]);
+      if (state.voucherRedemptions) setRedemptions([...state.voucherRedemptions]);
     } catch (e) {
       console.warn("simActions sync warning:", e);
     }
@@ -168,6 +227,28 @@ export default function CrmModule({
 
   useEffect(() => {
     syncStateFromSimActions();
+
+    // Direct subscriptions for real-time reactivity without page reload
+    const unsubCust = supabaseRealtime.subscribeCustomers((cList) => {
+      setCustomers([...cList]);
+    });
+    const unsubVouch = supabaseRealtime.subscribeVouchers((vList) => {
+      setVouchers([...vList]);
+    });
+    const unsubGroups = supabaseRealtime.subscribeCustomerGroups((gList) => {
+      setGroups([...gList]);
+    });
+    const unsubOrders = supabaseRealtime.subscribeOrders(() => {
+      setOrders([...simActions.getOrders()]);
+    });
+
+    const handleExternalUpdate = () => {
+      syncStateFromSimActions();
+    };
+
+    window.addEventListener("wassup-crm-update", handleExternalUpdate);
+    window.addEventListener("wassup-store-update", handleExternalUpdate);
+    window.addEventListener("storage", handleExternalUpdate);
 
     // Load ledger & proposals from localStorage
     try {
@@ -208,6 +289,16 @@ export default function CrmModule({
     } catch (e) {
       console.warn("Ledger loading error:", e);
     }
+
+    return () => {
+      unsubCust.unsubscribe();
+      unsubVouch.unsubscribe();
+      unsubGroups.unsubscribe();
+      unsubOrders.unsubscribe();
+      window.removeEventListener("wassup-crm-update", handleExternalUpdate);
+      window.removeEventListener("wassup-store-update", handleExternalUpdate);
+      window.removeEventListener("storage", handleExternalUpdate);
+    };
   }, []);
 
   // Customer registration / edit submission
@@ -611,17 +702,18 @@ export default function CrmModule({
   };
 
   const handleDeleteVoucher = (vId: string) => {
-    const updated = vouchers.filter((v) => v.id !== vId);
-    setVouchers(updated);
-    // Sync state
-    try {
-      const st = simActions.getState();
-      st.vouchers = updated;
-      localStorage.setItem("wassup_pos_state", JSON.stringify(st));
-    } catch (e) {
-      console.warn("delete voucher sync error:", e);
-    }
+    simActions.deleteVoucher(vId);
+    syncStateFromSimActions();
     toast.success("ĐÃ XÓA VOUCHER 🗑️", "Chiến dịch khuyến mãi đã được gỡ khỏi hệ thống.");
+  };
+
+  const handleDeleteCustomer = (cId: string) => {
+    simActions.deleteCustomer(cId);
+    syncStateFromSimActions();
+    if (selectedCustomerId === cId) {
+      setSelectedCustomerId(null);
+    }
+    toast.success("ĐÃ XÓA HỘI VIÊN 🗑️", "Hồ sơ khách hàng đã được xóa khỏi hệ thống.");
   };
 
   // Group Management Actions
@@ -629,12 +721,23 @@ export default function CrmModule({
     if (isEdit && gData.id) {
       const existing = groups.find((g) => g.id === gData.id);
       if (existing) {
+        // RULE: Nhóm đã tạo KHÔNG THỂ thay đổi loại nhóm từ tĩnh sang động và ngược lại
         const updated: CustomerGroup = {
           ...existing,
-          name: gData.name || existing.name,
-          type: gData.type || existing.type,
-          customer_ids: gData.type === "static" ? (gData.customer_ids || []) : [],
-          condition: gData.type === "dynamic" ? gData.condition : undefined
+          name: gData.name ? gData.name.trim() : existing.name,
+          type: existing.type, // Loại nhóm cố định, không thể đổi
+          customer_ids:
+            existing.type === "static"
+              ? gData.customer_ids !== undefined
+                ? gData.customer_ids
+                : existing.customer_ids || []
+              : [],
+          condition:
+            existing.type === "dynamic"
+              ? gData.condition !== undefined
+                ? gData.condition
+                : existing.condition
+              : undefined
         };
         simActions.updateCustomerGroup(updated);
         syncStateFromSimActions();
@@ -671,33 +774,29 @@ export default function CrmModule({
 
   return (
     <div className="space-y-4 text-left font-sans" id="crm-module-root">
-      {/* TOP BAR: MODULE HEADER & ROLE SWITCHER */}
-      <div className="bg-white border border-[#e5e5e5] rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3" id="crm-header-bar">
+      {/* TOP BAR: BORDERLESS MODULE HEADER & ROLE SWITCHER (MODULE 6 STANDARD) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-1 px-1" id="crm-header-bar">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-brand-green/15 text-forest-green rounded-xl">
-              <Users className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-base font-black font-display uppercase tracking-wider text-matte-black">
-                MODULE 4: QUẢN TRỊ QUAN HỆ KHÁCH HÀNG (CRM)
-              </h2>
-              <p className="text-[11px] text-mid-gray font-sans mt-0.5">
-                Quản lý hồ sơ hội viên, phương tiện liên kết, tích lũy điểm SUP, chiến dịch voucher và phân tích giữ chân.
-              </p>
+          <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2.5">
+            <div className="p-2 rounded-xl shrink-0 bg-brand-green/15 text-forest-green">
+              <Users className="h-6 w-6" />
             </div>
-          </div>
+            MODULE 4: QUẢN TRỊ QUAN HỆ KHÁCH HÀNG (CRM)
+          </h1>
+          <p className="text-mid-gray text-xs font-sans mt-1 max-w-3xl">
+            Quản lý hồ sơ hội viên, phương tiện liên kết, tích lũy điểm SUP, chiến dịch voucher và phân tích giữ chân.
+          </p>
         </div>
 
         {/* ROLE SWITCHER */}
-        <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl border border-stone-200" id="crm-role-switcher">
+        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-stone-200 shadow-2xs shrink-0" id="crm-role-switcher">
           <button
             type="button"
             onClick={() => setCurrentRole("master_admin")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold font-display uppercase transition cursor-pointer flex items-center gap-1.5 ${
               isMasterAdmin
                 ? "bg-matte-black text-white shadow-xs"
-                : "text-stone-600 hover:text-matte-black hover:bg-stone-200/60"
+                : "text-stone-600 hover:text-matte-black hover:bg-stone-100"
             }`}
           >
             <Shield className={`h-3.5 w-3.5 ${isMasterAdmin ? "text-[#A2C62C]" : "text-stone-400"}`} />
@@ -710,7 +809,7 @@ export default function CrmModule({
             className={`px-3 py-1.5 rounded-lg text-xs font-bold font-display uppercase transition cursor-pointer flex items-center gap-1.5 ${
               !isMasterAdmin
                 ? "bg-matte-black text-white shadow-xs"
-                : "text-stone-600 hover:text-matte-black hover:bg-stone-200/60"
+                : "text-stone-600 hover:text-matte-black hover:bg-stone-100"
             }`}
           >
             <Clock className={`h-3.5 w-3.5 ${!isMasterAdmin ? "text-blue-400" : "text-stone-400"}`} />
@@ -719,125 +818,131 @@ export default function CrmModule({
         </div>
       </div>
 
-      {/* SUB-TABS NAVIGATION (USING PILLTABBAR) */}
-      <PillTabBar
-        tabs={CRM_TABS}
-        activeId={activeTab}
-        onSelect={(id) => setActiveTab(id)}
-      />
-
-      {/* ACTIVE SUB-TAB CONTENT */}
-      {activeTab === "customers" && (
-        <CrmCustomerList
-          customers={customers}
-          orders={orders}
-          groups={groups}
-          isMasterAdmin={isMasterAdmin}
-          proposals={proposals}
-          onOpenCustomerModal={handleOpenCustomerForm}
-          onSelectCustomer={(c) => setSelectedCustomerId(c.id)}
-          onApproveProposal={handleApproveProposal}
-          onRejectProposal={handleRejectProposal}
-        />
-      )}
-
-      {activeTab === "vouchers" && (
-        <CrmVoucherManagement
-          vouchers={vouchers}
-          customers={customers}
-          orders={orders}
-          groups={groups}
-          redemptions={redemptions}
-          isMasterAdmin={isMasterAdmin}
-          onSaveVoucher={handleSaveVoucher}
-          onToggleVoucherStatus={handleToggleVoucherStatus}
-          onDeleteVoucher={handleDeleteVoucher}
-        />
-      )}
-
-      {activeTab === "groups" && (
-        <CrmCustomerGroups
-          groups={groups}
-          customers={customers}
+      {/* DETAIL SCREEN OR SUB-TABS NAVIGATION */}
+      {selectedCustomer ? (
+        <CrmCustomerDetail
+          customer={selectedCustomer}
           orders={orders}
           vouchers={vouchers}
+          groups={groups}
+          ledger={ledger}
           isMasterAdmin={isMasterAdmin}
-          onSaveGroup={handleSaveGroup}
-          onDeleteGroup={handleDeleteGroup}
+          onBack={() => setSelectedCustomerId(null)}
+          onEditCustomer={(c) => {
+            handleOpenCustomerForm(c);
+          }}
+          onDeleteCustomer={handleDeleteCustomer}
+          onOpenVehicleModal={(v) => {
+            setEditingVehicleTarget(v);
+            setShowVehicleModal(true);
+          }}
+          onDeleteVehicle={handleDeleteVehicle}
+          onOpenPointsModal={(c) => {
+            setPointsTargetCustomer(c);
+            setPointsDir("add");
+            setPointsChange("");
+            setPointsReason("");
+            setShowPointsModal(true);
+          }}
+          onOpenProposalModal={(c) => {
+            setProposalTargetCustomer(c);
+            setPropDir("add");
+            setPropPoints("");
+            setPropReason("");
+            setShowProposalModal(true);
+          }}
+          onOpenPointsHistory={(c) => {
+            setHistoryTargetCustomer(c);
+            setShowPointsHistoryModal(true);
+          }}
+          onOpenEmergencyCompensation={(c) => {
+            setEmergencyTargetCustomer(c);
+            setCompPoints("50");
+            setCompVoucherPercent("20");
+            setCompReason("");
+            setShowEmergencyCompensationModal(true);
+          }}
+          onOpenManualGrantVoucher={(c) => {
+            setGrantTargetCustomer(c);
+            setGrantVoucherType("percent");
+            setGrantVoucherValue("15");
+            setGrantVoucherReason("");
+            setShowManualGrantModal(true);
+          }}
+          onToggleStaticGroup={handleToggleStaticGroup}
         />
-      )}
+      ) : (
+        <>
+          {/* SUB-TABS NAVIGATION (USING PILLTABBAR) */}
+          <PillTabBar
+            tabs={CRM_TABS}
+            activeId={activeTab}
+            onSelect={(id) => setActiveTab(id)}
+          />
 
-      {activeTab === "sup_config" && (
-        <CrmSupConfig isMasterAdmin={isMasterAdmin} />
-      )}
+          {/* ACTIVE SUB-TAB CONTENT */}
+          {activeTab === "customers" && (
+            <CrmCustomerList
+              customers={customers}
+              orders={orders}
+              groups={groups}
+              isMasterAdmin={isMasterAdmin}
+              proposals={proposals}
+              onOpenCustomerModal={handleOpenCustomerForm}
+              onSelectCustomer={(c) => setSelectedCustomerId(c.id)}
+              onApproveProposal={handleApproveProposal}
+              onRejectProposal={handleRejectProposal}
+            />
+          )}
 
-      {activeTab === "rfm" && (
-        <CrmRfmAnalysis
-          customers={customers}
-          orders={orders}
-          onSelectCustomer={(c) => setSelectedCustomerId(c.id)}
-          onOpenCreateVoucherForSegment={handleOpenCreateVoucherForSegment}
-        />
-      )}
+          {activeTab === "vouchers" && (
+            <CrmVoucherManagement
+              vouchers={vouchers}
+              customers={customers}
+              orders={orders}
+              groups={groups}
+              redemptions={redemptions}
+              isMasterAdmin={isMasterAdmin}
+              onSaveVoucher={handleSaveVoucher}
+              onToggleVoucherStatus={handleToggleVoucherStatus}
+              onDeleteVoucher={handleDeleteVoucher}
+            />
+          )}
 
-      {activeTab === "retention" && (
-        <CrmRetentionDashboard
-          customers={customers}
-          orders={orders}
-        />
-      )}
+          {activeTab === "groups" && (
+            <CrmCustomerGroups
+              groups={groups}
+              customers={customers}
+              orders={orders}
+              vouchers={vouchers}
+              isMasterAdmin={isMasterAdmin}
+              onSaveGroup={handleSaveGroup}
+              onDeleteGroup={handleDeleteGroup}
+              onSelectCustomer={(c) => setSelectedCustomerId(c.id)}
+            />
+          )}
 
-      {/* DRAWER: CUSTOMER DETAIL & PROFILES */}
-      <CrmCustomerDrawer
-        open={!!selectedCustomerId}
-        onClose={() => setSelectedCustomerId(null)}
-        customer={selectedCustomer}
-        orders={orders}
-        vouchers={vouchers}
-        groups={groups}
-        isMasterAdmin={isMasterAdmin}
-        onEditCustomer={(c) => {
-          handleOpenCustomerForm(c);
-        }}
-        onOpenVehicleModal={(v) => {
-          setEditingVehicleTarget(v);
-          setShowVehicleModal(true);
-        }}
-        onDeleteVehicle={handleDeleteVehicle}
-        onOpenPointsModal={(c) => {
-          setPointsTargetCustomer(c);
-          setPointsDir("add");
-          setPointsChange("");
-          setPointsReason("");
-          setShowPointsModal(true);
-        }}
-        onOpenProposalModal={(c) => {
-          setProposalTargetCustomer(c);
-          setPropDir("add");
-          setPropPoints("");
-          setPropReason("");
-          setShowProposalModal(true);
-        }}
-        onOpenPointsHistory={(c) => {
-          setHistoryTargetCustomer(c);
-          setShowPointsHistoryModal(true);
-        }}
-        onOpenEmergencyCompensation={(c) => {
-          setEmergencyTargetCustomer(c);
-          setCompPoints("50");
-          setCompVoucherPercent("20");
-          setCompReason("");
-          setShowEmergencyCompensationModal(true);
-        }}
-        onOpenManualGrantVoucher={(c) => {
-          setGrantTargetCustomer(c);
-          setGrantVoucherType("percent");
-          setGrantVoucherValue("15");
-          setGrantVoucherReason("");
-          setShowManualGrantModal(true);
-        }}
-        onToggleStaticGroup={handleToggleStaticGroup}
-      />
+          {activeTab === "sup_config" && (
+            <CrmSupConfig isMasterAdmin={isMasterAdmin} />
+          )}
+
+          {activeTab === "rfm" && (
+            <CrmRfmAnalysis
+              customers={customers}
+              orders={orders}
+              onSelectCustomer={(c) => setSelectedCustomerId(c.id)}
+              onOpenCreateVoucherForSegment={handleOpenCreateVoucherForSegment}
+            />
+          )}
+
+          {activeTab === "retention" && (
+            <CrmRetentionDashboard
+              customers={customers}
+              orders={orders}
+            />
+          )}
+        </>
+      )}
 
       {/* DRAWER: VEHICLE ADD / EDIT MODAL */}
       <CrmVehicleModal

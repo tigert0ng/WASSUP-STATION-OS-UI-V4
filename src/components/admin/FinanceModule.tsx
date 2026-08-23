@@ -18,7 +18,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { OrderStatusView } from "../../types/workOrder.types";
-import { MarkdownTextarea, MarkdownRenderer } from "./shared/Markdown";
+import { MarkdownTextarea, MarkdownRenderer } from "../common/Markdown";
 
 interface FinanceRecord {
   id: string;

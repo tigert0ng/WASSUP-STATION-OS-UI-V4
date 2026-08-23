@@ -56,14 +56,16 @@ export default function CrmRfmAnalysis({
   // Compute RFM data for all customers
   const rfmList: CustomerRfmData[] = useMemo(() => {
     const now = Date.now();
+    const safeCustomers = Array.isArray(customers) ? customers : [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
 
-    return customers.map((c) => {
-      const cOrders = orders.filter(
-        (o) => o.customerId === c.id || o.customerPhone === c.phone
+    return safeCustomers.filter(Boolean).map((c) => {
+      const cOrders = safeOrders.filter(
+        (o) => (o?.customerId && o.customerId === c.id) || (o?.customerPhone && c.phone && o.customerPhone === c.phone)
       );
 
       const paidOrders = cOrders.filter(
-        (o) => o.status === "paid" || o.status === "closed"
+        (o) => o && (o.status === "paid" || o.status === "closed")
       );
 
       const monetary = paidOrders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -71,7 +73,7 @@ export default function CrmRfmAnalysis({
 
       let recencyDays = 999;
       if (cOrders.length > 0) {
-        const dates = cOrders.map((o) => new Date(o.createdAt).getTime()).filter((t) => !isNaN(t));
+        const dates = cOrders.map((o) => o?.createdAt ? new Date(o.createdAt).getTime() : NaN).filter((t) => !isNaN(t));
         if (dates.length > 0) {
           const lastDate = Math.max(...dates);
           recencyDays = Math.max(0, Math.floor((now - lastDate) / (1000 * 60 * 60 * 24)));

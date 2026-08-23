@@ -137,21 +137,23 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
 
   return (
     <div className="space-y-6 font-sans text-slate-800">
-      {/* Module 0 Header & Multi-Station Selector */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white border border-[#e5e5e5] p-6 rounded-2xl shadow-sm relative overflow-hidden">
-        <div className="px-2">
-          <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2">
-            <Settings className="h-6 w-6 text-forest-green" />
+      {/* BORDERLESS MODULE 0 HEADER & MULTI-STATION SELECTOR (MODULE 6 STANDARD) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-1 px-1" id="settings-header-bar">
+        <div>
+          <h1 className="text-2xl font-black font-display text-matte-black uppercase tracking-tight flex items-center gap-2.5">
+            <div className="p-2 rounded-xl shrink-0 bg-brand-green/15 text-forest-green">
+              <Settings className="h-6 w-6" />
+            </div>
             MODULE 0 — CÀI ĐẶT TRẠM & PHÂN QUYỀN
           </h1>
-          <p className="text-mid-gray text-xs font-sans mt-0.5">
+          <p className="text-mid-gray text-xs font-sans mt-1 max-w-3xl">
             Quản lý đa trạm vận hành (Multi Station), phân quyền vai trò tùy chỉnh, cấu hình tổng hợp, tích hợp thiết bị và nhật ký kiểm toán.
           </p>
         </div>
 
         {/* Multi-Station Context Selector Dropdown */}
         {isMasterAdmin && (
-          <div className="flex items-center gap-2 bg-slate-950 text-white p-2.5 px-4 rounded-xl shadow-xs border border-slate-800 shrink-0 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-matte-black text-white p-2.5 px-4 rounded-xl shadow-xs border border-slate-800 shrink-0 w-full md:w-auto">
             <ArrowLeftRight className="h-4 w-4 text-[#A2C62C] shrink-0" />
             <div className="flex flex-col">
               <span className="text-[9px] font-black uppercase tracking-wider text-stone-400">Góc nhìn Trạm Vận Hành:</span>

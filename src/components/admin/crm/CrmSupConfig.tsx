@@ -48,6 +48,16 @@ export default function CrmSupConfig({ isMasterAdmin }: CrmSupConfigProps) {
   const formatVnd = (amt: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amt);
 
+  const formatNumberWithSeparator = (val: number): string => {
+    if (val === undefined || val === null || isNaN(val)) return "";
+    return new Intl.NumberFormat("vi-VN").format(val);
+  };
+
+  const parseFormattedNumber = (val: string): number => {
+    const clean = val.replace(/\D/g, "");
+    return clean ? parseInt(clean, 10) : 0;
+  };
+
   // Load configuration and audit history
   useEffect(() => {
     try {
@@ -141,204 +151,140 @@ export default function CrmSupConfig({ isMasterAdmin }: CrmSupConfigProps) {
         </div>
       )}
 
-      {/* CONFIGURATION CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: Form cấu hình quy đổi & tích điểm */}
-        <div className="bg-white border border-[#e5e5e5] rounded-2xl p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-150 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-2 bg-brand-green/15 text-forest-green rounded-xl">
-                <Coins className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 className="text-sm font-black font-display uppercase tracking-wider text-matte-black">
-                  TỶ LỆ QUY ĐỔI ĐIỂM SUP (S4.12)
-                </h3>
-                <span className="text-[10px] text-mid-gray">
-                  Cấu hình giá trị tiền tệ khi khách hàng dùng điểm khấu trừ thanh toán
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Tỷ lệ quy đổi điểm sang tiền (Redemption Rate) */}
-            <div className="space-y-1.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
-              <label className="text-xs font-sans text-mid-gray uppercase font-black block">
-                1. Tỷ lệ khấu trừ: Điểm SUP sang VNĐ
-              </label>
-              <div className="flex items-center gap-2 pt-1">
-                <div className="w-28">
-                  <span className="text-[10px] text-mid-gray block">Số điểm SUP</span>
-                  <input
-                    type="number"
-                    min="1"
-                    disabled={!isMasterAdmin}
-                    value={pointsRate}
-                    onChange={(e) => setPointsRate(Number(e.target.value))}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-matte-black text-center disabled:bg-stone-100"
-                  />
-                </div>
-
-                <span className="text-sm font-black text-slate-400 self-end pb-2">=</span>
-
-                <div className="flex-1">
-                  <span className="text-[10px] text-mid-gray block">Giá trị quy đổi (VNĐ)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    disabled={!isMasterAdmin}
-                    value={vndRate}
-                    onChange={(e) => setVndRate(Number(e.target.value))}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-forest-green disabled:bg-stone-100"
-                  />
-                </div>
-              </div>
-              <p className="text-[11px] text-forest-green font-bold pt-1">
-                👉 Hiện tại: {pointsRate} SUP = {formatVnd(vndRate)} (1 SUP = {formatVnd(vndRate / (pointsRate || 1))})
-              </p>
-            </div>
-
-            {/* Tỷ lệ tích điểm từ đơn hàng (Accrual Rate) */}
-            <div className="space-y-1.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
-              <label className="text-xs font-sans text-mid-gray uppercase font-black block">
-                2. Tỷ lệ tích lũy tự động từ chi tiêu
-              </label>
-              <div className="flex items-center gap-2 pt-1">
-                <div className="flex-1">
-                  <span className="text-[10px] text-mid-gray block">Số tiền chi tiêu (VNĐ)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    disabled={!isMasterAdmin}
-                    value={earnVndPerPoint}
-                    onChange={(e) => setEarnVndPerPoint(Number(e.target.value))}
-                    className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-matte-black disabled:bg-stone-100"
-                  />
-                </div>
-
-                <span className="text-sm font-black text-slate-400 self-end pb-2">=</span>
-
-                <div className="w-28">
-                  <span className="text-[10px] text-mid-gray block">Tích lũy</span>
-                  <div className="bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-forest-green text-center">
-                    1 SUP
-                  </div>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-600 pt-1">
-                👉 Cứ mỗi {formatVnd(earnVndPerPoint)} thanh toán thành công, hệ thống tự cộng 1 SUP vào tài khoản hội viên.
-              </p>
-            </div>
-
-            {/* Lý do thay đổi */}
-            {isMasterAdmin && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
-                  Lý do cập nhật tỷ lệ (Ghi nhận kiểm toán) *
+      {/* CONFIGURATION CARD (FULL WIDTH WITH 2 COLUMNS) */}
+      <div className="bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-xs space-y-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Left Column: Tỷ lệ quy đổi điểm sang tiền (Redemption Rate) */}
+          <div className="space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-forest-green"></span>
+                <label className="text-xs font-sans text-stone-600 uppercase font-black tracking-wider block">
+                  1. Tỷ lệ khấu trừ (Điểm SUP ➔ VNĐ)
                 </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Điều chỉnh theo chính sách khuyến mãi Q3/2026..."
-                  value={changeReason}
-                  onChange={(e) => setChangeReason(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-forest-green"
-                />
               </div>
-            )}
 
-            {/* Save Button */}
-            {isMasterAdmin && (
-              <button
-                type="button"
-                onClick={handleSaveConfig}
-                className="w-full py-3 rounded-xl bg-forest-green hover:bg-forest-green/90 text-white font-extrabold text-xs font-display uppercase tracking-wider transition cursor-pointer shadow-xs flex items-center justify-center gap-2 border-0"
-              >
-                <Save className="h-4 w-4" />
-                LƯU & ÁP DỤNG TỶ LỆ QUY ĐỔI MỚI
-              </button>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="w-32">
+                  <span className="text-[11px] text-stone-400 font-bold block mb-1">Số điểm SUP</span>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      disabled={!isMasterAdmin}
+                      value={formatNumberWithSeparator(pointsRate)}
+                      onChange={(e) => setPointsRate(parseFormattedNumber(e.target.value))}
+                      className="w-full bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-forest-green rounded-xl py-2.5 px-3 text-xl sm:text-2xl font-black font-display text-matte-black text-center disabled:bg-stone-100 transition shadow-3xs outline-none"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400 pointer-events-none">
+                      SUP
+                    </span>
+                  </div>
+                </div>
 
-        {/* Card 2: Interactive Simulator */}
-        <div className="bg-white border border-[#e5e5e5] rounded-2xl p-5 shadow-xs space-y-4 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 border-b border-stone-150 pb-3">
-              <span className="p-2 bg-purple-50 text-purple-700 rounded-xl">
-                <Calculator className="h-5 w-5" />
+                <span className="text-xl sm:text-2xl font-black text-stone-300 self-end pb-2.5">=</span>
+
+                <div className="flex-1">
+                  <span className="text-[11px] text-stone-400 font-bold block mb-1">Quy đổi thành (VNĐ)</span>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      disabled={!isMasterAdmin}
+                      value={formatNumberWithSeparator(vndRate)}
+                      onChange={(e) => setVndRate(parseFormattedNumber(e.target.value))}
+                      className="w-full bg-emerald-50/40 hover:bg-emerald-50/70 focus:bg-white border border-emerald-200 focus:border-forest-green rounded-xl py-2.5 px-3 pr-10 text-xl sm:text-2xl font-black font-display text-forest-green disabled:bg-stone-100 transition shadow-3xs outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-forest-green pointer-events-none">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center gap-2">
+              <span className="text-xs text-stone-500 font-medium">Tỷ giá hiện tại:</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 text-forest-green border border-emerald-200/80 font-black text-xs font-display tracking-wide">
+                1 SUP = {formatVnd(vndRate / (pointsRate || 1))}
               </span>
-              <div>
-                <h3 className="text-sm font-black font-display uppercase tracking-wider text-matte-black">
-                  CÔNG CỤ TÍNH THỬ NGHIỆM ĐIỂM SUP
-                </h3>
-                <span className="text-[10px] text-mid-gray">
-                  Mô phỏng tức thì số tiền giảm giá và số điểm tích lũy của khách hàng
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-4 mt-4">
-              {/* Sim 1: Redeem */}
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
-                <span className="text-[10px] font-black text-mid-gray uppercase block">
-                  Mô phỏng Khấu trừ điểm khi thanh toán
-                </span>
-                <div className="flex items-center gap-3">
-                  <div className="w-1/2">
-                    <label className="text-[10px] text-slate-600 block">Số điểm SUP khách muốn dùng:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={simPoints}
-                      onChange={(e) => setSimPoints(Math.max(0, Number(e.target.value)))}
-                      className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-matte-black"
-                    />
-                  </div>
-                  <div className="w-1/2">
-                    <label className="text-[10px] text-slate-600 block">Số tiền được giảm:</label>
-                    <div className="bg-brand-green/15 text-forest-green border border-brand-green/30 rounded-xl px-3 py-2 text-xs font-black">
-                      {formatVnd(calculatedRedeemVnd)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sim 2: Earn */}
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
-                <span className="text-[10px] font-black text-mid-gray uppercase block">
-                  Mô phỏng Tích điểm khi khách chi tiêu
-                </span>
-                <div className="flex items-center gap-3">
-                  <div className="w-1/2">
-                    <label className="text-[10px] text-slate-600 block">Tổng tiền hóa đơn (VNĐ):</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50000"
-                      value={simSpendVnd}
-                      onChange={(e) => setSimSpendVnd(Math.max(0, Number(e.target.value)))}
-                      className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs font-black text-matte-black"
-                    />
-                  </div>
-                  <div className="w-1/2">
-                    <label className="text-[10px] text-slate-600 block">Số điểm SUP nhận được:</label>
-                    <div className="bg-matte-black text-[#A2C62C] rounded-xl px-3 py-2 text-xs font-black">
-                      +{calculatedEarnedPoints} SUP
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center gap-2 text-xs text-mid-gray">
-            <Info className="h-4 w-4 text-forest-green shrink-0" />
-            <span>
-              Công cụ tự động đồng bộ theo bảng giá thực tế tại module POS & Bán hàng.
-            </span>
+          {/* Right Column: Tỷ lệ tích điểm từ đơn hàng (Accrual Rate) */}
+          <div className="space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                <label className="text-xs font-sans text-stone-600 uppercase font-black tracking-wider block">
+                  2. Tỷ lệ tích lũy tự động (Chi tiêu ➔ SUP)
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1">
+                  <span className="text-[11px] text-stone-400 font-bold block mb-1">Mức chi tiêu đơn hàng</span>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      disabled={!isMasterAdmin}
+                      value={formatNumberWithSeparator(earnVndPerPoint)}
+                      onChange={(e) => setEarnVndPerPoint(parseFormattedNumber(e.target.value))}
+                      className="w-full bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-forest-green rounded-xl py-2.5 px-3 pr-10 text-xl sm:text-2xl font-black font-display text-matte-black disabled:bg-stone-100 transition shadow-3xs outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400 pointer-events-none">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+
+                <span className="text-xl sm:text-2xl font-black text-stone-300 self-end pb-2.5">➔</span>
+
+                <div className="w-32">
+                  <span className="text-[11px] text-stone-400 font-bold block mb-1">Tích lũy</span>
+                  <div className="bg-purple-50 border border-purple-200/80 rounded-xl py-2.5 px-3 text-xl sm:text-2xl font-black font-display text-purple-700 text-center shadow-3xs">
+                    +1 <span className="text-xs font-extrabold text-purple-700">SUP</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center gap-2">
+              <span className="text-xs text-stone-500 font-medium">Quy tắc tích lũy:</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 border border-purple-200/80 font-bold text-xs font-display">
+                Mỗi {formatVnd(earnVndPerPoint)} chi tiêu = +1 SUP
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Lý do thay đổi & Lưu */}
+        {isMasterAdmin && (
+          <div className="pt-2 border-t border-stone-150 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-sans text-mid-gray uppercase font-extrabold block">
+                Lý do cập nhật tỷ lệ (Ghi nhận kiểm toán) *
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Điều chỉnh theo chính sách khuyến mãi Q3/2026..."
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs text-matte-black focus:outline-none focus:border-forest-green"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveConfig}
+              className="w-full py-3 rounded-xl bg-forest-green hover:bg-forest-green/90 text-white font-extrabold text-xs font-display uppercase tracking-wider transition cursor-pointer shadow-xs flex items-center justify-center gap-2 border-0"
+            >
+              <Save className="h-4 w-4" />
+              LƯU & ÁP DỤNG TỶ LỆ QUY ĐỔI MỚI
+            </button>
+          </div>
+        )}
       </div>
 
       {/* AUDIT LOG TABLE OF RATE CHANGES */}

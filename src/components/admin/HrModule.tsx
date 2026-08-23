@@ -43,7 +43,7 @@ import {
   Send
 } from "lucide-react";
 import { supabase, simActions } from "../../lib/supabase/client";
-import { MarkdownTextarea, MarkdownRenderer } from "./shared/Markdown";
+import { MarkdownTextarea, MarkdownRenderer } from "../common/Markdown";
 
 // STATION CONFIGURATION
 export interface StationOption {

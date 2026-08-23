@@ -73,7 +73,7 @@ import InventoryModule from "./components/admin/InventoryModule";
 import MonitorModule from "./components/admin/MonitorModule";
 import StaffModule from "./components/admin/StaffModule";
 import SettingsModule from "./components/admin/SettingsModule";
-import NotificationManager from "./components/admin/shared/NotificationManager";
+import NotificationManager from "./components/common/NotificationManager";
 import LoginModule from "./components/admin/LoginModule";
 import HrModule from "./components/admin/HrModule";
 import AuditLog from "./components/admin/settings/AuditLog";
@@ -177,6 +177,7 @@ function AppContent() {
   const [staff, setStaff] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerGroups, setCustomerGroups] = useState<any[]>([]);
 
   // Default redirect from / to admin/dashboard
   useEffect(() => {
@@ -235,6 +236,7 @@ function AppContent() {
     setStaff(simActions.getStaff());
     setVouchers(simActions.getVouchers());
     setCustomers(simActions.getCustomers());
+    setCustomerGroups(simActions.getCustomerGroups());
 
     const unsubOrders = supabaseRealtime.subscribeOrders((updatedOrders) => {
       setOrders(updatedOrders);
@@ -258,12 +260,17 @@ function AppContent() {
       setCustomers(updatedCustomers);
     });
 
+    const unsubCustomerGroups = supabaseRealtime.subscribeCustomerGroups((updatedGroups) => {
+      setCustomerGroups(updatedGroups);
+    });
+
     return () => {
       unsubOrders.unsubscribe();
       unsubRevenue.unsubscribe();
       unsubStaff.unsubscribe();
       unsubVouchers.unsubscribe();
       unsubCustomers.unsubscribe();
+      unsubCustomerGroups.unsubscribe();
     };
   }, []);
 
@@ -336,84 +343,95 @@ function AppContent() {
                                     <Icon className="h-4 w-4" />
                                     {m.label}
                                   </span>
+                                  <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isActive ? "rotate-90 text-matte-black" : "text-gray-500"}`} />
                                 </button>
-                                {/* Module 6 Submenu */}
-                                <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5">
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/inventory/items");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.startsWith("/admin/inventory") &&
-                                      !location.pathname.includes("suppliers") &&
-                                      !location.pathname.includes("stocktake") &&
-                                      !location.pathname.includes("reports") &&
-                                      !location.pathname.includes("prd")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <Boxes className="h-3.5 w-3.5" />
-                                    <span>Quản lý vật tư</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/inventory/suppliers");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.includes("suppliers")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <Truck className="h-3.5 w-3.5" />
-                                    <span>Nhà cung cấp</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/inventory/stocktake");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.includes("stocktake")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <ClipboardList className="h-3.5 w-3.5" />
-                                    <span>Kiểm kho định kỳ</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/inventory/reports");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.includes("reports")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <Activity className="h-3.5 w-3.5" />
-                                    <span>Báo cáo kho</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/inventory/prd");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.includes("prd")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <BookOpen className="h-3.5 w-3.5" />
-                                    <span>Quy trình PRD M6</span>
-                                  </button>
-                                </div>
+                                {/* Module 6 Submenu - only shown when active */}
+                                <AnimatePresence>
+                                  {isActive && (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 overflow-hidden"
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/inventory/items");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.startsWith("/admin/inventory") &&
+                                          !location.pathname.includes("suppliers") &&
+                                          !location.pathname.includes("stocktake") &&
+                                          !location.pathname.includes("reports") &&
+                                          !location.pathname.includes("prd")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Boxes className="h-3.5 w-3.5" />
+                                        <span>Quản lý vật tư</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/inventory/suppliers");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("suppliers")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Truck className="h-3.5 w-3.5" />
+                                        <span>Nhà cung cấp</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/inventory/stocktake");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("stocktake")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <ClipboardList className="h-3.5 w-3.5" />
+                                        <span>Kiểm kho định kỳ</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/inventory/reports");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("reports")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Activity className="h-3.5 w-3.5" />
+                                        <span>Báo cáo kho</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/inventory/prd");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("prd")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <BookOpen className="h-3.5 w-3.5" />
+                                        <span>Quy trình PRD M6</span>
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             );
                           }
@@ -433,38 +451,49 @@ function AppContent() {
                                     <Icon className="h-4 w-4" />
                                     {m.label}
                                   </span>
+                                  <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isActive ? "rotate-90 text-matte-black" : "text-gray-500"}`} />
                                 </button>
-                                {/* Module 0 Submenu */}
-                                <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5">
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/system/stations");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <Building2 className="h-3.5 w-3.5" />
-                                    <span>Cài đặt trạm</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate("/admin/system/audit-log");
-                                      setIsMobileDrawerOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.includes("audit-log")
-                                        ? "text-brand-green font-extrabold bg-[#262626]"
-                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                    }`}
-                                  >
-                                    <History className="h-3.5 w-3.5" />
-                                    <span>Audit log</span>
-                                  </button>
-                                </div>
+                                {/* Module 0 Submenu - only shown when active */}
+                                <AnimatePresence>
+                                  {isActive && (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 overflow-hidden"
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/system/stations");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Building2 className="h-3.5 w-3.5" />
+                                        <span>Cài đặt trạm</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/system/audit-log");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("audit-log")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <History className="h-3.5 w-3.5" />
+                                        <span>Audit log</span>
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             );
                           }
@@ -655,71 +684,83 @@ function AppContent() {
                                 <Icon className="h-4 w-4" />
                                 {m.label}
                               </span>
-                              {isActive && <div className="h-1.5 w-1.5 rounded-full bg-matte-black" />}
+                              <div className="flex items-center gap-1.5">
+                                <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isActive ? "rotate-90 text-matte-black" : "text-gray-500"}`} />
+                              </div>
                             </button>
 
-                            {/* Module 6 Submenu */}
-                            <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans">
-                              <button
-                                onClick={() => navigate("/admin/inventory/items")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.startsWith("/admin/inventory") &&
-                                  !location.pathname.includes("suppliers") &&
-                                  !location.pathname.includes("stocktake") &&
-                                  !location.pathname.includes("reports") &&
-                                  !location.pathname.includes("prd")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <Boxes className="h-3.5 w-3.5" />
-                                <span>Quản lý vật tư</span>
-                              </button>
-                              <button
-                                onClick={() => navigate("/admin/inventory/suppliers")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.includes("suppliers")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <Truck className="h-3.5 w-3.5" />
-                                <span>Nhà cung cấp</span>
-                              </button>
-                              <button
-                                onClick={() => navigate("/admin/inventory/stocktake")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.includes("stocktake")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <ClipboardList className="h-3.5 w-3.5" />
-                                <span>Kiểm kho định kỳ</span>
-                              </button>
-                              <button
-                                onClick={() => navigate("/admin/inventory/reports")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.includes("reports")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <Activity className="h-3.5 w-3.5" />
-                                <span>Báo cáo kho</span>
-                              </button>
-                              <button
-                                onClick={() => navigate("/admin/inventory/prd")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.includes("prd")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <BookOpen className="h-3.5 w-3.5" />
-                                <span>Quy trình PRD M6</span>
-                              </button>
-                            </div>
+                            {/* Module 6 Submenu - only shown when active */}
+                            <AnimatePresence>
+                              {isActive && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans overflow-hidden"
+                                >
+                                  <button
+                                    onClick={() => navigate("/admin/inventory/items")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.startsWith("/admin/inventory") &&
+                                      !location.pathname.includes("suppliers") &&
+                                      !location.pathname.includes("stocktake") &&
+                                      !location.pathname.includes("reports") &&
+                                      !location.pathname.includes("prd")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Boxes className="h-3.5 w-3.5" />
+                                    <span>Quản lý vật tư</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/inventory/suppliers")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("suppliers")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Truck className="h-3.5 w-3.5" />
+                                    <span>Nhà cung cấp</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/inventory/stocktake")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("stocktake")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <ClipboardList className="h-3.5 w-3.5" />
+                                    <span>Kiểm kho định kỳ</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/inventory/reports")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("reports")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Activity className="h-3.5 w-3.5" />
+                                    <span>Báo cáo kho</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/inventory/prd")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("prd")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <BookOpen className="h-3.5 w-3.5" />
+                                    <span>Quy trình PRD M6</span>
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         );
                       }
@@ -738,34 +779,46 @@ function AppContent() {
                                 <Icon className="h-4 w-4" />
                                 {m.label}
                               </span>
-                              {isActive && <div className="h-1.5 w-1.5 rounded-full bg-matte-black" />}
+                              <div className="flex items-center gap-1.5">
+                                <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isActive ? "rotate-90 text-matte-black" : "text-gray-500"}`} />
+                              </div>
                             </button>
 
-                            {/* Module 0 Submenu */}
-                            <div className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans">
-                              <button
-                                onClick={() => navigate("/admin/system/stations")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <Building2 className="h-3.5 w-3.5" />
-                                <span>Cài đặt trạm</span>
-                              </button>
-                              <button
-                                onClick={() => navigate("/admin/system/audit-log")}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                  location.pathname.includes("audit-log")
-                                    ? "text-brand-green font-extrabold bg-[#262626]"
-                                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
-                                }`}
-                              >
-                                <History className="h-3.5 w-3.5" />
-                                <span>Audit log</span>
-                              </button>
-                            </div>
+                            {/* Module 0 Submenu - only shown when active */}
+                            <AnimatePresence>
+                              {isActive && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans overflow-hidden"
+                                >
+                                  <button
+                                    onClick={() => navigate("/admin/system/stations")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Building2 className="h-3.5 w-3.5" />
+                                    <span>Cài đặt trạm</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/system/audit-log")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("audit-log")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <History className="h-3.5 w-3.5" />
+                                    <span>Audit log</span>
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         );
                       }
@@ -897,6 +950,7 @@ function AppContent() {
                         customers={customers}
                         vouchers={vouchers}
                         orders={orders}
+                        customerGroups={customerGroups}
                       />
                     )}
 

@@ -12,8 +12,8 @@ import {
   Sparkles,
   ShoppingBag
 } from "lucide-react";
-import { supabaseRealtime } from "../../../lib/supabase/client";
-import { OrderStatusView } from "../../../types/workOrder.types";
+import { supabaseRealtime } from "../../lib/supabase/client";
+import { OrderStatusView } from "../../types/workOrder.types";
 
 export interface Toast {
   id: string;
