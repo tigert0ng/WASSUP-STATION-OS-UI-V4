@@ -379,12 +379,12 @@ export default function CrmVoucherManagement({
                   </td>
                 </tr>
               ) : (
-                filteredVouchers.map((v) => {
+                filteredVouchers.map((v, idx) => {
                   const rStatus = getVoucherRuntimeStatus(v);
                   const vRedCount = redemptions.filter((r) => r.voucherId === v.id).length;
 
                   return (
-                    <tr key={v.id} className="hover:bg-stone-50/80 transition">
+                    <tr key={v.id ? `${v.id}-${idx}` : `vch-${idx}`} className="hover:bg-stone-50/80 transition">
                       <td className="p-3 pl-4">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 bg-matte-black text-[#A2C62C] font-black text-xs rounded tracking-wider uppercase font-sans">
@@ -704,10 +704,10 @@ export default function CrmVoucherManagement({
                 { id: "sedan", label: "Sedan (4-5 chỗ)" },
                 { id: "suv", label: "SUV / CUV (5-7 chỗ)" },
                 { id: "truck", label: "Bán tải / Xe tải" }
-              ].map((vc) => {
+              ].map((vc, idx) => {
                 const isSelected = vVehicleClasses.includes(vc.id as any);
                 return (
-                  <label key={vc.id} className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer font-bold select-none">
+                  <label key={vc.id ? `${vc.id}-${idx}` : `vc-${idx}`} className="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer font-bold select-none">
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -780,8 +780,8 @@ export default function CrmVoucherManagement({
                   className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-xs text-slate-800 font-bold"
                 >
                   <option value="">-- Chọn nhóm khách hàng --</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
+                  {groups.map((g, idx) => (
+                    <option key={g.id ? `${g.id}-${idx}` : `grp-${idx}`} value={g.id}>
                       {g.name} ({g.type === "static" ? `${g.customer_ids?.length || 0} khách` : "Nhóm động"})
                     </option>
                   ))}
@@ -794,10 +794,10 @@ export default function CrmVoucherManagement({
                 <span className="text-[10px] font-black text-mid-gray uppercase block">
                   Đã chọn {vTargetSpecificCustomers.length} khách:
                 </span>
-                {customers.map((c) => {
+                {customers.map((c, idx) => {
                   const isChecked = vTargetSpecificCustomers.includes(c.id);
                   return (
-                    <label key={c.id} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer hover:bg-stone-50 p-1 rounded">
+                    <label key={c.id ? `${c.id}-${idx}` : `cst-${idx}`} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer hover:bg-stone-50 p-1 rounded">
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -902,10 +902,10 @@ export default function CrmVoucherManagement({
                             </td>
                           </tr>
                         ) : (
-                          vRed.map((r) => {
+                          vRed.map((r, idx) => {
                             const c = customers.find((x) => x.id === r.customerId);
                             return (
-                              <tr key={r.id} className="hover:bg-stone-50 transition">
+                              <tr key={r.id ? `${r.id}-${idx}` : `red-${idx}`} className="hover:bg-stone-50 transition">
                                 <td className="p-2.5 pl-4 text-stone-500 text-[10px]">
                                   {new Date(r.redeemedAt).toLocaleString("vi-VN")}
                                 </td>

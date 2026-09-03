@@ -3,6 +3,7 @@ import SearchableSelect from "../../common/SearchableSelect";
 import { motion, AnimatePresence } from "motion/react";
 import { X, CheckCircle2, AlertTriangle, ImageIcon, Hammer, FileText, Bold, Italic, Underline, Tag, Trash2, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
+import { createLocalService, updateLocalService, deleteLocalService, getLocalBomForService } from "../../../lib/catalog/serviceStore";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { logAudit } from "../../../lib/audit/logAction";
 import { ADDON_CATEGORY_LABELS, AddonCategory, HighlightType, ServiceRow, ServiceType } from "../../../types/catalog.types";
@@ -100,7 +101,13 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
   useEffect(() => {
     // Đếm ngay khi mở drawer (không đợi user bấm sang tab BOM) — nếu không,
     // toggle "Hoạt động" của 1 dịch vụ đã active sẵn sẽ hiện sai là bị khóa.
-    if (!service || !supabase) return;
+    if (!service) return;
+    const localBom = getLocalBomForService(service.id);
+    if (localBom !== null) {
+      setBomCount(localBom.length);
+      return;
+    }
+    if (!supabase) return;
     void (async () => {
       const { count } = await supabase
         .from("service_bom")
@@ -138,7 +145,7 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !staff || !canWrite) return;
+    if (!staff || !canWrite) return;
 
     if (active && bomCount < 1) {
       showToast("error", 'Chưa thể kích hoạt: cần ít nhất 1 dòng định mức vật tư ở tab "Định mức vật tư".');
@@ -159,56 +166,13 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
     setSaving(true);
 
     if (isCreate) {
-      const { data: stationRow } = await supabase.from("stations").select("id").order("created_at").limit(1).maybeSingle();
-      if (!stationRow) {
-        setSaving(false);
-        showToast("error", "Chưa có trạm — không thể tạo dịch vụ.");
-        return;
-      }
-      const { data, error } = await supabase
-        .from("services")
-        .insert({
-          station_id: stationRow.id,
-          code: code.trim().toUpperCase(),
-          name: name.trim(),
-          type,
-          price: priceNum,
-          duration_min: durMin,
-          duration_max: durMax,
-          checklist_jsonb: checklist,
-          description_bullets_jsonb: descriptionBullets,
-          image_url: imageUrl.trim() || null,
-          exempt_surcharge: type === "package" ? exemptSurcharge : false,
-          standalone: type === "addon" ? standalone : true,
-          addon_category: type === "addon" && addonCategory ? addonCategory : null,
-          highlight_type: highlightType,
-          active: false,
-        })
-        .select("id")
-        .single();
-      setSaving(false);
-      if (error) {
-        showToast("error", error.message);
-        return;
-      }
-      await logAudit({
-        actorId: staff.id,
-        module: "catalog",
-        action: "create_service",
-        entity: "services",
-        entityId: data.id,
-        after: { code: code.trim().toUpperCase(), name: name.trim(), price: priceNum },
-      });
-      showToast("success", `Đã tạo dịch vụ ${code.trim().toUpperCase()}. Thêm định mức vật tư để kích hoạt.`);
-      onSaved();
-      return;
-    }
-
-    const before = service!;
-    const { error } = await supabase
-      .from("services")
-      .update({
+      const newServiceId = `srv_loc_${Date.now()}`;
+      const newServiceRow: ServiceRow = {
+        id: newServiceId,
+        station_id: "st-wassup-01",
+        code: code.trim().toUpperCase(),
         name: name.trim(),
+        type,
         price: priceNum,
         duration_min: durMin,
         duration_max: durMax,
@@ -219,14 +183,46 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
         standalone: type === "addon" ? standalone : true,
         addon_category: type === "addon" && addonCategory ? addonCategory : null,
         highlight_type: highlightType,
-        active,
-      })
-      .eq("id", service!.id);
-    setSaving(false);
-    if (error) {
-      showToast("error", error.message);
+        active: false,
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      createLocalService(newServiceRow);
+      setSaving(false);
+
+      await logAudit({
+        actorId: staff.id,
+        module: "catalog",
+        action: "create_service",
+        entity: "services",
+        entityId: newServiceId,
+        after: { code: code.trim().toUpperCase(), name: name.trim(), price: priceNum },
+      });
+      showToast("success", `Đã tạo dịch vụ ${code.trim().toUpperCase()}. Thêm định mức vật tư để kích hoạt.`);
+      onSaved();
       return;
     }
+
+    const before = service!;
+    updateLocalService(service!.id, {
+      name: name.trim(),
+      price: priceNum,
+      duration_min: durMin,
+      duration_max: durMax,
+      checklist_jsonb: checklist,
+      description_bullets_jsonb: descriptionBullets,
+      image_url: imageUrl.trim() || null,
+      exempt_surcharge: type === "package" ? exemptSurcharge : false,
+      standalone: type === "addon" ? standalone : true,
+      addon_category: type === "addon" && addonCategory ? addonCategory : null,
+      highlight_type: highlightType,
+      active,
+      updated_at: new Date().toISOString(),
+    });
+
+    setSaving(false);
     await logAudit({
       actorId: staff.id,
       module: "catalog",
@@ -243,16 +239,13 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
   // PRD: xóa dịch vụ bắt buộc gõ đúng mã gói để xác nhận (chống bấm nhầm),
   // nút Xóa chỉ enable khi khớp tuyệt đối (không phân biệt hoa/thường).
   async function handleDelete() {
-    if (!supabase || !staff || !service) return;
+    if (!staff || !service) return;
     if (deleteConfirmCode.trim().toUpperCase() !== service.code.toUpperCase()) return;
 
     setDeleting(true);
-    const { error } = await supabase.from("services").delete().eq("id", service.id);
+    deleteLocalService(service.id);
     setDeleting(false);
-    if (error) {
-      showToast("error", error.message);
-      return;
-    }
+
     await logAudit({
       actorId: staff.id,
       module: "catalog",
@@ -310,7 +303,7 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
           <div className="mx-6 mt-4 flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-xl">
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] text-amber-900 leading-snug">
-              Bạn chỉ có quyền xem. Dùng tab "Đề xuất đổi giá" nếu muốn đề xuất giá mới.
+              Bạn đang ở chế độ chỉ xem thông tin dịch vụ. Chỉ Quản trị viên mới có quyền cập nhật cấu hình và giá.
             </p>
           </div>
         )}
@@ -481,7 +474,7 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
                   <div className="w-full bg-warm-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 min-h-[76px]">
                     <ul className="text-xs space-y-1">
                       {descriptionText.split("\n").filter((l) => l.trim()).map((line, i) => (
-                        <li key={i} className="flex gap-1.5">
+                        <li key={`desc-line-${i}`} className="flex gap-1.5">
                           <span>•</span>
                           <span dangerouslySetInnerHTML={{ __html: renderRichText(line) }} />
                         </li>
@@ -603,11 +596,11 @@ export default function ServiceFormDrawer({ service, type, onClose, onSaved }: P
                 <p className="text-[10px] text-mid-gray font-sans italic">Chưa ghi nhận thay đổi nào cho dịch vụ này.</p>
               ) : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  {history.map((row) => {
+                  {history.map((row, idx) => {
                     const priceChanged =
                       row.action === "update_service" && row.before && row.after && row.before.price !== row.after.price;
                     return (
-                      <div key={row.id} className="text-[10px] font-sans flex flex-col gap-0.5 bg-warm-white p-2 rounded-lg border border-gray-100">
+                      <div key={row.id ? `${row.id}-${idx}` : `hist-${idx}`} className="text-[10px] font-sans flex flex-col gap-0.5 bg-warm-white p-2 rounded-lg border border-gray-100">
                         <div className="flex justify-between items-center text-[9px] text-mid-gray">
                           <span className="font-semibold text-slate-700">
                             {row.actor_id ? historyActors[row.actor_id] ?? "—" : "—"} · {HISTORY_ACTION_LABELS[row.action] ?? row.action}

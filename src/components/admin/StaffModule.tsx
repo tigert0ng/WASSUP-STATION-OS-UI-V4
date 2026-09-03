@@ -25,7 +25,8 @@ import {
   Layers,
   Settings,
   MoreVertical,
-  Activity
+  Activity,
+  KeyRound
 } from "lucide-react";
 import { simActions } from "../../lib/supabase/client";
 
@@ -564,6 +565,15 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
                       {/* Actions */}
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            onClick={() => window.dispatchEvent(new CustomEvent("wassup_open_change_password"))}
+                            className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase font-display bg-brand-green/20 hover:bg-brand-green/35 text-matte-black border border-brand-green/40 transition cursor-pointer flex items-center gap-1"
+                            title="Tự đổi mật khẩu cá nhân"
+                          >
+                            <KeyRound className="h-3 w-3 text-matte-black" />
+                            <span>Đổi MK</span>
+                          </button>
+
                           <button
                             onClick={() => handleOpenEditModal(s)}
                             className="p-2 text-mid-gray hover:text-purple-600 hover:bg-purple-50 rounded-lg transition cursor-pointer border border-transparent hover:border-purple-100"

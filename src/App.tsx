@@ -44,7 +44,8 @@ import {
   History,
   Truck,
   ClipboardList,
-  BookOpen
+  BookOpen,
+  KeyRound
 } from "lucide-react";
 
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
@@ -77,6 +78,7 @@ import NotificationManager from "./components/common/NotificationManager";
 import LoginModule from "./components/admin/LoginModule";
 import HrModule from "./components/admin/HrModule";
 import AuditLog from "./components/admin/settings/AuditLog";
+import ChangePasswordModal from "./components/common/ChangePasswordModal";
 
 const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   master_admin: ["dashboard", "reception", "ktv", "pos", "finance", "crm", "services", "inventory", "monitor", "staff", "settings", "hr"],
@@ -169,6 +171,14 @@ function AppContent() {
   }
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+
+  // Global listener for change password trigger
+  useEffect(() => {
+    const handleOpenModal = () => setIsChangePasswordOpen(true);
+    window.addEventListener("wassup_open_change_password", handleOpenModal);
+    return () => window.removeEventListener("wassup_open_change_password", handleOpenModal);
+  }, []);
 
   // Realtime state synchronized with our client store
   const [orders, setOrders] = useState<OrderStatusView[]>(() => getMergedOrderStatusView() || []);
@@ -318,18 +328,18 @@ function AppContent() {
                 {/* Navigation links inside drawer */}
                 <div className="p-4 space-y-6">
                   {/* Categorized operational modules loop */}
-                  {["QUẢN TRỊ VẬN HÀNH", "DỮ LIỆU & DANH MỤC", "HỆ THỐNG TRẠM"].map((cat) => {
+                  {["QUẢN TRỊ VẬN HÀNH", "DỮ LIỆU & DANH MỤC", "HỆ THỐNG TRẠM"].map((cat, catIdx) => {
                     const catModules = ADMIN_MODULES.filter(m => m.category === cat && isModuleVisible(m.id));
                     if (catModules.length === 0) return null;
                     return (
-                      <div key={cat} className="space-y-1">
+                      <div key={`${cat}-${catIdx}`} className="space-y-1">
                         <span className="px-3 text-[9px] text-gray-500 font-extrabold tracking-widest block uppercase font-sans mb-2">{cat}</span>
-                        {catModules.map((m) => {
+                        {catModules.map((m, mIdx) => {
                           const Icon = m.icon;
                           const isActive = activeAdminModule === m.id;
                           if (m.id === "inventory") {
                             return (
-                              <div key={m.id} className="space-y-1">
+                              <div key={`${m.id}-${mIdx}`} className="space-y-1">
                                 <button
                                   onClick={() => {
                                     navigate("/admin/inventory/items");
@@ -437,7 +447,7 @@ function AppContent() {
                           }
                           if (m.id === "system") {
                             return (
-                              <div key={m.id} className="space-y-1">
+                              <div key={`${m.id}-${mIdx}`} className="space-y-1">
                                 <button
                                   onClick={() => {
                                     navigate("/admin/system/stations");
@@ -499,7 +509,7 @@ function AppContent() {
                           }
                           return (
                             <button
-                              key={m.id}
+                              key={`${m.id}-${mIdx}`}
                               onClick={() => {
                                 navigate(`/admin/${m.id}`);
                                 setIsMobileDrawerOpen(false);
@@ -618,7 +628,7 @@ function AppContent() {
           </div>
 
           {currentUser && (
-            <div className="flex items-center gap-2.5 bg-[#1a1a1a] border border-[#333] px-2.5 py-1.5 rounded-xl text-xs font-sans text-stone-200">
+            <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#333] px-2.5 py-1.5 rounded-xl text-xs font-sans text-stone-200">
               <div className="flex items-center gap-2">
                 <div className={`h-6 w-6 rounded-lg flex items-center justify-center font-black text-[10px] text-white uppercase shrink-0 ${
                   currentUser.role === "master_admin" ? "bg-purple-600" :
@@ -636,6 +646,19 @@ function AppContent() {
                   </div>
                 </div>
               </div>
+
+              {/* Self-service Change Password Button */}
+              <button
+                type="button"
+                onClick={() => setIsChangePasswordOpen(true)}
+                title="Đổi mật khẩu / PIN cá nhân của bạn"
+                className="flex items-center gap-1 px-2 py-1 bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-brand-green transition font-display font-black tracking-wider text-[9px] uppercase rounded-lg border border-stone-700/80 cursor-pointer"
+              >
+                <KeyRound className="h-3 w-3 text-brand-green" />
+                <span className="hidden md:inline">Đổi mật khẩu</span>
+                <span className="md:hidden">Đổi MK</span>
+              </button>
+
               <button
                 onClick={() => {
                   if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
@@ -1047,6 +1070,22 @@ function AppContent() {
           )}
         </main>
       </div>
+
+      {/* Global Self-Service Change Password Modal */}
+      {currentUser && (
+        <ChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+          currentUser={currentUser}
+          onPasswordChanged={(newPin) => {
+            if (currentUser) {
+              const updated = { ...currentUser, pin: newPin };
+              setCurrentUser(updated);
+              localStorage.setItem("wassup_current_user", JSON.stringify(updated));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1291,7 +1330,7 @@ function AdminDashboardView({ orders, revenueStats, booths, staff, vouchers }: A
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {booths.map((booth) => {
+          {booths.map((booth, idx) => {
             // Find active work orders inside this booth
             const activeWos = orders.filter(
               o => o.boothId === booth.id && o.status !== 'done'
@@ -1301,7 +1340,7 @@ function AdminDashboardView({ orders, revenueStats, booths, staff, vouchers }: A
 
             return (
               <div
-                key={booth.id}
+                key={`${booth.id}-${idx}`}
                 className={`border rounded-2xl p-5 transition-all duration-300 relative overflow-hidden shadow-sm ${
                   activeWo
                     ? "bg-white border-2 border-brand-green ring-4 ring-brand-green-light"
@@ -1479,9 +1518,9 @@ function AdminDashboardView({ orders, revenueStats, booths, staff, vouchers }: A
                       </td>
                     </tr>
                   ) : (
-                    orders.map((wo) => (
+                    orders.map((wo, idx) => (
                       <tr
-                        key={wo.id}
+                        key={wo.id ? `${wo.id}-${idx}` : `wo-${idx}`}
                         className={`hover:bg-warm-white/50 transition-colors ${
                           wo.status === 'done' ? "opacity-55" : ""
                         }`}
@@ -1773,9 +1812,9 @@ function TvQueueDisplayView({ orders, booths }: TvQueueDisplayViewProps) {
                   </span>
                 </motion.div>
               ) : (
-                waitingOrders.map((ord) => (
+                waitingOrders.map((ord, idx) => (
                   <motion.div
-                    key={ord.id}
+                    key={ord.id ? `${ord.id}-${idx}` : `wait-ord-${idx}`}
                     layout
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1810,12 +1849,12 @@ function TvQueueDisplayView({ orders, booths }: TvQueueDisplayViewProps) {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {booths.map((booth) => {
+            {booths.map((booth, idx) => {
               const matchedWo = ongoingWos.find(w => w.boothId === booth.id);
 
               return (
                 <motion.div
-                  key={booth.id}
+                  key={booth.id ? `${booth.id}-${idx}` : `booth-${idx}`}
                   layout
                   className={`border rounded-2xl p-5 space-y-4 relative overflow-hidden transition-colors duration-500 min-h-[260px] flex flex-col justify-between ${
                     matchedWo

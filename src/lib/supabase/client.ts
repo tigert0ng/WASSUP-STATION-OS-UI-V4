@@ -20,9 +20,62 @@ const supabaseAnonKey =
 
 export const isRealSupabase = !!(supabaseUrl && supabaseAnonKey);
 
-export const supabase = isRealSupabase
+const rawSupabase = isRealSupabase
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
+
+// Read-only Proxy wrapper ensuring ZERO mutations are ever written to Supabase
+function createReadOnlyClient(client: any) {
+  if (!client) return null;
+
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      if (prop === "from") {
+        return (table: string) => {
+          const queryBuilder = target.from(table);
+          return new Proxy(queryBuilder, {
+            get(tableTarget, tableProp, tableReceiver) {
+              if (
+                tableProp === "insert" ||
+                tableProp === "upsert" ||
+                tableProp === "update" ||
+                tableProp === "delete"
+              ) {
+                console.info(
+                  `[Supabase Read-Only Guard] Blocked ${String(tableProp)} on table "${table}". Only reading data is permitted.`
+                );
+                // Return a chainable dummy builder that resolves safely with error: null
+                const dummyBuilder: any = {
+                  select: () => dummyBuilder,
+                  eq: () => dummyBuilder,
+                  in: () => dummyBuilder,
+                  order: () => dummyBuilder,
+                  limit: () => dummyBuilder,
+                  single: async () => ({ data: { id: `ro_${Date.now()}` }, error: null }),
+                  maybeSingle: async () => ({ data: null, error: null }),
+                  then: (resolve: any) => Promise.resolve({ data: null, error: null }).then(resolve),
+                };
+                return () => dummyBuilder;
+              }
+              return Reflect.get(tableTarget, tableProp, tableReceiver);
+            }
+          });
+        };
+      }
+      if (prop === "rpc") {
+        return (fn: string) => {
+          console.info(
+            `[Supabase Read-Only Guard] Intercepted RPC "${fn}". Preventing remote DB changes.`
+          );
+          return Promise.resolve({ data: { success: true, mode: "read_only_simulated" }, error: null });
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    }
+  });
+}
+
+export const supabase = createReadOnlyClient(rawSupabase);
 
 if (!isRealSupabase) {
   console.warn("VITE_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL and VITE_SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY not found. WASSUP Station OS running on high-fidelity Realtime State Simulator.");
@@ -510,6 +563,48 @@ const getStoredState = (): SimState => {
             localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
           }
         }
+
+        // Deduplicate all arrays by ID to prevent duplicate React keys
+        let needsDedupeSave = false;
+        const dedupeById = <T extends { id?: string }>(arr: T[] | undefined): T[] => {
+          if (!Array.isArray(arr)) return [];
+          const seen = new Set<string>();
+          return arr.filter((item) => {
+            if (!item || !item.id) return false;
+            if (seen.has(item.id)) {
+              needsDedupeSave = true;
+              return false;
+            }
+            seen.add(item.id);
+            return true;
+          });
+        };
+
+        if (Array.isArray(parsed.customers)) {
+          parsed.customers = dedupeById(parsed.customers);
+        }
+        if (Array.isArray(parsed.orders)) {
+          parsed.orders = dedupeById(parsed.orders);
+        }
+        if (Array.isArray(parsed.workOrders)) {
+          parsed.workOrders = dedupeById(parsed.workOrders);
+        }
+        if (Array.isArray(parsed.vouchers)) {
+          parsed.vouchers = dedupeById(parsed.vouchers);
+        }
+        if (Array.isArray(parsed.booths)) {
+          parsed.booths = dedupeById(parsed.booths);
+        }
+        if (Array.isArray(parsed.customerGroups)) {
+          parsed.customerGroups = dedupeById(parsed.customerGroups);
+        }
+        if (Array.isArray(parsed.staff)) {
+          parsed.staff = dedupeById(parsed.staff);
+        }
+
+        if (needsDedupeSave) {
+          localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+        }
       }
       return parsed;
     } catch (e) {
@@ -566,7 +661,8 @@ if (typeof window !== 'undefined') {
 }
 
 export function getMergedOrderStatusView(): OrderStatusView[] {
-  return currentState.orders.map(o => {
+  const seenWoIds = new Set<string>();
+  return currentState.orders.map((o, idx) => {
     const wo = currentState.workOrders.find(w => w.orderId === o.id) || {
       id: 'mock-wo-' + o.id,
       status: 'queued' as WoStatus,
@@ -578,8 +674,14 @@ export function getMergedOrderStatusView(): OrderStatusView[] {
     const tech = currentState.staff.find(s => s.id === wo.technicianId);
     const booth = currentState.booths.find(b => b.id === wo.boothId);
 
+    let uniqueId = wo.id;
+    if (seenWoIds.has(uniqueId)) {
+      uniqueId = `${wo.id}_${o.id}_${idx}`;
+    }
+    seenWoIds.add(uniqueId);
+
     return {
-      id: wo.id,
+      id: uniqueId,
       orderId: o.id,
       status: wo.status,
       technicianId: wo.technicianId,
@@ -666,24 +768,6 @@ export const simActions = {
     };
     currentState.customers.push(newCust);
     saveState();
-
-    if (isRealSupabase && supabase) {
-      (async () => {
-        try {
-          await supabase
-            .from("customers")
-            .insert({
-              name: data.name,
-              phone: data.phone,
-              license_plate: data.licensePlate || "",
-              points: data.points || 0
-            });
-        } catch (err) {
-          console.error("Error in Supabase addCustomer:", err);
-        }
-      })();
-    }
-
     return newCust;
   },
 
@@ -701,26 +785,6 @@ export const simActions = {
       if (patch.points !== undefined) cust.points = patch.points;
       if (patch.vehicles !== undefined) cust.vehicles = patch.vehicles;
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            const updates: any = {};
-            if (patch.name !== undefined) updates.name = patch.name;
-            if (patch.phone !== undefined) updates.phone = patch.phone;
-            if (patch.licensePlate !== undefined) updates.license_plate = patch.licensePlate;
-            if (patch.points !== undefined) updates.points = patch.points;
-
-            await supabase
-              .from("customers")
-              .update(updates)
-              .eq("id", id);
-          } catch (err) {
-            console.error("Error in Supabase updateCustomer:", err);
-          }
-        })();
-      }
-
       return cust;
     }
     return null;
@@ -742,19 +806,6 @@ export const simActions = {
         });
       }
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            await supabase
-              .from("customers")
-              .delete()
-              .eq("id", id);
-          } catch (err) {
-            console.error("Error in Supabase deleteCustomer:", err);
-          }
-        })();
-      }
       return true;
     }
     return false;
@@ -763,21 +814,6 @@ export const simActions = {
   updateThresholds: (daily_target: number, warning_level: number) => {
     currentState.thresholds = { daily_target, warning_level };
     saveState();
-
-    if (isRealSupabase && supabase) {
-      (async () => {
-        try {
-          await supabase
-            .from("revenue_thresholds")
-            .insert({
-              daily_target,
-              warning_level
-            });
-        } catch (err) {
-          console.error("Error in Supabase updateThresholds:", err);
-        }
-      })();
-    }
   },
 
   addStaff: (data: { name: string; phone: string; role: "master_admin" | "manager" | "technician" | "accountant"; pin?: string }) => {
@@ -791,25 +827,6 @@ export const simActions = {
     };
     currentState.staff.push(newStaff);
     saveState();
-
-    if (isRealSupabase && supabase) {
-      (async () => {
-        try {
-          await supabase
-            .from("staff")
-            .insert({
-              name: data.name,
-              phone: data.phone,
-              role: data.role,
-              pin: data.pin || "123456",
-              status: "active"
-            });
-        } catch (err) {
-          console.error("Error in Supabase addStaff:", err);
-        }
-      })();
-    }
-
     return newStaff;
   },
 
@@ -822,27 +839,6 @@ export const simActions = {
       if (data.status !== undefined) staffMember.status = data.status;
       if (data.pin !== undefined) staffMember.pin = data.pin;
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            const updates: any = {};
-            if (data.name !== undefined) updates.name = data.name;
-            if (data.phone !== undefined) updates.phone = data.phone;
-            if (data.role !== undefined) updates.role = data.role;
-            if (data.status !== undefined) updates.status = data.status;
-            if (data.pin !== undefined) updates.pin = data.pin;
-
-            await supabase
-              .from("staff")
-              .update(updates)
-              .eq("id", id);
-          } catch (err) {
-            console.error("Error in Supabase updateStaff:", err);
-          }
-        })();
-      }
-
       return staffMember;
     }
     return null;
@@ -853,19 +849,6 @@ export const simActions = {
     if (idx !== -1) {
       currentState.staff.splice(idx, 1);
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            await supabase
-              .from("staff")
-              .delete()
-              .eq("id", id);
-          } catch (err) {
-            console.error("Error in Supabase deleteStaff:", err);
-          }
-        })();
-      }
       return true;
     }
     return false;
@@ -943,32 +926,6 @@ export const simActions = {
 
     saveState();
 
-    if (isRealSupabase && supabase) {
-      (async () => {
-        try {
-          const { data: rpcRes, error: rpcErr } = await supabase.rpc("create_kiosk_order_v2", {
-            p_phone: data.customerPhone || null,
-            p_name: data.customerName || null,
-            p_license_plate: data.licensePlate,
-            p_vehicle_segment: data.vehicleSegment,
-            p_package_code: data.packageCode,
-            p_subtotal: data.subtotal,
-            p_discount: data.discount,
-            p_total: data.total,
-            p_booth_id: data.boothId || null
-          });
-
-          if (rpcErr) {
-            console.error("Error invoking create_kiosk_order_v2 RPC:", rpcErr);
-          } else {
-            console.log("Atomic Kiosk Order Sync Succeeded:", rpcRes);
-          }
-        } catch (err) {
-          console.error("Error in Supabase atomic order creation:", err);
-        }
-      })();
-    }
-
     return { orderId, workOrderId: newWo.id };
   },
 
@@ -983,28 +940,6 @@ export const simActions = {
       if (b) b.status = 'busy';
       
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            await supabase
-              .from("work_orders")
-              .update({
-                technician_id: technicianId,
-                booth_id: boothId,
-                status: 'assigned'
-              })
-              .eq("id", woId);
-
-            await supabase
-              .from("booths")
-              .update({ status: 'busy' })
-              .eq("id", boothId);
-          } catch (err) {
-            console.error("Error in Supabase assignWorkOrder:", err);
-          }
-        })();
-      }
 
       return true;
     }
@@ -1029,32 +964,6 @@ export const simActions = {
       
       saveState();
 
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            await supabase
-              .from("work_orders")
-              .update({
-                technician_id: null,
-                booth_id: null,
-                status: 'queued'
-              })
-              .eq("id", woId);
-            
-            if (oldBoothId) {
-              const remainingActive = currentState.workOrders.some(w => w.boothId === oldBoothId && w.id !== woId && w.status !== 'done');
-              if (!remainingActive) {
-                await supabase
-                  .from("booths")
-                  .update({ status: 'idle' })
-                  .eq("id", oldBoothId);
-              }
-            }
-          } catch (err) {
-            console.error("Error in Supabase rejectWorkOrder:", err);
-          }
-        })();
-      }
       return true;
     }
     return false;
@@ -1080,34 +989,7 @@ export const simActions = {
       }
       
       saveState();
-      
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            await supabase
-              .from("work_orders")
-              .update({ booth_id: targetBoothId })
-              .eq("id", woId);
-            
-            await supabase
-              .from("booths")
-              .update({ status: 'busy' })
-              .eq("id", targetBoothId);
-              
-            if (oldBoothId && oldBoothId !== targetBoothId) {
-              const remainingActive = currentState.workOrders.some(w => w.boothId === oldBoothId && w.id !== woId && w.status !== 'done');
-              if (!remainingActive) {
-                await supabase
-                  .from("booths")
-                  .update({ status: 'idle' })
-                  .eq("id", oldBoothId);
-              }
-            }
-          } catch (err) {
-            console.error("Error in Supabase moveWorkOrderBooth:", err);
-          }
-        })();
-      }
+
       return true;
     }
     return false;
@@ -1210,60 +1092,6 @@ export const simActions = {
 
       saveState();
 
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            const updates: any = { status };
-            if (status === 'in_progress') {
-              updates.started_at = new Date().toISOString();
-            }
-            if (status === 'done') {
-              updates.completed_at = new Date().toISOString();
-
-              const { data: woData } = await supabase
-                .from("work_orders")
-                .select("booth_id")
-                .eq("id", woId)
-                .maybeSingle();
-              
-              if (woData?.booth_id) {
-                await supabase
-                  .from("booths")
-                  .update({ status: 'idle' })
-                  .eq("id", woData.booth_id);
-              }
-            }
-
-            if (status === 'rework') {
-              const { data: woData } = await supabase
-                .from("work_orders")
-                .select("rework_count")
-                .eq("id", woId)
-                .maybeSingle();
-              const currentRework = woData?.rework_count || 0;
-              updates.rework_count = Math.min(currentRework + 1, 2);
-            }
-
-            await supabase
-              .from("work_orders")
-              .update(updates)
-              .eq("id", woId);
-
-            await supabase
-              .from("work_order_events")
-              .insert({
-                work_order_id: woId,
-                status,
-                actor_id: actorId || null,
-                channel,
-                notes
-              });
-          } catch (err) {
-            console.error("Error in Supabase updateWorkOrderStatus:", err);
-          }
-        })();
-      }
-
       return true;
     }
     return false;
@@ -1358,23 +1186,6 @@ export const simActions = {
       if (total !== undefined) order.total = total;
       if (discount !== undefined) order.discount = discount;
       saveState();
-
-      if (isRealSupabase && supabase) {
-        (async () => {
-          try {
-            const updates: any = { status };
-            if (total !== undefined) updates.total = total;
-            if (discount !== undefined) updates.discount = discount;
-
-            await supabase
-              .from("orders")
-              .update(updates)
-              .eq("id", orderId);
-          } catch (err) {
-            console.error("Error in Supabase updateOrderStatus:", err);
-          }
-        })();
-      }
 
       return true;
     }

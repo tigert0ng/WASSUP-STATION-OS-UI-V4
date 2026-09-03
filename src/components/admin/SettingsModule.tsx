@@ -51,7 +51,7 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
     },
     {
       id: "users",
-      label: "User & Phân quyền RBAC",
+      label: "User & Phân quyền",
       icon: Users,
       component: <UsersRoles />,
     },

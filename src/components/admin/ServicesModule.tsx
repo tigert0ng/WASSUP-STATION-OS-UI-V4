@@ -1,18 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Layers, Sparkles, Percent, DollarSign, PackageSearch, Plus } from "lucide-react";
+import { Layers, Sparkles, Percent, PackageSearch, Plus } from "lucide-react";
 import ServiceList from "./services/ServiceList";
 import SurchargeConfig from "./services/SurchargeConfig";
-import PriceChangeRequests from "./services/PriceChangeRequest";
 
-// Module 5 — Quản Lý Gói Dịch Vụ & Giá. Shell mỏng trên 4 sub-màn hình
-// (S5.1/S5.3/S5.4/S5.8, PRD modules/module-5-dich-vu-gia/prd.md), cùng mẫu
+// Module 5 — Quản Lý Gói Dịch Vụ & Giá. Shell mỏng trên 3 sub-màn hình
+// (S5.1/S5.3/S5.4, PRD modules/module-5-dich-vu-gia/prd.md), cùng mẫu
 // URL-synced tabs như SettingsModule.tsx (Module 0).
 const TABS = [
   { id: "packages", label: "GÓI DỊCH VỤ (W0-W5)", icon: Layers, component: <ServiceList type="package" /> },
   { id: "addons", label: "DỊCH VỤ LẺ", icon: Sparkles, component: <ServiceList type="addon" /> },
   { id: "surcharge", label: "PHỤ THU HẠNG XE", icon: Percent, component: <SurchargeConfig /> },
-  { id: "price-requests", label: "ĐỀ XUẤT ĐỔI GIÁ", icon: DollarSign, component: <PriceChangeRequests /> },
 ] as const;
 
 export default function ServicesModule() {
@@ -38,7 +36,7 @@ export default function ServicesModule() {
             GÓI DỊCH VỤ & GIÁ
           </h1>
           <p className="text-mid-gray text-xs font-sans mt-1">
-            Nguồn giá duy nhất, đồng bộ tự động xuống Kiosk — quản lý gói W0-W5, dịch vụ lẻ, định mức vật tư, phụ thu hạng xe và đề xuất đổi giá.
+            Nguồn giá duy nhất, đồng bộ tự động xuống Kiosk — quản lý gói W0-W5, dịch vụ lẻ, định mức vật tư và phụ thu hạng xe.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -47,14 +45,12 @@ export default function ServicesModule() {
               onClick={() => {
                 if (activeTab === "packages" || activeTab === "addons") {
                   window.dispatchEvent(new CustomEvent("open-service-drawer-new"));
-                } else if (activeTab === "price-requests") {
-                  window.dispatchEvent(new CustomEvent("open-price-request-modal"));
                 }
               }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-green hover:bg-brand-green-hover text-matte-black font-display font-black text-xs uppercase tracking-wider transition shadow-sm cursor-pointer border-0"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" />
-              {activeTab === "price-requests" ? "Tạo đề xuất giá" : "Tạo dịch vụ mới"}
+              Tạo dịch vụ mới
             </button>
           )}
         </div>

@@ -57,18 +57,6 @@ export interface InventoryItemPickerRow {
   min_stock?: number;
 }
 
-export interface PriceChangeRequestRow {
-  id: string;
-  service_id: string;
-  proposed_price: number;
-  reason: string;
-  requested_by: string;
-  decided_by: string | null;
-  status: "pending" | "approved" | "rejected";
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface VehicleSurchargeConfigRow {
   id: string;
   percent: number;

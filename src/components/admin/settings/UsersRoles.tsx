@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Users, Plus, Key, X, Lock, Unlock, CheckCircle2, Trash2, ShieldCheck, KeyRound, AlertTriangle, Copy, Edit3,
-  Building2, Filter, Search, Sparkles
+  Building2, Filter, Search, Sparkles, Check, Shield
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
 import { useAuth } from "../../../lib/auth/AuthProvider";
@@ -308,20 +308,6 @@ export default function UsersRoles() {
     setPerms(updatedPerms);
     localStorage.setItem(`wassup_role_perms_${selectedRoleId}`, JSON.stringify(updatedPerms));
 
-    if (supabase) {
-      try {
-        const { error } = await supabase.from("role_module_permissions").upsert(
-          { role_id: selectedRoleId, ...current, [action]: nextValue },
-          { onConflict: "role_id,module_code" }
-        );
-        if (error) {
-          console.warn("Supabase permission update warning:", error.message);
-        }
-      } catch (e) {
-        console.warn("Supabase permission update exception:", e);
-      }
-    }
-
     const roleName = roles.find((r) => r.id === selectedRoleId)?.name ?? selectedRoleId;
     await logAudit({
       actorId: currentStaff.id,
@@ -345,33 +331,7 @@ export default function UsersRoles() {
       station_scope_all: false,
     };
 
-    let finalRoleId = generatedId;
-
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from("roles")
-          .insert({ name, is_system_default: false })
-          .select("id")
-          .single();
-
-        if (!error && data?.id) {
-          finalRoleId = data.id;
-          newRole.id = finalRoleId;
-        } else if (error) {
-          console.warn("Supabase role create warning:", error.message);
-        }
-      } catch (e) {
-        console.warn("Supabase role create exception:", e);
-      }
-
-      try {
-        await supabase.from("role_module_permissions").insert(
-          MODULES.map((m) => ({ role_id: finalRoleId, module_code: m.code, can_create: false, can_read: true, can_update: false, can_delete: false }))
-        );
-      } catch (e) {}
-    }
-
+    const finalRoleId = generatedId;
     const updatedRoles = [...roles, newRole];
     setRoles(updatedRoles);
     localStorage.setItem("wassup_roles", JSON.stringify(updatedRoles));
@@ -405,21 +365,6 @@ export default function UsersRoles() {
     const newName = editRoleName.trim();
     const roleId = editingRole.id;
 
-    if (supabase) {
-      try {
-        const { error } = await supabase
-          .from("roles")
-          .update({ name: newName })
-          .eq("id", roleId);
-
-        if (error) {
-          console.warn("Supabase update role name warning:", error.message);
-        }
-      } catch (e) {
-        console.warn("Supabase update role name exception:", e);
-      }
-    }
-
     const updatedRoles = roles.map((r) => (r.id === roleId ? { ...r, name: newName } : r));
     setRoles(updatedRoles);
     localStorage.setItem("wassup_roles", JSON.stringify(updatedRoles));
@@ -437,6 +382,30 @@ export default function UsersRoles() {
     setEditRoleModalOpen(false);
     setEditingRole(null);
     showToast("success", `Đã đổi tên vai trò thành "${newName}".`);
+  }
+
+  async function handleSetAllPermissions(type: "all_true" | "all_false" | "read_only") {
+    if (!selectedRoleId || !canWrite || !currentStaff) return;
+    const updatedPerms: PermRow[] = MODULES.map((m) => ({
+      module_code: m.code,
+      can_create: type === "all_true",
+      can_read: type === "all_true" || type === "read_only",
+      can_update: type === "all_true",
+      can_delete: type === "all_true",
+    }));
+    setPerms(updatedPerms);
+    localStorage.setItem(`wassup_role_perms_${selectedRoleId}`, JSON.stringify(updatedPerms));
+
+    const roleName = roles.find((r) => r.id === selectedRoleId)?.name ?? selectedRoleId;
+    await logAudit({
+      actorId: currentStaff.id,
+      module: "settings",
+      action: "bulk_update_permissions",
+      entity: "role_module_permissions",
+      entityId: selectedRoleId,
+      after: { role: roleName, type },
+    });
+    showToast("success", `Đã cập nhật toàn bộ quyền cho vai trò "${roleName}".`);
   }
 
   async function handleDeleteRoleClick(role: RoleRow) {
@@ -478,11 +447,6 @@ export default function UsersRoles() {
     try {
       if (confirmDelete.kind === "role") {
         const role = roles.find((r) => r.id === confirmDelete.id);
-        if (supabase) {
-          try {
-            await supabase.from("roles").delete().eq("id", confirmDelete.id);
-          } catch (e) {}
-        }
         const updatedRoles = roles.filter((r) => r.id !== confirmDelete.id);
         setRoles(updatedRoles);
         localStorage.setItem("wassup_roles", JSON.stringify(updatedRoles));
@@ -503,13 +467,6 @@ export default function UsersRoles() {
         showToast("success", `Đã xóa vai trò "${confirmDelete.matchText}".`);
       } else {
         const staffRow = staffList.find((s) => s.id === confirmDelete.id);
-        if (supabase) {
-          try {
-            await supabase.functions.invoke("admin-manage-staff", {
-              body: { action: "delete", staff_id: confirmDelete.id },
-            });
-          } catch (e) {}
-        }
         const updatedStaff = staffList.filter((s) => s.id !== confirmDelete.id);
         setStaffList(updatedStaff);
         localStorage.setItem("wassup_staff_list", JSON.stringify(updatedStaff));
@@ -536,17 +493,7 @@ export default function UsersRoles() {
     if (!window.confirm(`Cấp lại mật khẩu cho ${row.name}? Mật khẩu hiện tại sẽ ngừng hoạt động ngay.`)) return;
     setResettingId(row.id);
     try {
-      let tempPass = "Wassup@" + Math.floor(100000 + Math.random() * 900000);
-      if (supabase) {
-        try {
-          const { data, error } = await supabase.functions.invoke("admin-manage-staff", {
-            body: { action: "reset_password", staff_id: row.id },
-          });
-          if (!error && data?.temp_password) {
-            tempPass = data.temp_password;
-          }
-        } catch (e) {}
-      }
+      const tempPass = "Wassup@" + Math.floor(100000 + Math.random() * 900000);
 
       await logAudit({
         actorId: currentStaff.id,
@@ -577,17 +524,6 @@ export default function UsersRoles() {
       status: "active",
     };
 
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.functions.invoke("admin-manage-staff", {
-          body: { action: "create", ...newStaff },
-        });
-        if (!error && data?.staff_id) {
-          newStaffObj.id = data.staff_id;
-        }
-      } catch (e) {}
-    }
-
     const updatedStaff = [...staffList, newStaffObj];
     setStaffList(updatedStaff);
     localStorage.setItem("wassup_staff_list", JSON.stringify(updatedStaff));
@@ -612,14 +548,6 @@ export default function UsersRoles() {
     const action = row.status === "active" ? "lock" : "unlock";
     const newStatus: "active" | "locked" = action === "lock" ? "locked" : "active";
 
-    if (supabase) {
-      try {
-        await supabase.functions.invoke("admin-manage-staff", {
-          body: { action, staff_id: row.id },
-        });
-      } catch (e) {}
-    }
-
     const updatedStaff = staffList.map((s) => (s.id === row.id ? { ...s, status: newStatus } : s));
     setStaffList(updatedStaff);
     localStorage.setItem("wassup_staff_list", JSON.stringify(updatedStaff));
@@ -640,17 +568,6 @@ export default function UsersRoles() {
     if (!currentStaff || roleId === row.role_id) return;
     if (row.id === currentStaff.id || !isMasterAdmin) return;
 
-    if (supabase) {
-      try {
-        const { error } = await supabase.from("staff").update({ role_id: roleId }).eq("id", row.id);
-        if (error) {
-          console.warn("Supabase change staff role warning:", error.message);
-        }
-      } catch (e) {
-        console.warn("Supabase change staff role exception:", e);
-      }
-    }
-
     const updatedStaff = staffList.map((s) => (s.id === row.id ? { ...s, role_id: roleId } : s));
     setStaffList(updatedStaff);
     localStorage.setItem("wassup_staff_list", JSON.stringify(updatedStaff));
@@ -670,17 +587,6 @@ export default function UsersRoles() {
   async function handleChangeStation(row: StaffRow, stationId: string) {
     if (!currentStaff || stationId === row.station_id) return;
     if (row.id === currentStaff.id || !isMasterAdmin) return;
-
-    if (supabase) {
-      try {
-        const { error } = await supabase.from("staff").update({ station_id: stationId }).eq("id", row.id);
-        if (error) {
-          console.warn("Supabase change staff station warning:", error.message);
-        }
-      } catch (e) {
-        console.warn("Supabase change staff station exception:", e);
-      }
-    }
 
     const updatedStaff = staffList.map((s) => (s.id === row.id ? { ...s, station_id: stationId } : s));
     setStaffList(updatedStaff);
@@ -737,112 +643,341 @@ export default function UsersRoles() {
         </div>
       )}
 
-      {/* ---- Vai trò & ma trận quyền ---- */}
-      <div className="bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="border-b border-gray-100 pb-3 flex justify-between items-center flex-wrap gap-3">
+      {/* ---- Vai trò & ma trận quyền (Ratio 4:8) ---- */}
+      <div className="bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-sm space-y-6">
+        {/* Header section */}
+        <div className="border-b border-stone-200/80 pb-4 flex justify-between items-center flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-black font-display tracking-wider text-matte-black uppercase flex items-center gap-2">
               <Key className="h-4.5 w-4.5 text-purple-600" />
-              VAI TRÒ & MA TRẬN PHÂN QUYỀN
+              VAI TRÒ & MA TRẬN PHÂN QUYỀN (RBAC)
             </h3>
-            <p className="text-[11px] text-mid-gray font-sans mt-0.5">8 module × 4 quyền (C/R/U/D). Quản lý cấu hình vai trò & phân quyền hệ thống WASSUP OS.</p>
+            <p className="text-[11px] text-mid-gray font-sans mt-0.5">
+              Cấu hình vai trò vận hành và thiết lập ma trận 4 quyền hạn CRUD (Create, Read, Update, Delete) trên từng phân hệ WASSUP OS.
+            </p>
           </div>
-          {canWrite && (
-            <button
-              onClick={() => setNewRoleModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" /> Tạo vai trò mới
-            </button>
-          )}
+          <div className="flex items-center gap-2 text-xs font-sans text-stone-500 bg-stone-100/80 px-3 py-1.5 rounded-lg border border-stone-200/60">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-green"></span>
+            </span>
+            <span className="text-[11px] font-medium text-stone-600">Tự động đồng bộ quyền hạn</span>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {roles.map((r) => (
-            <div key={r.id} className="inline-flex items-center gap-1">
-              <button
-                onClick={() => setSelectedRoleId(r.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold font-sans transition cursor-pointer ${
-                  selectedRoleId === r.id ? "bg-matte-black text-white shadow-sm" : "bg-gray-100 text-mid-gray hover:bg-gray-200"
-                }`}
-              >
-                {r.name}
-                {r.is_system_default && <span className="ml-1.5 text-[9px] opacity-70">(mặc định)</span>}
-              </button>
-              {canWrite && selectedRoleId === r.id && (
-                <button
-                  type="button"
-                  title="Sửa tên vai trò"
-                  onClick={() => {
-                    setEditingRole(r);
-                    setEditRoleName(r.name);
-                    setEditRoleModalOpen(true);
-                  }}
-                  className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs transition cursor-pointer border border-stone-200"
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
-              )}
+        {/* 2 Columns: Ratio 4:8 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column (Ratio 4): Danh sách vai trò sắp xếp dọc + Nút Vai trò mới */}
+          <div className="lg:col-span-4 space-y-3.5 bg-stone-50/70 border border-stone-200/80 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-matte-black" />
+                <h4 className="text-xs font-extrabold font-display uppercase tracking-wider text-matte-black">
+                  DANH SÁCH VAI TRÒ
+                </h4>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-stone-200 text-stone-700 text-[10px] font-extrabold">
+                {roles.length} vai trò
+              </span>
             </div>
-          ))}
-        </div>
 
-        {selectedRoleId && (
-          <div className="pt-2">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse font-sans text-xs">
-                <thead>
-                  <tr className="bg-gray-50 text-mid-gray font-bold text-[10px] uppercase border-b border-gray-200">
-                    <th className="p-3">Module (8 phân hệ)</th>
-                    {ACTIONS.map((a) => (
-                      <th key={a.key} className="p-3 text-center">{a.label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {MODULES.map((m) => {
-                    const row = perms.find((p) => p.module_code === m.code);
-                    return (
-                      <tr key={m.code} className="hover:bg-gray-50/50 transition">
-                        <td className="p-3 font-semibold text-matte-black text-xs">{m.order}. {m.name}</td>
-                        {ACTIONS.map((a) => {
-                          const hasPerm = row?.[a.key] ?? false;
-                          return (
-                            <td key={a.key} className="p-3 text-center">
-                              <button
-                                type="button"
-                                disabled={!canWrite}
-                                onClick={() => togglePermission(m.code, a.key)}
-                                className={`h-6 w-9 rounded-md border font-black text-[10px] inline-flex items-center justify-center transition-all ${
-                                  hasPerm
-                                    ? "bg-purple-600 text-white border-purple-600"
-                                    : "bg-white text-gray-300 border-gray-250 hover:bg-gray-100"
-                                } ${!canWrite ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
-                              >
-                                {hasPerm ? a.label : "—"}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {canWrite && isMasterAdmin && !roles.find((r) => r.id === selectedRoleId)?.is_system_default && (
+            {/* Nút Thêm Vai trò mới */}
+            {canWrite && (
               <button
+                type="button"
                 onClick={() => {
-                  const role = roles.find((r) => r.id === selectedRoleId);
-                  if (role) void handleDeleteRoleClick(role);
+                  setNewRoleName("");
+                  setNewRoleModalOpen(true);
                 }}
-                className="mt-4 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-brand-green hover:bg-brand-green-hover text-matte-black font-display font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer border border-[#8fb124]/50 hover:shadow active:scale-[0.99]"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Xóa vai trò này
+                <Plus className="h-4 w-4 text-matte-black stroke-[2.5]" />
+                <span>Vai trò mới</span>
               </button>
             )}
+
+            {/* Danh sách vai trò dọc */}
+            <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1 scrollbar-thin">
+              {roles.map((r, rIdx) => {
+                const isSelected = selectedRoleId === r.id;
+                const assignedStaffCount = staffList.filter((s) => s.role_id === r.id).length;
+
+                return (
+                  <div
+                    key={`${r.id}-${rIdx}`}
+                    onClick={() => setSelectedRoleId(r.id)}
+                    className={`group relative rounded-xl p-3.5 transition-all duration-200 cursor-pointer border text-left ${
+                      isSelected
+                        ? "bg-matte-black text-white border-matte-black shadow-md"
+                        : "bg-white hover:bg-stone-100/80 text-stone-800 border-stone-200/90 shadow-2xs"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`font-display font-extrabold text-xs tracking-tight truncate ${
+                              isSelected ? "text-white" : "text-stone-900"
+                            }`}
+                          >
+                            {r.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                              r.is_system_default
+                                ? isSelected
+                                  ? "bg-white/15 text-stone-200"
+                                  : "bg-stone-100 text-stone-600"
+                                : isSelected
+                                ? "bg-purple-900/50 text-purple-200 border border-purple-400/30"
+                                : "bg-purple-50 text-purple-700 border border-purple-200/60"
+                            }`}
+                          >
+                            {r.is_system_default ? "Mặc định" : "Tùy chỉnh"}
+                          </span>
+                          <span
+                            className={`text-[10px] font-sans ${
+                              isSelected ? "text-stone-300" : "text-stone-500"
+                            }`}
+                          >
+                            {assignedStaffCount} nhân sự
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions for role */}
+                      {canWrite && (
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            title="Sửa tên vai trò"
+                            onClick={() => {
+                              setEditingRole(r);
+                              setEditRoleName(r.name);
+                              setEditRoleModalOpen(true);
+                            }}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer border-0 ${
+                              isSelected
+                                ? "text-stone-300 hover:text-white hover:bg-white/10"
+                                : "text-stone-400 hover:text-stone-700 hover:bg-stone-200/70"
+                            }`}
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          {isMasterAdmin && !r.is_system_default && (
+                            <button
+                              type="button"
+                              title="Xóa vai trò"
+                              onClick={() => void handleDeleteRoleClick(r)}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer border-0 ${
+                                isSelected
+                                  ? "text-red-400 hover:text-red-300 hover:bg-red-950/40"
+                                  : "text-stone-400 hover:text-red-600 hover:bg-red-50"
+                              }`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        )}
+
+          {/* Right Column (Ratio 8): Table Matrix CRUD */}
+          <div className="lg:col-span-8 space-y-4">
+            {selectedRoleId ? (
+              (() => {
+                const selectedRole = roles.find((r) => r.id === selectedRoleId);
+                if (!selectedRole) return null;
+                const assignedCount = staffList.filter((s) => s.role_id === selectedRole.id).length;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Selected Role Header Card */}
+                    <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-matte-black text-brand-green shadow-xs">
+                          {selectedRole.is_system_default ? (
+                            <ShieldCheck className="h-5 w-5" />
+                          ) : (
+                            <KeyRound className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-black font-display uppercase tracking-wider text-matte-black">
+                              {selectedRole.name}
+                            </h4>
+                            <span
+                              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                selectedRole.is_system_default
+                                  ? "bg-stone-200 text-stone-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}
+                            >
+                              {selectedRole.is_system_default ? "System Default" : "Custom Role"}
+                            </span>
+                            <span className="text-[11px] font-bold text-stone-500 font-sans">
+                              • {assignedCount} nhân sự đang gán
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-mid-gray font-sans mt-0.5">
+                            Bấm vào từng nút C, R, U, D bên dưới để cấp hoặc thu hồi quyền hạn tức thì.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quick Bulk Actions */}
+                      {canWrite && (
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => void handleSetAllPermissions("all_true")}
+                            className="px-2.5 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 text-[10px] font-black uppercase tracking-wider transition cursor-pointer shadow-2xs"
+                            title="Bật toàn bộ quyền hạn C/R/U/D cho vai trò này"
+                          >
+                            Bật tất cả
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSetAllPermissions("read_only")}
+                            className="px-2.5 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 text-[10px] font-black uppercase tracking-wider transition cursor-pointer shadow-2xs"
+                            title="Chỉ cho phép quyền Đọc (R) trên tất cả phân hệ"
+                          >
+                            Chỉ xem (R)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSetAllPermissions("all_false")}
+                            className="px-2.5 py-1.5 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 text-[10px] font-black uppercase tracking-wider transition cursor-pointer shadow-2xs"
+                            title="Tắt toàn bộ quyền hạn"
+                          >
+                            Tắt hết
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Table Matrix CRUD */}
+                    <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse font-sans text-xs">
+                          <thead>
+                            <tr className="bg-stone-100 text-stone-700 font-display font-extrabold text-[10px] uppercase tracking-wider border-b border-stone-200">
+                              <th className="py-3 px-4 w-1/2">Phân hệ / Module (8 Phân hệ)</th>
+                              {ACTIONS.map((a) => (
+                                <th key={a.key} className="py-3 px-2 text-center w-[12.5%]">
+                                  <div className="flex flex-col items-center justify-center">
+                                    <span className="font-black text-xs text-matte-black">{a.label}</span>
+                                    <span className="text-[9px] text-stone-500 font-medium lowercase">
+                                      {a.key === "can_create"
+                                        ? "tạo"
+                                        : a.key === "can_read"
+                                        ? "xem"
+                                        : a.key === "can_update"
+                                        ? "sửa"
+                                        : "xóa"}
+                                    </span>
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-100">
+                            {MODULES.map((m) => {
+                              const row = perms.find((p) => p.module_code === m.code);
+                              return (
+                                <tr key={m.code} className="hover:bg-stone-50/80 transition-colors group">
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-5 w-5 rounded-md bg-stone-100 text-stone-600 font-display font-bold text-[10px] flex items-center justify-center shrink-0 group-hover:bg-matte-black group-hover:text-white transition-colors">
+                                        {m.order}
+                                      </span>
+                                      <span className="font-semibold text-matte-black text-xs">
+                                        {m.name}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  {ACTIONS.map((a) => {
+                                    const hasPerm = row?.[a.key] ?? false;
+                                    return (
+                                      <td key={a.key} className="py-3 px-2 text-center">
+                                        <button
+                                          type="button"
+                                          disabled={!canWrite}
+                                          onClick={() => togglePermission(m.code, a.key)}
+                                          title={`${hasPerm ? "Thu hồi" : "Cấp"} quyền ${
+                                            a.key === "can_create"
+                                              ? "Tạo (C)"
+                                              : a.key === "can_read"
+                                              ? "Xem (R)"
+                                              : a.key === "can_update"
+                                              ? "Sửa (U)"
+                                              : "Xóa (D)"
+                                          } tại ${m.name}`}
+                                          className={`h-7 w-10 rounded-lg border font-display font-black text-[11px] inline-flex items-center justify-center transition-all ${
+                                            hasPerm
+                                              ? "bg-matte-black text-brand-green border-matte-black shadow-xs ring-1 ring-brand-green/30"
+                                              : "bg-stone-50 text-stone-300 border-stone-200 hover:bg-stone-200/70 hover:text-stone-600"
+                                          } ${!canWrite ? "cursor-not-allowed opacity-70" : "cursor-pointer active:scale-95"}`}
+                                        >
+                                          {hasPerm ? a.label : "—"}
+                                        </button>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Legend and explanation footer */}
+                      <div className="bg-stone-50/90 border-t border-stone-200/80 p-3.5 flex items-center justify-between flex-wrap gap-2 text-[11px] font-sans text-stone-600">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="font-bold text-stone-800">Chú thích CRUD:</span>
+                          <span className="inline-flex items-center gap-1">
+                            <strong className="text-matte-black font-display">C</strong>: Create (Tạo mới)
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <strong className="text-matte-black font-display">R</strong>: Read (Xem dữ liệu)
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <strong className="text-matte-black font-display">U</strong>: Update (Chỉnh sửa)
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <strong className="text-matte-black font-display">D</strong>: Delete (Xóa dữ liệu)
+                          </span>
+                        </div>
+                        {canWrite && isMasterAdmin && !selectedRole.is_system_default && (
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteRoleClick(selectedRole)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Xóa vai trò này
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="p-12 text-center bg-stone-50/60 rounded-2xl border border-dashed border-stone-300 text-mid-gray">
+                <KeyRound className="h-8 w-8 mx-auto text-stone-400 mb-2" />
+                <p className="font-sans text-xs">Vui lòng chọn một vai trò ở cột bên trái để thiết lập ma trận phân quyền.</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ---- Danh sách nhân sự ---- */}
@@ -878,6 +1013,39 @@ export default function UsersRoles() {
           )}
         </div>
 
+        {/* Banner thông tin tài khoản hiện tại & Tự đổi mật khẩu */}
+        {currentStaff && (
+          <div className="bg-matte-black text-white p-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-neutral-800 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-brand-green/20 border border-brand-green/40 flex items-center justify-center text-brand-green font-bold text-xs shrink-0">
+                {currentStaff.name?.charAt(0) || "U"}
+              </div>
+              <div>
+                <div className="text-xs font-bold text-stone-100 flex items-center gap-2 flex-wrap">
+                  <span>Tài khoản cá nhân: <strong>{currentStaff.name}</strong></span>
+                  {currentStaff.phone && (
+                    <span className="text-[10px] text-stone-400 font-mono">({currentStaff.phone})</span>
+                  )}
+                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.2 rounded bg-brand-green/15 text-brand-green border border-brand-green/30">
+                    Đang đăng nhập
+                  </span>
+                </div>
+                <div className="text-[10px] text-stone-400 mt-0.5">
+                  Bạn có quyền tự quản lý và thay đổi mật khẩu / mã PIN đăng nhập của chính mình.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("wassup_open_change_password"))}
+              className="px-3.5 py-2 rounded-xl bg-brand-green hover:bg-brand-green-hover text-matte-black font-display font-black text-xs uppercase tracking-wider transition cursor-pointer border border-[#8fb124]/50 shrink-0 flex items-center gap-1.5 shadow-sm"
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+              <span>Đổi mật khẩu của tôi</span>
+            </button>
+          </div>
+        )}
+
         {/* Thanh lọc theo Trạm & Tìm kiếm */}
         <div className="bg-stone-50 border border-stone-200 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
@@ -897,11 +1065,11 @@ export default function UsersRoles() {
               Tất cả các Trạm ({staffList.length})
             </button>
 
-            {stations.map((st) => {
+            {stations.map((st, stIdx) => {
               const count = staffList.filter((s) => s.station_id === st.id).length;
               return (
                 <button
-                  key={st.id}
+                  key={`${st.id}-${stIdx}`}
                   onClick={() => setSelectedStationFilter(st.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${
                     selectedStationFilter === st.id
@@ -954,96 +1122,120 @@ export default function UsersRoles() {
                   </td>
                 </tr>
               ) : (
-                displayStaffList.map((s) => (
-                  <tr key={s.id} className="hover:bg-warm-white/30 transition">
-                    <td className="p-3 font-extrabold text-matte-black">{s.name}</td>
-                    <td className="p-3 font-mono text-mid-gray">{s.username}</td>
-                    <td className="p-3 font-mono text-mid-gray">{s.phone || "—"}</td>
+                displayStaffList.map((s, sIdx) => {
+                  const isSelf = s.id === currentStaff?.id;
+                  return (
+                    <tr key={s.id ? `${s.id}-${sIdx}` : `stf-${sIdx}`} className={`transition ${isSelf ? "bg-amber-50/40 hover:bg-amber-50/70" : "hover:bg-warm-white/30"}`}>
+                      <td className="p-3 font-extrabold text-matte-black">
+                        <div className="flex items-center gap-1.5">
+                          <span>{s.name}</span>
+                          {isSelf && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-brand-green text-matte-black">
+                              Bạn
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3 font-mono text-mid-gray">{s.username}</td>
+                      <td className="p-3 font-mono text-mid-gray">{s.phone || "—"}</td>
 
-                    {/* Cột Trạm làm việc */}
-                    <td className="p-3">
-                      {canWrite && isMasterAdmin && s.id !== currentStaff?.id ? (
-                        <select
-                          value={s.station_id || "all"}
-                          onChange={(e) => void handleChangeStation(s, e.target.value)}
-                          className="bg-stone-50 border border-[#e5e5e5] rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:border-purple-500 cursor-pointer"
-                        >
-                          <option value="all">Toàn hệ thống (HQ)</option>
-                          {stations.map((st) => (
-                            <option key={st.id} value={st.id}>{st.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-200 px-2.5 py-1 rounded-lg font-bold text-[10px]">
-                          <Building2 className="h-3 w-3 text-purple-600" />
-                          {getStationName(s.station_id)}
-                        </span>
-                      )}
-                    </td>
+                      {/* Cột Trạm làm việc */}
+                      <td className="p-3">
+                        {canWrite && isMasterAdmin && !isSelf ? (
+                          <select
+                            value={s.station_id || "all"}
+                            onChange={(e) => void handleChangeStation(s, e.target.value)}
+                            className="bg-stone-50 border border-[#e5e5e5] rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:border-purple-500 cursor-pointer"
+                          >
+                            <option value="all">Toàn hệ thống (HQ)</option>
+                            {stations.map((st, stIdx) => (
+                              <option key={`${st.id}-${stIdx}`} value={st.id}>{st.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-200 px-2.5 py-1 rounded-lg font-bold text-[10px]">
+                            <Building2 className="h-3 w-3 text-purple-600" />
+                            {getStationName(s.station_id)}
+                          </span>
+                        )}
+                      </td>
 
-                    <td className="p-3">
-                      {canWrite && isMasterAdmin && s.id !== currentStaff?.id ? (
-                        <select
-                          value={s.role_id}
-                          onChange={(e) => void handleChangeRole(s, e.target.value)}
-                          className="bg-white border border-[#e5e5e5] rounded-lg px-2 py-1.5 text-xs font-sans focus:outline-none focus:border-forest-green"
-                        >
-                          {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r) => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        roles.find((r) => r.id === s.role_id)?.name ?? "—"
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {s.status === "locked" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-700 border border-red-200 font-extrabold text-[9px] uppercase tracking-wider">
-                          <Lock className="h-3 w-3" /> Đã khóa
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200 font-extrabold text-[9px] uppercase tracking-wider">
-                          <Unlock className="h-3 w-3" /> Hoạt động
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {canWrite && (
-                          <button
-                            onClick={() => void handleResetPassword(s)}
-                            disabled={resettingId === s.id}
-                            title="Cấp lại mật khẩu"
-                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                      <td className="p-3">
+                        {canWrite && isMasterAdmin && !isSelf ? (
+                          <select
+                            value={s.role_id}
+                            onChange={(e) => void handleChangeRole(s, e.target.value)}
+                            className="bg-white border border-[#e5e5e5] rounded-lg px-2 py-1.5 text-xs font-sans focus:outline-none focus:border-forest-green"
                           >
-                            <KeyRound className="h-3.5 w-3.5 inline -mt-0.5" /> {resettingId === s.id ? "..." : "Cấp lại MK"}
-                          </button>
+                            {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r, rIdx) => (
+                              <option key={`${r.id}-${rIdx}`} value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          roles.find((r) => r.id === s.role_id)?.name ?? "—"
                         )}
-                        {canWrite && s.id !== currentStaff?.id && (
-                          <button
-                            onClick={() => void handleToggleLock(s)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border ${
-                              s.status === "locked"
-                                ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
-                                : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                            }`}
-                          >
-                            {s.status === "locked" ? "Mở khóa" : "Khóa"}
-                          </button>
+                      </td>
+                      <td className="p-3">
+                        {s.status === "locked" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-700 border border-red-200 font-extrabold text-[9px] uppercase tracking-wider">
+                            <Lock className="h-3 w-3" /> Đã khóa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200 font-extrabold text-[9px] uppercase tracking-wider">
+                            <Unlock className="h-3 w-3" /> Hoạt động
+                          </span>
                         )}
-                        {isMasterAdmin && s.id !== currentStaff?.id && (
-                          <button
-                            onClick={() => void handleDeleteUserClick(s)}
-                            title="Xóa vĩnh viễn"
-                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 inline -mt-0.5" /> Xóa
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {isSelf ? (
+                            <button
+                              type="button"
+                              onClick={() => window.dispatchEvent(new CustomEvent("wassup_open_change_password"))}
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-brand-green hover:bg-brand-green-hover text-matte-black border-[#8fb124]/60 flex items-center gap-1"
+                              title="Đổi mật khẩu / PIN tài khoản cá nhân"
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                              <span>Đổi mật khẩu</span>
+                            </button>
+                          ) : (
+                            canWrite && (
+                              <button
+                                onClick={() => void handleResetPassword(s)}
+                                disabled={resettingId === s.id}
+                                title="Cấp lại mật khẩu"
+                                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                              >
+                                <KeyRound className="h-3.5 w-3.5 inline -mt-0.5" /> {resettingId === s.id ? "..." : "Cấp lại MK"}
+                              </button>
+                            )
+                          )}
+                          {canWrite && !isSelf && (
+                            <button
+                              onClick={() => void handleToggleLock(s)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border ${
+                                s.status === "locked"
+                                  ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
+                                  : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                              }`}
+                            >
+                              {s.status === "locked" ? "Mở khóa" : "Khóa"}
+                            </button>
+                          )}
+                          {isMasterAdmin && !isSelf && (
+                            <button
+                              onClick={() => void handleDeleteUserClick(s)}
+                              title="Xóa vĩnh viễn"
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 inline -mt-0.5" /> Xóa
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1216,7 +1408,7 @@ export default function UsersRoles() {
                     <select required value={newStaff.role_id} onChange={(e) => setNewStaff({ ...newStaff, role_id: e.target.value })}
                       className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500">
                       <option value="">Chọn vai trò...</option>
-                      {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
+                      {roles.filter((r) => r.name !== KTV_ROLE_NAME).map((r, rIdx) => (<option key={`${r.id}-${rIdx}`} value={r.id}>{r.name}</option>))}
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -1224,8 +1416,8 @@ export default function UsersRoles() {
                     <select required value={newStaff.station_id} onChange={(e) => setNewStaff({ ...newStaff, station_id: e.target.value })}
                       className="w-full bg-stone-50 border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:border-purple-500">
                       <option value="all">Toàn hệ thống (HQ - Master Admin/Kế toán)</option>
-                      {stations.map((st) => (
-                        <option key={st.id} value={st.id}>{st.name}</option>
+                      {stations.map((st, stIdx) => (
+                        <option key={`${st.id}-${stIdx}`} value={st.id}>{st.name}</option>
                       ))}
                     </select>
                   </div>

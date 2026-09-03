@@ -1088,7 +1088,7 @@ export default function KioskStepsManager() {
                     <div className="flex justify-center gap-3 py-2">
                       {[0, 1, 2, 3, 4, 5].map((idx) => (
                         <div
-                          key={idx}
+                          key={`pin-dot-${idx}`}
                           className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
                             pinInput.length > idx ? "bg-[#A2C62C] border-slate-950" : "border-slate-300 bg-slate-100"
                           }`}
@@ -1580,14 +1580,14 @@ export default function KioskStepsManager() {
 
               {/* Catalog Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {KIOSK_PACKAGES.map((pkg) => {
+                {KIOSK_PACKAGES.map((pkg, idx) => {
                   const actualPrice = Math.round((pkg.basePrice * (isLarge ? 1.3 : 1)) / 1000) * 1000;
                   const isSelected = state.selectedPackageId === pkg.id;
                   const hasBom = serviceBoms[pkg.id] && serviceBoms[pkg.id].length > 0;
 
                   return (
                     <button
-                      key={pkg.id}
+                      key={`${pkg.id}-${pkg.code}-${idx}`}
                       type="button"
                       onClick={() => {
                         if (!hasBom) {
@@ -1632,7 +1632,7 @@ export default function KioskStepsManager() {
                         {/* Bulleted Markdown details list */}
                         <ul className="text-[11px] text-slate-500 space-y-1 pt-1 font-sans border-t border-slate-100">
                           {pkg.description_md.map((bullet, idx) => (
-                            <li key={idx} className="flex items-start gap-1.5">
+                            <li key={`bullet-${pkg.id || pkg.code}-${idx}`} className="flex items-start gap-1.5">
                               <span className="text-[#A2C62C] font-black">✓</span>
                               <span>{bullet}</span>
                             </li>
@@ -1672,11 +1672,11 @@ export default function KioskStepsManager() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {KIOSK_ADDONS.map((addon) => {
+                {KIOSK_ADDONS.map((addon, idx) => {
                   const isSelected = state.selectedAddonIds.includes(addon.id);
                   return (
                     <button
-                      key={addon.id}
+                      key={`${addon.id}-${idx}`}
                       type="button"
                       onClick={() => dispatch({ type: 'TOGGLE_ADDON', payload: addon.id })}
                       className={`p-4 rounded-2xl border-2 text-left flex items-center justify-between transition duration-200 cursor-pointer ${
@@ -1749,8 +1749,8 @@ export default function KioskStepsManager() {
                       <span className="font-bold text-slate-950">{packagePrice.toLocaleString("vi-VN")}đ</span>
                     </div>
 
-                    {KIOSK_ADDONS.filter(a => state.selectedAddonIds.includes(a.id)).map(a => (
-                      <div key={a.id} className="flex justify-between items-center text-slate-600 pl-3 border-l-2 border-[#A2C62C]">
+                    {KIOSK_ADDONS.filter(a => state.selectedAddonIds.includes(a.id)).map((a, idx) => (
+                      <div key={`${a.id}-${idx}`} className="flex justify-between items-center text-slate-600 pl-3 border-l-2 border-[#A2C62C]">
                         <span>Addon: {a.name}</span>
                         <span className="font-bold text-slate-900">+{a.price.toLocaleString("vi-VN")}đ</span>
                       </div>
@@ -2092,7 +2092,7 @@ export default function KioskStepsManager() {
                 <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
-                      key={star}
+                      key={`kiosk-star-${star}`}
                       type="button"
                       onClick={() => {
                         setRating(star);

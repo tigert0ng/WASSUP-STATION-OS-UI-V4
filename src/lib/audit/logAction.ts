@@ -1,5 +1,3 @@
-import { supabase } from "../supabase/client";
-
 export interface LogAuditParams {
   actorId: string;
   module: string;
@@ -10,10 +8,22 @@ export interface LogAuditParams {
   after?: unknown;
 }
 
+export interface AuditEntry {
+  id: string;
+  actor_id: string | null;
+  module: string;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  before: unknown;
+  after: unknown;
+  at: string;
+}
+
 export async function logAudit(params: LogAuditParams) {
-  if (!supabase) return;
   try {
-    await supabase.from("audit_log").insert({
+    const entry: AuditEntry = {
+      id: "audit-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       actor_id: params.actorId,
       module: params.module,
       action: params.action,
@@ -22,8 +32,20 @@ export async function logAudit(params: LogAuditParams) {
       before: params.before ?? null,
       after: params.after ?? null,
       at: new Date().toISOString(),
-    });
+    };
+
+    const stored = localStorage.getItem("wassup_local_audit_logs");
+    let list: AuditEntry[] = [];
+    if (stored) {
+      try {
+        list = JSON.parse(stored);
+      } catch (e) {}
+    }
+    list.unshift(entry);
+    if (list.length > 500) list = list.slice(0, 500);
+    localStorage.setItem("wassup_local_audit_logs", JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("wassup_audit_logged", { detail: entry }));
   } catch (err) {
-    console.error("Failed to log audit action:", err);
+    console.warn("Audit log local save note:", err);
   }
 }

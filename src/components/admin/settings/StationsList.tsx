@@ -225,31 +225,6 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
       ktv_count: 0,
     };
 
-    // Database attempt
-    if (supabase) {
-      try {
-        await supabase.from("stations").insert({
-          id: newId,
-          name: newStationObj.name,
-          address: newStationObj.address,
-          contact_phone: newStationObj.contact_phone,
-          opening_hours_jsonb: newStationObj.opening_hours_jsonb,
-          is_headquarters: false,
-        });
-
-        // Seed station admin user
-        await supabase.from("staff").insert({
-          name: adminName.trim(),
-          phone: adminPhone.trim(),
-          username: adminUsername.trim(),
-          role_id: "station_admin",
-          station_id: newId,
-        });
-      } catch (err) {
-        console.warn("Database insert station warning", err);
-      }
-    }
-
     // Save initial station admin account to local staff list
     try {
       const storedStaff = localStorage.getItem("wassup_staff_list");
@@ -309,17 +284,6 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
     localStorage.setItem("wassup_stations", JSON.stringify(updatedStations));
     window.dispatchEvent(new Event("wassup_stations_updated"));
 
-    if (supabase) {
-      try {
-        await supabase
-          .from("stations")
-          .update({ status: newStatus })
-          .eq("id", target.id);
-      } catch (e) {
-        // quiet fallback
-      }
-    }
-
     await logAudit({
       actorId: staff?.id || "admin-001",
       module: "settings",
@@ -343,22 +307,6 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
     setStations(updatedStations);
     localStorage.setItem("wassup_stations", JSON.stringify(updatedStations));
     window.dispatchEvent(new Event("wassup_stations_updated"));
-
-    if (supabase) {
-      try {
-        await supabase
-          .from("stations")
-          .update({
-            name: editingStation.name,
-            address: editingStation.address,
-            contact_phone: editingStation.contact_phone,
-            opening_hours_jsonb: editingStation.opening_hours_jsonb,
-          })
-          .eq("id", editingStation.id);
-      } catch (e) {
-        // quiet fallback
-      }
-    }
 
     await logAudit({
       actorId: staff?.id || "admin-001",
@@ -507,11 +455,11 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
                   </td>
                 </tr>
               ) : (
-                filteredStations.map((st) => {
+                filteredStations.map((st, idx) => {
                   const isCurrentViewing = currentStationId === st.id;
                   return (
                     <tr
-                      key={st.id}
+                      key={st.id ? `${st.id}-${idx}` : `stn-${idx}`}
                       className={`hover:bg-stone-50/70 transition ${
                         isCurrentViewing ? "bg-amber-50/30" : ""
                       }`}
@@ -1100,8 +1048,8 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-200">
-                          {stationStaff.map((s) => (
-                            <tr key={s.id} className="hover:bg-stone-50">
+                          {stationStaff.map((s, idx) => (
+                            <tr key={s.id ? `${s.id}-${idx}` : `stf-${idx}`} className="hover:bg-stone-50">
                               <td className="p-2.5 font-bold text-stone-900">{s.name}</td>
                               <td className="p-2.5 font-mono text-stone-600">{s.username}</td>
                               <td className="p-2.5 font-mono text-stone-600">{s.phone || "—"}</td>
@@ -1127,7 +1075,7 @@ export default function StationsList({ currentStationId, onSelectStation }: Stat
                       Đóng
                     </button>
                     <p className="text-[11px] text-stone-500 italic">
-                      Tạo & quản lý phân quyền tài khoản chi tiết tại tab <strong>User & Phân quyền RBAC</strong>.
+                      Tạo & quản lý phân quyền tài khoản chi tiết tại tab <strong>User & Phân quyền</strong>.
                     </p>
                   </div>
                 </div>

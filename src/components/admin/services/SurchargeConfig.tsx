@@ -20,35 +20,65 @@ export default function SurchargeConfig() {
 
   useEffect(() => {
     void load();
+
+    const handleSurchargeSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ percent: number }>;
+      if (customEvent.detail && typeof customEvent.detail.percent === "number") {
+        setPercentInput(String(customEvent.detail.percent));
+        setConfig((prev) => (prev ? { ...prev, percent: customEvent.detail.percent } : null));
+      }
+    };
+    window.addEventListener("wassup_surcharge_updated", handleSurchargeSync);
+    return () => {
+      window.removeEventListener("wassup_surcharge_updated", handleSurchargeSync);
+    };
   }, []);
 
   async function load() {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    const { data } = await supabase.from("vehicle_surcharge_config").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle();
-    setConfig(data as VehicleSurchargeConfigRow | null);
-    setPercentInput(data ? String(data.percent) : "30");
+    let row: VehicleSurchargeConfigRow | null = null;
+    if (supabase) {
+      try {
+        const { data } = await supabase.from("vehicle_surcharge_config").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        row = data as VehicleSurchargeConfigRow | null;
+      } catch (e) {
+        console.warn("Supabase fetch surcharge warning:", e);
+      }
+    }
+
+    const saved = localStorage.getItem("wassup_vehicle_surcharge");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.percent === "number") {
+          row = { ...(row || { id: "affaef86-abb9-4e47-a5aa-ed1b593fb92c", updated_at: new Date().toISOString() } as any), ...parsed };
+        }
+      } catch (e) {}
+    } else if (!row) {
+      row = {
+        id: "affaef86-abb9-4e47-a5aa-ed1b593fb92c",
+        percent: 30,
+        updated_at: new Date().toISOString(),
+      } as any;
+    }
+
+    setConfig(row);
+    setPercentInput(row ? String(row.percent) : "30");
     setLoading(false);
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!config || !supabase || !staff) return;
+    if (!config || !staff) return;
     setSaving(true);
     const before = config;
-    const { error } = await supabase
-      .from("vehicle_surcharge_config")
-      .update({ percent: Number(percentInput), updated_by: staff.id })
-      .eq("id", config.id);
+    const newPercent = Number(percentInput);
+    const updated = { ...config, percent: newPercent };
+    setConfig(updated);
+    localStorage.setItem("wassup_vehicle_surcharge", JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("wassup_surcharge_updated", { detail: updated }));
     setSaving(false);
-    if (error) {
-      setToast(`Lỗi: ${error.message}`);
-      setTimeout(() => setToast(null), 4000);
-      return;
-    }
+
     await logAudit({
       actorId: staff.id,
       module: "catalog",
@@ -56,11 +86,10 @@ export default function SurchargeConfig() {
       entity: "vehicle_surcharge_config",
       entityId: config.id,
       before,
-      after: { percent: Number(percentInput) },
+      after: { percent: newPercent },
     });
-    setToast("Đã cập nhật mức phụ thu hạng xe.");
+    setToast(`Đã cập nhật mức phụ thu: +${newPercent}%`);
     setTimeout(() => setToast(null), 4000);
-    await load();
   }
 
   if (loading) return <p className="text-mid-gray font-sans text-sm">Đang tải...</p>;

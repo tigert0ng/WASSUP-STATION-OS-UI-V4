@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building2, MapPin, Phone, Clock, CheckCircle2 } from "lucide-react";
+import { Building2, MapPin, Phone, Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { logAudit } from "../../../lib/audit/logAction";
@@ -16,11 +16,22 @@ interface StationRow {
 interface GeneralInfoProps {
   currentStationId?: string;
   onSelectStation?: (id: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function GeneralInfo({ currentStationId, onSelectStation }: GeneralInfoProps = {}) {
+export default function GeneralInfo({
+  currentStationId,
+  onSelectStation,
+  isCollapsed: controlledCollapsed,
+  onToggleCollapse,
+}: GeneralInfoProps = {}) {
   const { can, staff } = useAuth();
   const canEdit = can("settings", "update");
+
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : localCollapsed;
+  const toggleCollapse = onToggleCollapse || (() => setLocalCollapsed((prev) => !prev));
 
   const [station, setStation] = useState<StationRow | null>(null);
   const [allStations, setAllStations] = useState<StationRow[]>([]);
@@ -109,35 +120,20 @@ export default function GeneralInfo({ currentStationId, onSelectStation }: Gener
     setLoading(false);
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!station) return;
+    if (!station.name?.trim()) {
+      setToast("Tên chi nhánh / trạm vận hành không được để trống!");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
     setSaving(true);
 
     const updatedAll = allStations.map((s) => (s.id === station.id ? station : s));
     setAllStations(updatedAll);
     localStorage.setItem("wassup_stations", JSON.stringify(updatedAll));
     window.dispatchEvent(new Event("wassup_stations_updated"));
-
-    if (supabase) {
-      try {
-        const { error } = await supabase
-          .from("stations")
-          .update({
-            name: station.name,
-            address: station.address,
-            contact_phone: station.contact_phone,
-            opening_hours_jsonb: station.opening_hours_jsonb,
-          })
-          .eq("id", station.id);
-
-        if (error) {
-          console.warn("Supabase update error:", error.message);
-        }
-      } catch (err) {
-        console.warn("Supabase update error:", err);
-      }
-    }
 
     if (staff) {
       await logAudit({
@@ -167,7 +163,7 @@ export default function GeneralInfo({ currentStationId, onSelectStation }: Gener
   }
 
   return (
-    <form onSubmit={handleSave} className="bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-sm space-y-6 max-w-2xl">
+    <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-sm space-y-5 transition-all">
       {toast && (
         <div className="fixed top-20 right-6 z-50 bg-matte-black text-brand-green px-5 py-3.5 rounded-xl border border-brand-green/30 shadow-2xl flex items-center gap-3 font-sans text-xs font-bold animate-fadeIn">
           <CheckCircle2 className="h-4 w-4 text-brand-green" />
@@ -175,123 +171,189 @@ export default function GeneralInfo({ currentStationId, onSelectStation }: Gener
         </div>
       )}
 
-      <div className="border-b border-[#e5e5e5] pb-3 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-extrabold font-display tracking-wider text-matte-black uppercase flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-forest-green" />
-            THÔNG TIN VÀ KHUNG GIỜ VẬN HÀNH TRẠM
-          </h3>
-          <p className="text-[11px] text-mid-gray font-sans mt-0.5">Mã trạm: <span className="font-mono font-bold text-slate-800">{station.id}</span></p>
-        </div>
-
-        {allStations.length > 1 && (
+      {/* Header with Title and Controls */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${!isCollapsed ? "border-b border-[#e5e5e5] pb-4" : ""}`}>
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-extrabold uppercase text-stone-400">Chọn Trạm:</span>
-            <select
-              value={station.id}
-              onChange={(e) => {
-                const sel = allStations.find((s) => s.id === e.target.value);
-                if (sel) {
-                  setStation(sel);
-                  if (onSelectStation) onSelectStation(sel.id);
-                }
-              }}
-              className="bg-stone-50 border border-stone-200 text-slate-900 font-bold text-xs rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
-            >
-              {allStations.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.name}
-                </option>
-              ))}
-            </select>
+            <Building2 className="h-5 w-5 text-forest-green shrink-0" />
+            <h3 className="text-sm font-extrabold font-display tracking-wider text-matte-black uppercase">
+              THÔNG TIN VÀ KHUNG GIỜ VẬN HÀNH TRẠM
+            </h3>
           </div>
-        )}
-      </div>
+          <p className="text-[11px] text-mid-gray font-sans">
+            Mã trạm: <span className="font-mono font-bold text-slate-800">{station.id}</span>
+            {station.name && (
+              <>
+                <span className="mx-2 text-stone-300">•</span>
+                <span className="font-semibold text-stone-700">{station.name}</span>
+              </>
+            )}
+          </p>
 
-      <div className="space-y-1.5 text-xs">
-        <label className="font-extrabold text-mid-gray uppercase">Tên Chi Nhánh / Trạm Vận Hành</label>
-        <input
-          type="text"
-          required
-          disabled={!canEdit}
-          value={station.name}
-          onChange={(e) => setStation({ ...station, name: e.target.value })}
-          className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 font-sans font-semibold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
-        />
-      </div>
-
-      <div className="space-y-1.5 text-xs">
-        <label className="font-extrabold text-mid-gray uppercase">Địa chỉ vật lý</label>
-        <div className="relative">
-          <MapPin className="absolute left-3.5 top-3 text-mid-gray h-4 w-4" />
-          <input
-            type="text"
-            disabled={!canEdit}
-            value={station.address ?? ""}
-            onChange={(e) => setStation({ ...station, address: e.target.value })}
-            className="w-full bg-white border border-[#e5e5e5] rounded-xl pl-10 pr-4 py-2.5 text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
-          />
+          {/* Quick info badges shown when collapsed */}
+          {isCollapsed && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-stone-600">
+              {station.contact_phone && (
+                <span className="inline-flex items-center gap-1 bg-stone-100 px-2 py-0.5 rounded-md font-mono text-stone-700">
+                  <Phone className="h-3 w-3 text-stone-500" />
+                  {station.contact_phone}
+                </span>
+              )}
+              {station.address && (
+                <span className="inline-flex items-center gap-1 bg-stone-100 px-2 py-0.5 rounded-md text-stone-700">
+                  <MapPin className="h-3 w-3 text-stone-500" />
+                  <span className="truncate max-w-xs">{station.address}</span>
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-md text-amber-800 font-bold font-mono">
+                <Clock className="h-3 w-3 text-amber-600" />
+                {station.opening_hours_jsonb?.open || "07:30"} - {station.opening_hours_jsonb?.close || "20:30"}
+              </span>
+            </div>
+          )}
         </div>
-      </div>
 
-      <div className="space-y-1.5 text-xs">
-        <label className="font-extrabold text-mid-gray uppercase">Hotline chăm sóc khách hàng</label>
-        <div className="relative">
-          <Phone className="absolute left-3.5 top-3 text-mid-gray h-4 w-4" />
-          <input
-            type="text"
-            disabled={!canEdit}
-            value={station.contact_phone ?? ""}
-            onChange={(e) => setStation({ ...station, contact_phone: e.target.value })}
-            className="w-full bg-white border border-[#e5e5e5] rounded-xl pl-10 pr-4 py-2.5 text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
-          />
-        </div>
-      </div>
+        <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+          {allStations.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase text-stone-400">Chọn Trạm:</span>
+              <select
+                value={station.id}
+                onChange={(e) => {
+                  const sel = allStations.find((s) => s.id === e.target.value);
+                  if (sel) {
+                    setStation(sel);
+                    if (onSelectStation) onSelectStation(sel.id);
+                  }
+                }}
+                className="bg-stone-50 border border-stone-200 text-slate-900 font-bold text-xs rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+              >
+                {allStations.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-      <div className="border-t border-gray-100 pt-5 text-xs">
-        <span className="font-bold text-matte-black block mb-3 uppercase tracking-wider flex items-center gap-1.5">
-          <Clock className="h-4.5 w-4.5 text-amber-500" />
-          Khung giờ hoạt động của trạm (dùng làm mặc định cho cron job Kiosk/TV — chưa build)
-        </span>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <label className="font-extrabold text-mid-gray uppercase">Giờ mở cửa</label>
-            <input
-              type="time"
-              disabled={!canEdit}
-              value={station.opening_hours_jsonb?.open ?? ""}
-              onChange={(e) =>
-                setStation({ ...station, opening_hours_jsonb: { ...station.opening_hours_jsonb, open: e.target.value } })
-              }
-              className="w-full bg-white border border-[#e5e5e5] rounded-xl px-4 py-2.5 font-mono font-bold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-extrabold text-mid-gray uppercase">Giờ đóng cửa</label>
-            <input
-              type="time"
-              disabled={!canEdit}
-              value={station.opening_hours_jsonb?.close ?? ""}
-              onChange={(e) =>
-                setStation({ ...station, opening_hours_jsonb: { ...station.opening_hours_jsonb, close: e.target.value } })
-              }
-              className="w-full bg-white border border-[#e5e5e5] rounded-xl px-4 py-2.5 font-mono font-bold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
-            />
-          </div>
-        </div>
-      </div>
-
-      {canEdit && (
-        <div className="pt-4 flex justify-end">
+          {/* Collapse / Expand toggle button */}
           <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-3 rounded-xl bg-matte-black hover:bg-gray-900 text-white font-extrabold text-xs uppercase tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60"
+            type="button"
+            onClick={toggleCollapse}
+            className="p-1.5 rounded-xl border border-stone-200 text-stone-600 hover:text-matte-black hover:bg-stone-100 transition cursor-pointer flex items-center gap-1 text-xs font-bold"
+            title={isCollapsed ? "Mở rộng box này" : "Thu gọn box này"}
           >
-            {saving ? "Đang lưu..." : "Lưu cấu hình chung"}
+            {isCollapsed ? (
+              <>
+                <ChevronDown className="h-4 w-4 text-stone-600" />
+                <span className="text-[11px] font-sans font-bold hidden sm:inline">Mở rộng</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="h-4 w-4 text-stone-600" />
+                <span className="text-[11px] font-sans font-bold hidden sm:inline">Thu gọn</span>
+              </>
+            )}
           </button>
         </div>
+      </div>
+
+      {/* Body content - visible only when not collapsed */}
+      {!isCollapsed && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-extrabold text-mid-gray uppercase">Tên Chi Nhánh / Trạm Vận Hành</label>
+              <input
+                type="text"
+                required
+                disabled={!canEdit}
+                value={station.name}
+                onChange={(e) => setStation({ ...station, name: e.target.value })}
+                placeholder="VD: WASSUP Station - Cầu Giấy"
+                className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3.5 py-2.5 font-sans font-semibold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-extrabold text-mid-gray uppercase">Hotline chăm sóc khách hàng</label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-3 text-mid-gray h-4 w-4" />
+                <input
+                  type="text"
+                  disabled={!canEdit}
+                  value={station.contact_phone ?? ""}
+                  onChange={(e) => setStation({ ...station, contact_phone: e.target.value })}
+                  placeholder="VD: 0901 234 567"
+                  className="w-full bg-white border border-[#e5e5e5] rounded-xl pl-10 pr-4 py-2.5 text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="font-extrabold text-mid-gray uppercase">Địa chỉ vật lý</label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-3 text-mid-gray h-4 w-4" />
+                <input
+                  type="text"
+                  disabled={!canEdit}
+                  value={station.address ?? ""}
+                  onChange={(e) => setStation({ ...station, address: e.target.value })}
+                  placeholder="VD: Số 188 Nguyễn Văn Huyên, Cầu Giấy, Hà Nội"
+                  className="w-full bg-white border border-[#e5e5e5] rounded-xl pl-10 pr-4 py-2.5 text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-5 text-xs">
+            <span className="font-bold text-matte-black block mb-3 uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="h-4.5 w-4.5 text-amber-500" />
+              Khung giờ hoạt động của trạm (dùng làm mặc định cho cron job Kiosk/TV — chưa build)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-extrabold text-mid-gray uppercase">Giờ mở cửa</label>
+                <input
+                  type="time"
+                  disabled={!canEdit}
+                  value={station.opening_hours_jsonb?.open ?? ""}
+                  onChange={(e) =>
+                    setStation({ ...station, opening_hours_jsonb: { ...station.opening_hours_jsonb, open: e.target.value } })
+                  }
+                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-4 py-2.5 font-mono font-bold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-extrabold text-mid-gray uppercase">Giờ đóng cửa</label>
+                <input
+                  type="time"
+                  disabled={!canEdit}
+                  value={station.opening_hours_jsonb?.close ?? ""}
+                  onChange={(e) =>
+                    setStation({ ...station, opening_hours_jsonb: { ...station.opening_hours_jsonb, close: e.target.value } })
+                  }
+                  className="w-full bg-white border border-[#e5e5e5] rounded-xl px-4 py-2.5 font-mono font-bold text-matte-black focus:outline-none focus:border-forest-green disabled:bg-gray-50 disabled:text-mid-gray"
+                />
+              </div>
+            </div>
+          </div>
+
+          {canEdit && (
+            <div className="pt-3 flex justify-end border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saving}
+                className="px-6 py-3 rounded-xl bg-matte-black hover:bg-gray-900 text-white font-extrabold text-xs uppercase tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60 flex items-center gap-2"
+              >
+                {saving ? "Đang lưu..." : "Lưu cấu hình chung"}
+              </button>
+            </div>
+          )}
+        </>
       )}
-    </form>
+    </div>
   );
 }

@@ -1015,12 +1015,12 @@ export default function InventoryModule() {
                         </td>
                       </tr>
                     ) : (
-                      filteredItems.map((item) => {
+                      filteredItems.map((item, idx) => {
                         const isLow = item.quantity <= item.minThreshold;
                         const hasRetail = Boolean(item.salePrice && item.salePrice > 0);
 
                         return (
-                          <tr key={item.id} className="hover:bg-purple-50/20 transition">
+                          <tr key={item.id ? `${item.id}-${idx}` : `inv-${idx}`} className="hover:bg-purple-50/20 transition">
                             <td className="p-3.5">
                               <div className="flex items-center gap-2.5">
                                 <div className="h-9 w-9 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center shrink-0 overflow-hidden">
@@ -1290,8 +1290,8 @@ export default function InventoryModule() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
-                    {ledger.map((row) => (
-                      <tr key={row.id} className="hover:bg-stone-50">
+                    {ledger.map((row, idx) => (
+                      <tr key={row.id ? `${row.id}-${idx}` : `led-${idx}`} className="hover:bg-stone-50">
                         <td className="p-3 text-stone-500">{new Date(row.date).toLocaleString("vi-VN")}</td>
                         <td className="p-3 font-bold text-slate-900 font-sans">{row.itemName}</td>
                         <td className="p-3 text-center">

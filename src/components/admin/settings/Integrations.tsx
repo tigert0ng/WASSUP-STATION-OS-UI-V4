@@ -56,7 +56,14 @@ export default function Integrations() {
   }, []);
 
   async function load() {
+    let localRows: IntegrationRow[] = [];
+    try {
+      const stored = localStorage.getItem("wassup_integrations");
+      if (stored) localRows = JSON.parse(stored);
+    } catch (e) {}
+
     if (!supabase) {
+      if (localRows.length > 0) setRows(localRows);
       setLoading(false);
       return;
     }
@@ -65,7 +72,17 @@ export default function Integrations() {
       .from("integration_settings")
       .select("id, type, config_jsonb, status, last_checked_at")
       .order("type");
-    setRows((data as IntegrationRow[]) ?? []);
+    
+    const dbRows = (data as IntegrationRow[]) ?? [];
+    if (localRows.length > 0) {
+      const merged = dbRows.map((d) => {
+        const found = localRows.find((l) => l.id === d.id || l.type === d.type);
+        return found ? { ...d, config_jsonb: found.config_jsonb } : d;
+      });
+      setRows(merged);
+    } else {
+      setRows(dbRows);
+    }
     setLoading(false);
   }
 
@@ -75,15 +92,13 @@ export default function Integrations() {
   };
 
   async function save(row: IntegrationRow) {
-    if (!supabase || !staff) return;
-    const { error } = await supabase
-      .from("integration_settings")
-      .update({ config_jsonb: row.config_jsonb, updated_by: staff.id })
-      .eq("id", row.id);
-    if (error) {
-      showToast(`Lỗi: ${error.message}`);
-      return;
-    }
+    if (!staff) return;
+    const updated = rows.map((r) => (r.id === row.id ? row : r));
+    setRows(updated);
+    try {
+      localStorage.setItem("wassup_integrations", JSON.stringify(updated));
+    } catch (e) {}
+
     await logAudit({
       actorId: staff.id,
       module: "settings",

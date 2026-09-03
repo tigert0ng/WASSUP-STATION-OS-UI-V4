@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import SearchableSelect from "../../common/SearchableSelect";
 import { Plus, Trash2, AlertTriangle, Beaker } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
+import { getLocalBomForService, saveLocalBomForService } from "../../../lib/catalog/serviceStore";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { logAudit } from "../../../lib/audit/logAction";
 import { ServiceBomRow, InventoryItemPickerRow, VehicleClass } from "../../../types/catalog.types";
@@ -69,7 +70,8 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
     ]);
     if (bomErr) showToast("error", bomErr.message);
     if (invErr) showToast("error", invErr.message);
-    const bom = (bomData as ServiceBomRow[]) ?? [];
+    const localOverride = getLocalBomForService(serviceId);
+    const bom = localOverride !== null ? (localOverride as ServiceBomRow[]) : ((bomData as ServiceBomRow[]) ?? []);
     setBomLines(bom);
     setInventoryItems((invData as InventoryItemPickerRow[]) ?? []);
     onBomCountChange(bom.length);
@@ -101,7 +103,7 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
 
   async function handleAddLine(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !staff || !addItemId || !selectedAddItem) return;
+    if (!staff || !addItemId || !selectedAddItem) return;
     const qty45 = addQty45.trim() ? Number(addQty45) : null;
     const qty79 = addQty79.trim() ? Number(addQty79) : null;
     if (!qty45 && !qty79) {
@@ -123,20 +125,38 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
       if (useShared) finalQty45 = qty79;
     }
 
-    const rows: { service_id: string; vehicle_class: VehicleClass; inventory_item_id: string; qty_per_unit: number; unit: string }[] = [];
-    if (finalQty45) rows.push({ service_id: serviceId, vehicle_class: "4_5_cho", inventory_item_id: addItemId, qty_per_unit: finalQty45, unit: selectedAddItem.unit });
-    if (finalQty79) rows.push({ service_id: serviceId, vehicle_class: "7_9_cho_bantai", inventory_item_id: addItemId, qty_per_unit: finalQty79, unit: selectedAddItem.unit });
-
     setSaving(true);
-    const { error } = await supabase
-      .from("service_bom")
-      .upsert(rows, { onConflict: "service_id,vehicle_class,inventory_item_id" });
-    setSaving(false);
-
-    if (error) {
-      showToast("error", error.message);
-      return;
+    const updated = [...bomLines];
+    if (finalQty45) {
+      const idx = updated.findIndex((l) => l.vehicle_class === "4_5_cho" && l.inventory_item_id === addItemId);
+      const rowItem: ServiceBomRow = {
+        id: idx >= 0 ? updated[idx].id : `bom_loc_${Date.now()}_45`,
+        service_id: serviceId,
+        vehicle_class: "4_5_cho",
+        inventory_item_id: addItemId,
+        qty_per_unit: finalQty45,
+        unit: selectedAddItem.unit,
+      };
+      if (idx >= 0) updated[idx] = rowItem;
+      else updated.push(rowItem);
     }
+    if (finalQty79) {
+      const idx = updated.findIndex((l) => l.vehicle_class === "7_9_cho_bantai" && l.inventory_item_id === addItemId);
+      const rowItem: ServiceBomRow = {
+        id: idx >= 0 ? updated[idx].id : `bom_loc_${Date.now()}_79`,
+        service_id: serviceId,
+        vehicle_class: "7_9_cho_bantai",
+        inventory_item_id: addItemId,
+        qty_per_unit: finalQty79,
+        unit: selectedAddItem.unit,
+      };
+      if (idx >= 0) updated[idx] = rowItem;
+      else updated.push(rowItem);
+    }
+    saveLocalBomForService(serviceId, updated);
+    setBomLines(updated);
+    onBomCountChange(updated.length);
+    setSaving(false);
 
     await logAudit({
       actorId: staff.id,
@@ -150,7 +170,6 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
     setAddItemId("");
     setAddQty45("");
     setAddQty79("");
-    await loadAll();
     showToast("success", `Đã lưu định mức vật tư: ${selectedAddItem.name}.`);
   }
 
@@ -167,22 +186,32 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
   }
 
   async function saveEdit(row: GroupedRow) {
-    if (!supabase || !staff || !editingCell) return;
+    if (!staff || !editingCell) return;
     const qty = editingValue.trim() ? Number(editingValue) : null;
     if (qty === null || Number.isNaN(qty) || qty <= 0) {
       showToast("error", "Định mức phải là số lớn hơn 0.");
       return;
     }
-    const { error } = await supabase
-      .from("service_bom")
-      .upsert(
-        [{ service_id: serviceId, vehicle_class: editingCell.vehicleClass, inventory_item_id: row.itemId, qty_per_unit: qty, unit: row.unit }],
-        { onConflict: "service_id,vehicle_class,inventory_item_id" }
-      );
-    if (error) {
-      showToast("error", error.message);
-      return;
+
+    const updated = [...bomLines];
+    const idx = updated.findIndex((l) => l.inventory_item_id === row.itemId && l.vehicle_class === editingCell.vehicleClass);
+    if (idx >= 0) {
+      updated[idx] = { ...updated[idx], qty_per_unit: qty };
+    } else {
+      updated.push({
+        id: `bom_loc_${Date.now()}`,
+        service_id: serviceId,
+        vehicle_class: editingCell.vehicleClass,
+        inventory_item_id: row.itemId,
+        qty_per_unit: qty,
+        unit: row.unit,
+      });
     }
+
+    saveLocalBomForService(serviceId, updated);
+    setBomLines(updated);
+    onBomCountChange(updated.length);
+
     await logAudit({
       actorId: staff.id,
       module: "catalog",
@@ -193,19 +222,18 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
       after: { item: row.itemName, vehicle_class: editingCell.vehicleClass, qty },
     });
     cancelEdit();
-    await loadAll();
     showToast("success", `Đã cập nhật định mức ${row.itemName}.`);
   }
 
   async function handleDeleteRow(row: GroupedRow) {
-    if (!supabase || !staff) return;
+    if (!staff) return;
     if (!window.confirm(`Xóa toàn bộ định mức "${row.itemName}" (cả 2 hạng xe nếu có)?`)) return;
-    const ids = [row.line45?.id, row.line79?.id].filter((id): id is string => !!id);
-    const { error } = await supabase.from("service_bom").delete().in("id", ids);
-    if (error) {
-      showToast("error", error.message);
-      return;
-    }
+
+    const updated = bomLines.filter((l) => l.inventory_item_id !== row.itemId);
+    saveLocalBomForService(serviceId, updated);
+    setBomLines(updated);
+    onBomCountChange(updated.length);
+
     await logAudit({
       actorId: staff.id,
       module: "catalog",
@@ -214,7 +242,6 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
       entityId: row.itemId,
       before: { item: row.itemName, line45: row.line45, line79: row.line79 },
     });
-    await loadAll();
     showToast("success", "Đã xóa dòng định mức.");
   }
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Clock, Layers, Sparkles, Sliders } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
+import { applyLocalOverridesToServices } from "../../../lib/catalog/serviceStore";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { ADDON_CATEGORY_LABELS, AddonCategory, ServiceRow, ServiceType } from "../../../types/catalog.types";
 import { renderRichText } from "../../../lib/catalog/richText";
@@ -37,8 +38,13 @@ export default function ServiceList({ type }: Props) {
   useEffect(() => {
     void load();
     const handleOpenNew = () => setEditing("new");
+    const handleServicesUpdate = () => void load();
     window.addEventListener("open-service-drawer-new", handleOpenNew);
-    return () => window.removeEventListener("open-service-drawer-new", handleOpenNew);
+    window.addEventListener("wassup_services_updated", handleServicesUpdate);
+    return () => {
+      window.removeEventListener("open-service-drawer-new", handleOpenNew);
+      window.removeEventListener("wassup_services_updated", handleServicesUpdate);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
@@ -50,7 +56,8 @@ export default function ServiceList({ type }: Props) {
     setLoading(true);
     const { data, error } = await supabase.from("services").select("*").eq("type", type).order("code");
     if (!error && data) {
-      const rows = data as ServiceRow[];
+      const rawRows = data as ServiceRow[];
+      const rows = applyLocalOverridesToServices(rawRows, type);
       setServices(rows);
       const { data: bomData } = await supabase
         .from("service_bom")
@@ -103,7 +110,7 @@ export default function ServiceList({ type }: Props) {
         <div className="p-8 text-center text-mid-gray font-sans text-xs bg-white border border-[#e5e5e5] rounded-2xl">Chưa có dịch vụ nào.</div>
       ) : type === "package" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((pkg) => {
+          {services.map((pkg, idx) => {
             const bomCount = bomCounts[pkg.id] ?? 0;
             const hasBom = bomCount > 0;
             // Tô màu + tag theo highlight_type thật (cột dữ liệu, Master Admin
@@ -144,7 +151,7 @@ export default function ServiceList({ type }: Props) {
 
             return (
               <div
-                key={pkg.id}
+                key={`${pkg.id || pkg.code}-${idx}`}
                 onClick={() => setEditing(pkg)}
                 className={`p-6 border rounded-2xl cursor-pointer transition-all duration-300 flex flex-col justify-between min-h-[210px] relative overflow-hidden group hover:-translate-y-1 ${cardBg}`}
               >
@@ -178,7 +185,7 @@ export default function ServiceList({ type }: Props) {
                   {pkg.description_bullets_jsonb?.length > 0 && (
                     <ul className={`text-[11px] font-sans mt-3.5 space-y-1 relative z-10 ${textDescColor}`}>
                       {pkg.description_bullets_jsonb.slice(0, 4).map((bullet, i) => (
-                        <li key={i} className="flex gap-1.5 leading-snug">
+                        <li key={`desc-${pkg.id || pkg.code}-${i}`} className="flex gap-1.5 leading-snug">
                           <span className="shrink-0">•</span>
                           <span className="line-clamp-1" dangerouslySetInnerHTML={{ __html: renderRichText(bullet) }} />
                         </li>
@@ -211,8 +218,8 @@ export default function ServiceList({ type }: Props) {
                   {ADDON_CATEGORY_LABELS[cat]} <span className="text-mid-gray/60 font-normal normal-case">({items.length})</span>
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {items.map((add) => (
-                    <AddonCard key={add.id} add={add} bomCount={bomCounts[add.id] ?? 0} onClick={() => setEditing(add)} />
+                  {items.map((add, idx) => (
+                    <AddonCard key={`${add.id || add.code}-${idx}`} add={add} bomCount={bomCounts[add.id] ?? 0} onClick={() => setEditing(add)} />
                   ))}
                 </div>
               </div>
@@ -230,8 +237,8 @@ export default function ServiceList({ type }: Props) {
                   </h3>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {uncategorized.map((add) => (
-                    <AddonCard key={add.id} add={add} bomCount={bomCounts[add.id] ?? 0} onClick={() => setEditing(add)} />
+                  {uncategorized.map((add, idx) => (
+                    <AddonCard key={`${add.id || add.code}-${idx}`} add={add} bomCount={bomCounts[add.id] ?? 0} onClick={() => setEditing(add)} />
                   ))}
                   {canCreate && (
                     <div

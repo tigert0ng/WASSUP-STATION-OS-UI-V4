@@ -25,31 +25,58 @@ export default function AuditLog() {
 
   useEffect(() => {
     void load();
+    const handleLocalAudit = () => void load();
+    window.addEventListener("wassup_audit_logged", handleLocalAudit);
+    return () => window.removeEventListener("wassup_audit_logged", handleLocalAudit);
   }, [moduleFilter, entityFilter]);
 
   async function load() {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    let query = supabase
-      .from("audit_log")
-      .select("id, actor_id, module, action, entity, entity_id, before, after, at")
-      .order("at", { ascending: false })
-      .limit(200);
-    if (moduleFilter) query = query.eq("module", moduleFilter);
-    if (entityFilter) query = query.ilike("entity", `%${entityFilter}%`);
-    const { data } = await query;
-    const list = (data as AuditRow[]) ?? [];
+    let list: AuditRow[] = [];
+    if (supabase) {
+      try {
+        let query = supabase
+          .from("audit_log")
+          .select("id, actor_id, module, action, entity, entity_id, before, after, at")
+          .order("at", { ascending: false })
+          .limit(200);
+        if (moduleFilter) query = query.eq("module", moduleFilter);
+        if (entityFilter) query = query.ilike("entity", `%${entityFilter}%`);
+        const { data } = await query;
+        if (data) list = data as AuditRow[];
+      } catch (e) {
+        console.warn("Audit log fetch error:", e);
+      }
+    }
+
+    // Merge local audit logs
+    const stored = localStorage.getItem("wassup_local_audit_logs");
+    if (stored) {
+      try {
+        const localList: AuditRow[] = JSON.parse(stored);
+        const filteredLocal = localList.filter((r) => {
+          if (moduleFilter && r.module !== moduleFilter) return false;
+          if (entityFilter && !r.entity.toLowerCase().includes(entityFilter.toLowerCase())) return false;
+          return true;
+        });
+        const existingIds = new Set(list.map((r) => r.id));
+        const nonDup = filteredLocal.filter((r) => !existingIds.has(r.id));
+        list = [...nonDup, ...list].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+      } catch (e) {}
+    }
+
     setRows(list);
 
     const actorIds = Array.from(new Set(list.map((r) => r.actor_id).filter((id): id is string => !!id)));
     if (actorIds.length > 0) {
-      const { data: staffRows } = await supabase.from("staff").select("id, name").in("id", actorIds);
-      const map: Record<string, string> = {};
-      for (const s of staffRows ?? []) map[s.id] = s.name;
-      setActorNames(map);
+      if (supabase) {
+        try {
+          const { data: staffRows } = await supabase.from("staff").select("id, name").in("id", actorIds);
+          const map: Record<string, string> = {};
+          for (const s of staffRows ?? []) map[s.id] = s.name;
+          setActorNames(map);
+        } catch (e) {}
+      }
     }
     setLoading(false);
   }

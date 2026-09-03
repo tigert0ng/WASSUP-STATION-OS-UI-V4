@@ -1367,7 +1367,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                                     <div className="flex items-center gap-0.5 text-amber-500">
                                       {[1, 2, 3, 4, 5].map((s) => (
                                         <Star
-                                          key={s}
+                                          key={`v-star-${s}`}
                                           className={`h-3 w-3 ${s <= vehicleRating.stars ? "fill-amber-400 stroke-amber-500 text-amber-500" : "text-stone-200"}`}
                                         />
                                       ))}
@@ -1386,7 +1386,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                                     <div className="flex items-center gap-0.5 text-amber-500">
                                       {[1, 2, 3, 4, 5].map((s) => (
                                         <Star
-                                          key={s}
+                                          key={`ktv-star-${s}`}
                                           className={`h-3 w-3 ${s <= ktvRating.stars ? "fill-amber-400 stroke-amber-500 text-amber-500" : "text-stone-200"}`}
                                         />
                                       ))}
@@ -1413,7 +1413,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                                   <div className="flex items-center gap-1">
                                     {[1, 2, 3, 4, 5].map((s) => (
                                       <button
-                                        key={s}
+                                        key={`in-v-star-${s}`}
                                         type="button"
                                         onClick={() => setRatingVehicleStars(s)}
                                         className="text-amber-400 hover:scale-110 transition cursor-pointer border-0 bg-transparent p-0.5"
@@ -1441,7 +1441,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                                   <div className="flex items-center gap-1">
                                     {[1, 2, 3, 4, 5].map((s) => (
                                       <button
-                                        key={s}
+                                        key={`in-ktv-star-${s}`}
                                         type="button"
                                         onClick={() => setRatingKtvStars(s)}
                                         className="text-amber-400 hover:scale-110 transition cursor-pointer border-0 bg-transparent p-0.5"
@@ -1678,7 +1678,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                           <td className="p-4 text-stone-600 font-sans max-w-xs">
                             {allReasons.length > 0 ? (
                               <ul className="list-disc pl-4 space-y-0.5 text-[10px]">
-                                {allReasons.map((r, idx) => <li key={idx} className="truncate">"{r}"</li>)}
+                                {allReasons.map((r, rIdx) => <li key={`reason-${tech.id}-${rIdx}`} className="truncate">"{r}"</li>)}
                               </ul>
                             ) : (
                               <span className="text-stone-400 italic">Chưa ghi nhận lý do</span>
@@ -1822,7 +1822,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                   <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-xl shadow-xl max-h-[180px] overflow-y-auto divide-y divide-gray-100">
                     {filteredSuggestions.map((sugg, idx) => (
                       <button
-                        key={idx}
+                        key={`sugg-${sugg.plate}-${sugg.phone}-${idx}`}
                         type="button"
                         onClick={() => handleSelectPlateSuggestion(sugg)}
                         className="w-full text-left p-2.5 hover:bg-stone-50 transition flex justify-between items-center cursor-pointer border-0 bg-transparent"
@@ -1872,7 +1872,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                             day: '2-digit', month: '2-digit', year: 'numeric'
                           });
                           return (
-                            <div key={idx} className="bg-white p-2.5 rounded-lg border border-stone-200 text-[10px] font-sans flex justify-between items-start gap-2">
+                            <div key={`hist-${h.orderId || h.id || idx}-${idx}`} className="bg-white p-2.5 rounded-lg border border-stone-200 text-[10px] font-sans flex justify-between items-start gap-2">
                               <div className="space-y-0.5">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-extrabold text-stone-850">{h.packageCode}</span>
@@ -1982,9 +1982,9 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                   Chọn Gói Dịch Vụ Chính
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {packages.map((pkg) => (
+                  {packages.map((pkg, idx) => (
                     <button
-                      key={pkg.id}
+                      key={`${pkg.id || pkg.code}-${idx}`}
                       type="button"
                       onClick={() => handleSelectPackage(pkg)}
                       className={`p-3 border rounded-xl text-left flex flex-col justify-between gap-1 transition-all min-h-[85px] ${
@@ -2049,11 +2049,11 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                       addonsList.filter(addon => 
                         addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
                         addon.code.toLowerCase().includes(addonSearch.toLowerCase())
-                      ).map((addon) => {
+                      ).map((addon, idx) => {
                         const isChecked = selectedAddons.find(a => a.id === addon.id);
                         return (
                           <div
-                            key={addon.id}
+                            key={`${addon.id || addon.code}-${idx}`}
                             onMouseDown={() => {
                               toggleAddon(addon);
                               setAddonSearch("");
@@ -2098,9 +2098,9 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                 {/* Selected Addons list (tags style) */}
                 {selectedAddons.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {selectedAddons.map((addon) => (
+                    {selectedAddons.map((addon, idx) => (
                       <div
-                        key={addon.id}
+                        key={`sel-${addon.id || addon.code}-${idx}`}
                         className="inline-flex items-center gap-1 bg-brand-green-light border border-brand-green/30 px-2 py-1 rounded-lg text-[10px] font-sans font-semibold text-matte-black transition"
                       >
                         <span className="font-sans font-bold opacity-75">[{addon.code}]</span>
@@ -2216,7 +2216,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                   1. Chọn Buồng Thi Công (Booth)
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {booths.map((b) => {
+                  {booths.map((b, idx) => {
                     const friendlyName = getFriendlyBoothName(b);
                     const boothWorkOrders = orders.filter(o => o.boothId === b.id && o.status !== 'done');
                     const isBusy = boothWorkOrders.length > 0;
@@ -2224,7 +2224,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
 
                     return (
                       <button
-                        key={b.id}
+                        key={`${b.id}-${idx}`}
                         type="button"
                         onClick={() => setDispatchingBoothId(b.id)}
                         className={`p-3 border rounded-xl text-left transition-all relative cursor-pointer text-xs font-bold font-sans ${
@@ -2253,12 +2253,12 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                     2. Chọn Kỹ Thuật Viên Chuyên Trách (Đồng thời gửi Telegram Bot)
                   </label>
                   <div className="grid grid-cols-1 gap-2 max-h-[180px] overflow-y-auto pr-1">
-                    {staff.filter(s => s.role === 'technician').map((tech) => {
+                    {staff.filter(s => s.role === 'technician').map((tech, idx) => {
                       const activeJobs = orders.filter(o => o.technicianId === tech.id && o.status !== 'done').length;
                       
                       return (
                         <button
-                          key={tech.id}
+                          key={`${tech.id}-${idx}`}
                           type="button"
                           onClick={() => {
                             const bName = getFriendlyBoothName({ id: dispatchingBoothId, name: booths.find(b => b.id === dispatchingBoothId)?.name || "" });

@@ -312,11 +312,11 @@ export default function CrmCustomerDetail({
                 {staticGroups.length === 0 ? (
                   <span className="text-[11px] text-stone-400 italic">Chưa có nhóm tĩnh nào</span>
                 ) : (
-                  staticGroups.map((g) => {
+                  staticGroups.map((g, idx) => {
                     const isMember = (g.customer_ids || []).includes(customer.id);
                     return (
                       <button
-                        key={g.id}
+                        key={`${g.id}-${idx}`}
                         type="button"
                         onClick={() => onToggleStaticGroup(g.id, customer.id, !isMember)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
@@ -342,12 +342,12 @@ export default function CrmCustomerDetail({
 
           {/* Vertical Navigation Menu */}
           <div className="bg-white border border-stone-200 rounded-2xl p-2 shadow-xs space-y-1">
-            {navItems.map((item) => {
+            {navItems.map((item, idx) => {
               const isActive = activeTab === item.id;
               const Icon = item.icon;
               return (
                 <button
-                  key={item.id}
+                  key={`${item.id}-${idx}`}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
@@ -444,9 +444,9 @@ export default function CrmCustomerDetail({
                       Chưa có xe nào được đăng ký.
                     </div>
                   ) : (
-                    vehicles.map((v) => (
+                    vehicles.map((v, idx) => (
                       <div
-                        key={v.plate}
+                        key={`${v.plate || 'veh'}-${idx}`}
                         className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex items-center justify-between"
                       >
                         <div className="space-y-0.5">
@@ -510,14 +510,14 @@ export default function CrmCustomerDetail({
                     Hội viên chưa có xe nào. Bấm "Thêm xe mới" để liên kết.
                   </div>
                 ) : (
-                  vehicles.map((v) => {
+                  vehicles.map((v, idx) => {
                     const vehicleOrdersCount = orders.filter(
                       (o) => o.licensePlate && o.licensePlate.toUpperCase() === v.plate.toUpperCase()
                     ).length;
 
                     return (
                       <div
-                        key={v.plate}
+                        key={`${v.plate || 'veh'}-${idx}`}
                         className="p-3.5 bg-stone-50 border border-stone-200 rounded-xl flex flex-col justify-between space-y-2 hover:border-forest-green/60 transition shadow-3xs"
                       >
                         <div>
@@ -577,9 +577,9 @@ export default function CrmCustomerDetail({
                   >
                     Tất cả xe ({customerOrders.length})
                   </button>
-                  {vehicles.map((v) => (
+                  {vehicles.map((v, idx) => (
                     <button
-                      key={v.plate}
+                      key={`${v.plate || 'veh'}-${idx}`}
                       type="button"
                       onClick={() => setActiveVehicleTab(v.plate)}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
@@ -615,8 +615,8 @@ export default function CrmCustomerDetail({
                           </td>
                         </tr>
                       ) : (
-                        displayedOrders.map((o) => (
-                          <tr key={o.id} className="hover:bg-stone-50/70 transition">
+                        displayedOrders.map((o, idx) => (
+                          <tr key={o.id ? `${o.id}-${idx}` : `ord-${idx}`} className="hover:bg-stone-50/70 transition">
                             <td className="p-2.5 pl-4 font-bold text-matte-black">{o.id}</td>
                             <td className="p-2.5 text-slate-500 text-[11px]">
                               {new Date(o.createdAt).toLocaleString("vi-VN", {
@@ -721,8 +721,8 @@ export default function CrmCustomerDetail({
                             </td>
                           </tr>
                         ) : (
-                          customerLedger.map((row) => (
-                            <tr key={row.id} className="hover:bg-stone-50/80 transition">
+                          customerLedger.map((row, idx) => (
+                            <tr key={row.id ? `${row.id}-${idx}` : `row-${idx}`} className="hover:bg-stone-50/80 transition">
                               <td className="p-3 pl-4 text-stone-600 text-[11px] font-medium whitespace-nowrap">
                                 {new Date(row.date || row.createdAt || Date.now()).toLocaleString("vi-VN")}
                               </td>
@@ -799,9 +799,9 @@ export default function CrmCustomerDetail({
                     Hội viên hiện chưa có mã voucher ưu đãi nào. Bấm <strong>"Cấp voucher riêng"</strong> để tặng ưu đãi đặc cách.
                   </div>
                 ) : (
-                  customerVouchers.map((v) => (
+                  customerVouchers.map((v, idx) => (
                     <div
-                      key={v.id}
+                      key={v.id ? `${v.id}-${idx}` : `vch-${idx}`}
                       className="p-4 bg-stone-50 border border-stone-200 rounded-xl flex items-start justify-between shadow-3xs"
                     >
                       <div className="space-y-1">

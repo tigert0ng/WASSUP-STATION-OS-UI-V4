@@ -231,8 +231,8 @@ export default function CrmCustomerList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {pendingProposals.map((p) => (
-                  <tr key={p.id} className="hover:bg-amber-50/40 transition">
+                {pendingProposals.map((p, idx) => (
+                  <tr key={p.id ? `${p.id}-${idx}` : `prop-${idx}`} className="hover:bg-amber-50/40 transition">
                     <td className="p-2.5 pl-4 text-stone-500 text-[10px]">
                       {new Date(p.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
                     </td>
@@ -426,11 +426,11 @@ export default function CrmCustomerList({
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((c) => {
+                filteredCustomers.map((c, idx) => {
                   const metrics = getCustomerMetrics(c);
                   return (
                     <tr
-                      key={c.id}
+                      key={c.id ? `${c.id}-${idx}` : `cust-${idx}`}
                       onClick={() => onSelectCustomer(c)}
                       className="hover:bg-stone-50/80 transition cursor-pointer group"
                     >
@@ -455,9 +455,9 @@ export default function CrmCustomerList({
                           {metrics.vehicles.length === 0 ? (
                             <span className="text-[10px] text-stone-400 italic">Chưa có xe</span>
                           ) : (
-                            metrics.vehicles.map((v) => (
+                            metrics.vehicles.map((v, vIdx) => (
                               <span
-                                key={v.plate}
+                                key={`${v.plate || 'veh'}-${vIdx}`}
                                 className="px-2 py-0.5 bg-stone-100 text-slate-800 rounded font-sans text-[10px] font-bold border border-stone-200/60"
                               >
                                 {v.plate}
