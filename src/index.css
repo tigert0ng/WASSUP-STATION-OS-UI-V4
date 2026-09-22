@@ -16,3 +16,9 @@
   --color-warm-white: #FAFAFA;
   --color-mid-gray: #6B7280;
 }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}

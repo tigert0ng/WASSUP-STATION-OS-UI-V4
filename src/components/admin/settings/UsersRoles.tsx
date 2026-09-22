@@ -437,6 +437,11 @@ export default function UsersRoles() {
 
   async function handleDeleteUserClick(row: StaffRow) {
     if (!isMasterAdmin || row.id === currentStaff?.id) return;
+    // SECURITY: Master Admin account can never be deleted!
+    if (row.role_id === "master_admin" || row.username === "admin" || (row as any).is_master_admin) {
+      showToast("error", "Tài khoản Master Admin được hệ thống bảo vệ tối cao, không thể bị xóa.");
+      return;
+    }
     setConfirmDelete({ kind: "user", id: row.id, matchText: row.username });
     setConfirmInput("");
   }
@@ -467,6 +472,13 @@ export default function UsersRoles() {
         showToast("success", `Đã xóa vai trò "${confirmDelete.matchText}".`);
       } else {
         const staffRow = staffList.find((s) => s.id === confirmDelete.id);
+        // SECURITY: Guard Master Admin from deletion
+        if (staffRow && (staffRow.role_id === "master_admin" || staffRow.username === "admin" || (staffRow as any).is_master_admin)) {
+          showToast("error", "Tài khoản Master Admin được hệ thống bảo vệ tối cao, không thể bị xóa.");
+          setConfirmDelete(null);
+          setConfirmInput("");
+          return;
+        }
         const updatedStaff = staffList.filter((s) => s.id !== confirmDelete.id);
         setStaffList(updatedStaff);
         localStorage.setItem("wassup_staff_list", JSON.stringify(updatedStaff));
@@ -545,6 +557,11 @@ export default function UsersRoles() {
 
   async function handleToggleLock(row: StaffRow) {
     if (!currentStaff) return;
+    // SECURITY: Nobody can lock or block Master Admin account!
+    if (row.role_id === "master_admin" || row.username === "admin" || (row as any).is_master_admin) {
+      showToast("error", "Tài khoản Master Admin được hệ thống bảo vệ tối cao, không thể bị khóa.");
+      return;
+    }
     const action = row.status === "active" ? "lock" : "unlock";
     const newStatus: "active" | "locked" = action === "lock" ? "locked" : "active";
 
@@ -611,8 +628,21 @@ export default function UsersRoles() {
   }
 
   const displayStaffList = staffList.filter((s) => {
+    // SECURITY: Master Admin account is NEVER shown when viewing a specific station!
     if (selectedStationFilter !== "all") {
+      if (s.role_id === "master_admin" || s.username === "admin" || (s as any).is_master_admin) {
+        return false;
+      }
       if (s.station_id && s.station_id !== "all" && s.station_id !== selectedStationFilter) {
+        return false;
+      }
+      if (!s.station_id || s.station_id === "all") {
+        return false;
+      }
+    }
+    // SECURITY: Non-master-admin users/stations can NEVER see Master Admin account in user lists!
+    if (!isMasterAdmin) {
+      if (s.role_id === "master_admin" || s.username === "admin" || (s as any).is_master_admin) {
         return false;
       }
     }
@@ -1062,11 +1092,11 @@ export default function UsersRoles() {
                   : "bg-white text-stone-700 border-stone-200 hover:bg-stone-100"
               }`}
             >
-              Tất cả các Trạm ({staffList.length})
+              Tất cả các Trạm ({isMasterAdmin ? staffList.length : staffList.filter((s) => s.role_id !== "master_admin" && s.username !== "admin").length})
             </button>
 
             {stations.map((st, stIdx) => {
-              const count = staffList.filter((s) => s.station_id === st.id).length;
+              const count = staffList.filter((s) => s.station_id === st.id && s.role_id !== "master_admin" && s.username !== "admin").length;
               return (
                 <button
                   key={`${st.id}-${stIdx}`}
@@ -1210,26 +1240,38 @@ export default function UsersRoles() {
                               </button>
                             )
                           )}
-                          {canWrite && !isSelf && (
-                            <button
-                              onClick={() => void handleToggleLock(s)}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border ${
-                                s.status === "locked"
-                                  ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
-                                  : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                              }`}
+                          {(s.role_id === "master_admin" || s.username === "admin" || (s as any).is_master_admin) ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-[9px] uppercase tracking-wider shadow-xs"
+                              title="Tài khoản Master Admin tối cao được bảo vệ vĩnh viễn, không ai có quyền khóa hoặc xóa"
                             >
-                              {s.status === "locked" ? "Mở khóa" : "Khóa"}
-                            </button>
-                          )}
-                          {isMasterAdmin && !isSelf && (
-                            <button
-                              onClick={() => void handleDeleteUserClick(s)}
-                              title="Xóa vĩnh viễn"
-                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 inline -mt-0.5" /> Xóa
-                            </button>
+                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                              Bảo vệ tối cao
+                            </span>
+                          ) : (
+                            <>
+                              {canWrite && !isSelf && (
+                                <button
+                                  onClick={() => void handleToggleLock(s)}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border ${
+                                    s.status === "locked"
+                                      ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
+                                      : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                  }`}
+                                >
+                                  {s.status === "locked" ? "Mở khóa" : "Khóa"}
+                                </button>
+                              )}
+                              {isMasterAdmin && !isSelf && (
+                                <button
+                                  onClick={() => void handleDeleteUserClick(s)}
+                                  title="Xóa vĩnh viễn"
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-sm border bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 inline -mt-0.5" /> Xóa
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

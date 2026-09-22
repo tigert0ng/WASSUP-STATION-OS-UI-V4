@@ -910,7 +910,7 @@ export default function CrmVoucherManagement({
                                   {new Date(r.redeemedAt).toLocaleString("vi-VN")}
                                 </td>
                                 <td className="p-2.5 font-bold text-slate-800">
-                                  {c ? c.name : "Khách vãng lai"}
+                                  {c ? c.name : "Hội viên WASSUP"}
                                 </td>
                                 <td className="p-2.5 font-sans text-slate-600">{r.orderId}</td>
                                 <td className="p-2.5 text-right pr-4 font-black text-forest-green">

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Settings, Building2, Users, Sliders, Bot, Sparkles, AlertCircle, ArrowLeftRight } from "lucide-react";
+import { Settings, Building2, Users, Sliders, Bot, Sparkles, AlertCircle, ArrowLeftRight, Tablet } from "lucide-react";
 import StationsList from "./settings/StationsList";
 import UsersRoles from "./settings/UsersRoles";
 import ConfigOverview from "./settings/ConfigOverview";
 import Integrations from "./settings/Integrations";
+import KioskDevicesSettings from "./settings/KioskDevicesSettings";
 import { useAuth } from "../../lib/auth/AuthProvider";
 import { supabase } from "../../lib/supabase/client";
 
@@ -27,8 +28,8 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
   const isMasterAdmin = staff?.role_id === "master_admin" || staff?.station_scope_all;
 
   const rawTabFromUrl = location.pathname.split("/")[3];
-  // Redirect legacy /general or /staff tabs to merged tabs
-  const tabFromUrl = rawTabFromUrl === "general" ? "config" : rawTabFromUrl === "staff" ? "users" : rawTabFromUrl;
+  // Redirect legacy /config to /general or /staff to /users
+  const tabFromUrl = rawTabFromUrl === "config" ? "general" : rawTabFromUrl === "staff" ? "users" : rawTabFromUrl;
 
   const [stationsList, setStationsList] = useState<StationOption[]>(SAMPLE_STATIONS);
   const [selectedStationId, setSelectedStationId] = useState<string>(
@@ -44,6 +45,12 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
 
   const TABS = [
     {
+      id: "general",
+      label: "Thông tin chung",
+      icon: Sliders,
+      component: <ConfigOverview currentStationId={selectedStationId} onSelectStation={handleSelectStation} />,
+    },
+    {
       id: "stations",
       label: "Danh sách Trạm (S0.0)",
       icon: Building2,
@@ -56,22 +63,28 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
       component: <UsersRoles />,
     },
     {
-      id: "config",
-      label: "Cấu hình hệ thống & Trạm",
-      icon: Sliders,
-      component: <ConfigOverview currentStationId={selectedStationId} onSelectStation={handleSelectStation} />,
-    },
-    {
       id: "integrations",
       label: "Tích hợp thiết bị",
       icon: Bot,
       component: <Integrations />,
     },
+    {
+      id: "kiosks",
+      label: "Kiosk Sảnh (M0)",
+      icon: Tablet,
+      component: <KioskDevicesSettings currentStationId={selectedStationId} />,
+    },
   ];
 
   const [activeTab, setActiveTab] = useState<string>(
-    TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : "stations"
+    TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : "general"
   );
+
+  useEffect(() => {
+    if (tabFromUrl && TABS.some((t) => t.id === tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   useEffect(() => {
     async function loadStations() {
@@ -200,28 +213,6 @@ export default function SettingsModule({ rolePermissions: _rolePermissions, onPe
           </button>
         </div>
       )}
-
-      {/* Module 0 Sub-Menu Navigation Bar */}
-      <div className="flex border border-stone-200/90 bg-white rounded-2xl p-1.5 shadow-sm gap-2 overflow-x-auto scrollbar-none">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => selectTab(tab.id)}
-              className={`flex-1 min-w-[140px] py-3.5 px-4 text-center font-display font-black text-xs tracking-wider uppercase transition-all duration-200 rounded-xl cursor-pointer flex items-center justify-center gap-2 border-0 ${
-                isActive
-                  ? "bg-[#18181b] text-white shadow-xs"
-                  : "bg-[#f4f4f6] text-[#64748b] hover:text-slate-900 hover:bg-stone-200/70"
-              }`}
-            >
-              <Icon className={`h-4 w-4 shrink-0 transition-colors stroke-[2.2] ${isActive ? "text-[#a2c62c]" : "text-[#64748b]"}`} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
 
       <div className="animate-fadeIn">
         {TABS.find((t) => t.id === activeTab)?.component}

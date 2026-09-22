@@ -366,7 +366,34 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
 
   const handleCheckInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plate) return;
+    if (!plate.trim() || !phone.trim() || !name.trim()) return;
+
+    // 100% Customer Membership Policy: Register or update customer in CRM
+    const existingCustomers = simActions.getCustomers();
+    const cleanPhone = phone.replace(/\D/g, "");
+    const existingCust = existingCustomers.find(c => c.phone.replace(/\D/g, "") === cleanPhone);
+
+    if (!existingCust) {
+      simActions.addCustomer({
+        name: name.trim(),
+        phone: phone.trim(),
+        licensePlate: plate.toUpperCase(),
+        vehicles: [{ plate: plate.toUpperCase(), vehicleClass: segment }],
+        licensePlates: [plate.toUpperCase()],
+        vehicleSegment: segment,
+        points: 100
+      });
+    } else {
+      if (!existingCust.vehicles) existingCust.vehicles = [];
+      if (!existingCust.vehicles.some(v => v.plate.toUpperCase() === plate.toUpperCase())) {
+        existingCust.vehicles.push({ plate: plate.toUpperCase(), vehicleClass: segment });
+      }
+      if (!existingCust.licensePlates) existingCust.licensePlates = [];
+      if (!existingCust.licensePlates.includes(plate.toUpperCase())) {
+        existingCust.licensePlates.push(plate.toUpperCase());
+      }
+      simActions.saveState?.();
+    }
 
     const subtotal = selectedPkg.price + selectedAddons.reduce((sum, a) => sum + a.price, 0);
     const total = subtotal; // No discount initially
@@ -382,8 +409,8 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
     const finalNotes = `[Tình trạng xe vào: ${conditionText}]${checkInNote ? " - " + checkInNote : ""}`;
 
     const res = simActions.createOrder({
-      customerPhone: phone || undefined,
-      customerName: name || undefined,
+      customerPhone: phone.trim(),
+      customerName: name.trim(),
       licensePlate: plate.toUpperCase(),
       vehicleSegment: segment,
       packageCode: selectedPkg.code,
@@ -726,7 +753,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                     <div>
                       <div className="text-sm font-black font-sans tracking-wider text-white">{wo.licensePlate}</div>
                       <div className="text-[10px] text-slate-400 font-sans mt-0.5 truncate">
-                        {wo.customerName || "Khách vãng lai"}
+                        {wo.customerName || "Hội viên WASSUP"}
                       </div>
                       {wo.notes && (
                         <div className="text-[10px] text-brand-green bg-brand-green/10 p-1.5 rounded mt-2 italic font-medium leading-tight line-clamp-2">
@@ -824,7 +851,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
 
                           {/* Customer Info */}
                           <div className="text-[10px] text-stone-500 font-sans">
-                            Khách: <strong className="text-slate-800">{wo.customerName || "Khách vãng lai"}</strong>
+                            Khách: <strong className="text-slate-800">{wo.customerName || "Hội viên WASSUP"}</strong>
                           </div>
 
                           {wo.notes && (
@@ -1130,8 +1157,8 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                             >
                               <td className="p-4 font-extrabold text-matte-black tracking-wider text-sm font-sans">{wo.licensePlate}</td>
                               <td className="p-4 font-bold text-matte-black">
-                                <div>{wo.customerName}</div>
-                                <div className="text-[10px] text-mid-gray font-normal">{wo.customerPhone || "Khách vãng lai"}</div>
+                                <div>{wo.customerName || "Hội viên WASSUP"}</div>
+                                <div className="text-[10px] text-mid-gray font-normal">{wo.customerPhone || "Đã định danh"}</div>
                               </td>
                               <td className="p-4">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-stone-100 text-matte-black font-extrabold text-[10px] font-sans border border-stone-200">
@@ -1221,7 +1248,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                     </div>
                     <div className="space-y-0.5">
                       <span className="text-[9px] text-stone-400 font-extrabold uppercase block">Số điện thoại:</span>
-                      <span className="text-matte-black font-sans block font-semibold">{selectedOrder.customerPhone || "Khách vãng lai"}</span>
+                      <span className="text-matte-black font-sans block font-semibold">{selectedOrder.customerPhone || "Đã định danh"}</span>
                     </div>
                     <div className="space-y-0.5">
                       <span className="text-[9px] text-stone-400 font-extrabold uppercase block">Dịch vụ chính:</span>
@@ -1790,11 +1817,16 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-2 border-b border-[#e5e5e5] pb-4 mb-4">
-              <Sparkles className="h-5 w-5 text-forest-green" />
-              <h3 className="text-lg font-extrabold font-display tracking-wider text-matte-black uppercase">
-                TIẾP NHẬN XE MỚI TRỰC TIẾP
-              </h3>
+            <div className="flex items-center justify-between border-b border-[#e5e5e5] pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-forest-green" />
+                <h3 className="text-lg font-extrabold font-display tracking-wider text-matte-black uppercase">
+                  TIẾP NHẬN XE MỚI TRỰC TIẾP
+                </h3>
+              </div>
+              <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-bold uppercase">
+                100% Định danh &amp; Đăng ký Hội viên
+              </span>
             </div>
 
             <form onSubmit={handleCheckInSubmit} className="space-y-4">
@@ -2205,7 +2237,7 @@ export default function ReceptionModule({ orders, booths, staff }: ReceptionModu
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] text-mid-gray font-bold uppercase">{dispatchingWo.vehicleSegment}</span>
-                    <p className="text-xs text-stone-600 font-medium mt-1">{dispatchingWo.customerName || "Khách vãng lai"}</p>
+                    <p className="text-xs text-stone-600 font-medium mt-1">{dispatchingWo.customerName || "Hội viên WASSUP"}</p>
                   </div>
                 </div>
               </div>

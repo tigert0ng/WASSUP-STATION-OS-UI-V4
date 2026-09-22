@@ -241,19 +241,14 @@ export default function GeneralInfo({
           <button
             type="button"
             onClick={toggleCollapse}
-            className="p-1.5 rounded-xl border border-stone-200 text-stone-600 hover:text-matte-black hover:bg-stone-100 transition cursor-pointer flex items-center gap-1 text-xs font-bold"
+            className="p-2 rounded-xl border border-stone-200 text-stone-500 hover:text-slate-900 hover:bg-stone-100 transition cursor-pointer flex items-center justify-center"
             title={isCollapsed ? "Mở rộng box này" : "Thu gọn box này"}
+            aria-label={isCollapsed ? "Mở rộng" : "Thu gọn"}
           >
             {isCollapsed ? (
-              <>
-                <ChevronDown className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Mở rộng</span>
-              </>
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <>
-                <ChevronUp className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Thu gọn</span>
-              </>
+              <ChevronUp className="h-4 w-4" />
             )}
           </button>
         </div>

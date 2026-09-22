@@ -200,19 +200,14 @@ export default function ConfigOverview({ currentStationId, onSelectStation }: Co
           <button
             type="button"
             onClick={() => toggleSection("threshold")}
-            className="p-1.5 rounded-xl border border-stone-200 text-stone-600 hover:text-matte-black hover:bg-stone-100 transition cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0 ml-auto"
+            className="p-2 rounded-xl border border-stone-200 text-stone-500 hover:text-slate-900 hover:bg-stone-100 transition cursor-pointer flex items-center justify-center shrink-0 ml-auto"
             title={collapsedSections.threshold ? "Mở rộng box này" : "Thu gọn box này"}
+            aria-label={collapsedSections.threshold ? "Mở rộng" : "Thu gọn"}
           >
             {collapsedSections.threshold ? (
-              <>
-                <ChevronDown className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Mở rộng</span>
-              </>
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <>
-                <ChevronUp className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Thu gọn</span>
-              </>
+              <ChevronUp className="h-4 w-4" />
             )}
           </button>
         </div>
@@ -276,19 +271,14 @@ export default function ConfigOverview({ currentStationId, onSelectStation }: Co
           <button
             type="button"
             onClick={() => toggleSection("expense")}
-            className="p-1.5 rounded-xl border border-stone-200 text-stone-600 hover:text-matte-black hover:bg-stone-100 transition cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0 ml-auto"
+            className="p-2 rounded-xl border border-stone-200 text-stone-500 hover:text-slate-900 hover:bg-stone-100 transition cursor-pointer flex items-center justify-center shrink-0 ml-auto"
             title={collapsedSections.expense ? "Mở rộng box này" : "Thu gọn box này"}
+            aria-label={collapsedSections.expense ? "Mở rộng" : "Thu gọn"}
           >
             {collapsedSections.expense ? (
-              <>
-                <ChevronDown className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Mở rộng</span>
-              </>
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <>
-                <ChevronUp className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Thu gọn</span>
-              </>
+              <ChevronUp className="h-4 w-4" />
             )}
           </button>
         </div>
@@ -302,7 +292,7 @@ export default function ConfigOverview({ currentStationId, onSelectStation }: Co
         )}
       </div>
 
-      {/* SECTION 5: Ngưỡng cảnh báo tồn kho */}
+      {/* SECTION 4: Ngưỡng cảnh báo tồn kho */}
       <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-6 shadow-sm space-y-3 transition-all">
         <div className={`flex flex-wrap items-center justify-between gap-3 ${!collapsedSections.inventory ? "border-b border-[#e5e5e5] pb-3" : ""}`}>
           <div className="space-y-1">
@@ -318,19 +308,14 @@ export default function ConfigOverview({ currentStationId, onSelectStation }: Co
           <button
             type="button"
             onClick={() => toggleSection("inventory")}
-            className="p-1.5 rounded-xl border border-stone-200 text-stone-600 hover:text-matte-black hover:bg-stone-100 transition cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0 ml-auto"
+            className="p-2 rounded-xl border border-stone-200 text-stone-500 hover:text-slate-900 hover:bg-stone-100 transition cursor-pointer flex items-center justify-center shrink-0 ml-auto"
             title={collapsedSections.inventory ? "Mở rộng box này" : "Thu gọn box này"}
+            aria-label={collapsedSections.inventory ? "Mở rộng" : "Thu gọn"}
           >
             {collapsedSections.inventory ? (
-              <>
-                <ChevronDown className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Mở rộng</span>
-              </>
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <>
-                <ChevronUp className="h-4 w-4 text-stone-600" />
-                <span className="text-[11px] font-sans font-bold hidden sm:inline">Thu gọn</span>
-              </>
+              <ChevronUp className="h-4 w-4" />
             )}
           </button>
         </div>

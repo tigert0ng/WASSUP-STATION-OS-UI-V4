@@ -29,6 +29,7 @@ import {
   KeyRound
 } from "lucide-react";
 import { simActions } from "../../lib/supabase/client";
+import { useAuth } from "../../lib/auth/AuthProvider";
 
 interface StaffModuleProps {
   staff: any[];
@@ -53,6 +54,9 @@ interface AuditLog {
 }
 
 export default function StaffModule({ staff, orders }: StaffModuleProps) {
+  const { staff: currentStaff } = useAuth();
+  const isMasterAdmin = currentStaff?.role_id === "master_admin" || currentStaff?.station_scope_all;
+
   // UI filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "accountant">("all");
@@ -139,6 +143,13 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
   // Filter staff based on search query and selected tab (exluding KTVs as they don't login to Station OS)
   const filteredStaff = staff.filter((s) => {
     if (s.role === "technician") return false;
+
+    // SECURITY: Master Admin account is NEVER visible to non-master admin users/stations!
+    if (!isMasterAdmin) {
+      if (s.role === "master_admin" || s.role_id === "master_admin" || (s as any).username === "admin" || s.id === "s1" || s.id === "admin-001") {
+        return false;
+      }
+    }
     
     const matchesSearch =
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -220,6 +231,12 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
 
   // Perform blocking of staff with custom dialog to handle technician de-dispatch rule
   const handleRequestToggleBlock = (s: any) => {
+    // SECURITY: Nobody has the right to lock or block Master Admin account!
+    if (s.role === "master_admin" || s.role_id === "master_admin" || (s as any).username === "admin" || s.id === "s1" || s.id === "admin-001") {
+      showToast("Tài khoản Master Admin được hệ thống bảo vệ tối cao, không thể bị khóa.");
+      return;
+    }
+
     if (s.status === "blocked") {
       // Just unblock immediately
       const updated = simActions.updateStaff(s.id, { status: "active" });
@@ -582,16 +599,26 @@ export default function StaffModule({ staff, orders }: StaffModuleProps) {
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           
-                          <button
-                            onClick={() => handleRequestToggleBlock(s)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase font-display transition cursor-pointer shadow-sm border ${
-                              s.status === "blocked"
-                                ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
-                                : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                            }`}
-                          >
-                            {s.status === "blocked" ? "MỞ KHÓA" : "ĐÌNH CHỈ"}
-                          </button>
+                          {s.role === "master_admin" || s.role_id === "master_admin" || (s as any).username === "admin" || s.id === "s1" || s.id === "admin-001" ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-[9px] uppercase tracking-wider shadow-xs"
+                              title="Tài khoản Master Admin tối cao được bảo vệ vĩnh viễn, không ai có quyền khóa"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                              Bảo vệ tối cao
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleRequestToggleBlock(s)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase font-display transition cursor-pointer shadow-sm border ${
+                                s.status === "blocked"
+                                  ? "bg-white text-green-700 border-[#e5e5e5] hover:bg-green-50 hover:border-green-200"
+                                  : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                              }`}
+                            >
+                              {s.status === "blocked" ? "MỞ KHÓA" : "ĐÌNH CHỈ"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

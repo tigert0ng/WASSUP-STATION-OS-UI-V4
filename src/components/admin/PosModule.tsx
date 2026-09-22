@@ -520,7 +520,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
     const autoPt: PhieuThu = {
       id: newPtId,
       timestamp: new Date().toISOString(),
-      customerName: selectedOrder.customerName || "Khách vãng lai",
+      customerName: selectedOrder.customerName || "Hội viên WASSUP",
       customerPhone: selectedOrder.customerPhone || "—",
       licensePlate: selectedOrder.licensePlate,
       vehicleSegment: selectedOrder.vehicleSegment,
@@ -551,7 +551,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
     setPrintedReceipt({
       orderId: selectedOrder.orderId,
       licensePlate: selectedOrder.licensePlate,
-      customerName: selectedOrder.customerName || "Khách vãng lai",
+      customerName: selectedOrder.customerName || "Hội viên WASSUP",
       customerPhone: selectedOrder.customerPhone || "—",
       packageCode: selectedOrder.packageCode,
       basePrice: selectedOrder.total,
@@ -1117,7 +1117,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                                   </span>
                                 </td>
                                 <td className="p-4">
-                                  <p className="font-bold text-slate-800">{o.customerName || "Khách vãng lai"}</p>
+                                  <p className="font-bold text-slate-800">{o.customerName || "Hội viên WASSUP"}</p>
                                   <p className="text-[10px] text-slate-400 font-bold mt-0.5 flex items-center gap-1">
                                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#A2C62C]"></span>
                                     KTV: {o.technicianName || "Đang xếp lịch..."}
@@ -1247,7 +1247,7 @@ export default function PosModule({ orders, revenueStats }: PosModuleProps) {
                           <div className="text-xs space-y-1.5 border-b border-stone-100 pb-3">
                             <div className="flex justify-between">
                               <span className="text-slate-400 font-sans">Khách hàng:</span>
-                              <span className="font-bold text-slate-800">{selectedOrder.customerName || "Khách vãng lai"}</span>
+                              <span className="font-bold text-slate-800">{selectedOrder.customerName || "Hội viên WASSUP"}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-slate-400 font-sans">Nhân viên kỹ thuật:</span>

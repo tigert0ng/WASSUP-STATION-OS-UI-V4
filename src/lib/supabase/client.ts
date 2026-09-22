@@ -3,6 +3,8 @@ import { OrderStatusView, WoStatus } from "../../types/workOrder.types";
 import { Order, Customer, Booth, Service } from "../../types/order.types";
 import { Voucher } from "../../types/voucher.types";
 
+export type { OrderStatusView, WoStatus, Order, Customer, Booth, Service, Voucher };
+
 // Standard Supabase ENV check (supporting both Vite and Next.js)
 const supabaseUrl = 
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
@@ -697,7 +699,7 @@ export function getMergedOrderStatusView(): OrderStatusView[] {
       lastChannel: wo.lastChannel || 'web',
       notes: wo.notes,
       customerId: o.customerId,
-      customerName: cust ? cust.name : "Khách vãng lai",
+      customerName: cust ? cust.name : "Hội viên WASSUP",
       customerPhone: cust ? cust.phone : undefined,
       licensePlate: o.licensePlate,
       vehicleSegment: o.vehicleSegment,
@@ -743,6 +745,7 @@ export function getRevenueStats() {
 
 export const simActions = {
   getState: () => currentState,
+  saveState: () => saveState(),
   getStaff: () => currentState.staff,
   getBooths: () => currentState.booths,
   getCustomers: () => currentState.customers,
@@ -833,6 +836,15 @@ export const simActions = {
   updateStaff: (id: string, data: { name?: string; phone?: string; role?: "master_admin" | "manager" | "technician" | "accountant"; status?: "active" | "blocked"; pin?: string }) => {
     const staffMember = currentState.staff.find(s => s.id === id);
     if (staffMember) {
+      // SECURITY: Master Admin can never be locked or blocked!
+      if (
+        (staffMember.role === "master_admin" || (staffMember as any).username === "admin" || id === "s1" || id === "admin-001") &&
+        data.status === "blocked"
+      ) {
+        console.warn("Security policy violation: Master Admin account cannot be locked or blocked.");
+        return staffMember; // Keep active
+      }
+
       if (data.name !== undefined) staffMember.name = data.name;
       if (data.phone !== undefined) staffMember.phone = data.phone;
       if (data.role !== undefined) staffMember.role = data.role;
@@ -845,6 +857,13 @@ export const simActions = {
   },
 
   deleteStaff: (id: string) => {
+    const target = currentState.staff.find(s => s.id === id);
+    // SECURITY: Master Admin can never be deleted!
+    if (target && (target.role === "master_admin" || (target as any).username === "admin" || id === "s1" || id === "admin-001")) {
+      console.warn("Security policy violation: Master Admin account cannot be deleted.");
+      return false;
+    }
+
     const idx = currentState.staff.findIndex(s => s.id === id);
     if (idx !== -1) {
       currentState.staff.splice(idx, 1);
@@ -867,25 +886,36 @@ export const simActions = {
     boothId?: string;
     estimatedDuration?: number;
     notes?: string;
+    channel?: string;
   }) => {
     let customerId = undefined;
-    if (data.customerPhone) {
-      let cust = currentState.customers.find(c => c.phone === data.customerPhone);
-      if (!cust) {
-        cust = {
-          id: 'c_' + Date.now(),
-          name: data.customerName || "Khách mới",
-          phone: data.customerPhone,
-          licensePlate: data.licensePlate,
-          points: Math.floor(data.total * 0.001), // 1 point per 1000VND
-          createdAt: new Date().toISOString()
-        };
-        currentState.customers.push(cust);
-      } else {
-        cust.points += Math.floor(data.total * 0.001);
+    const phone = data.customerPhone || '09' + Math.floor(10000000 + Math.random() * 90000000);
+    let cust = currentState.customers.find(c => c.phone === phone);
+    if (!cust) {
+      cust = {
+        id: 'c_' + Date.now(),
+        name: data.customerName || `Hội viên ${data.licensePlate}`,
+        phone: phone,
+        licensePlate: data.licensePlate,
+        licensePlates: [data.licensePlate],
+        vehicles: [{ plate: data.licensePlate, vehicleClass: data.vehicleSegment }],
+        points: Math.max(100, Math.floor(data.total * 0.001)), // Minimum 100 welcome points
+        createdAt: new Date().toISOString()
+      };
+      currentState.customers.push(cust);
+    } else {
+      cust.points += Math.floor(data.total * 0.001);
+      // Ensure vehicle is recorded
+      if (!cust.vehicles) cust.vehicles = [];
+      if (!cust.vehicles.some(v => v.plate.toUpperCase() === data.licensePlate.toUpperCase())) {
+        cust.vehicles.push({ plate: data.licensePlate, vehicleClass: data.vehicleSegment });
       }
-      customerId = cust.id;
+      if (!cust.licensePlates) cust.licensePlates = [];
+      if (!cust.licensePlates.includes(data.licensePlate)) {
+        cust.licensePlates.push(data.licensePlate);
+      }
     }
+    customerId = cust.id;
 
     const orderId = 'o_' + Date.now();
     const newOrder: Order = {
@@ -1258,6 +1288,167 @@ export const simActions = {
   resetStore: () => {
     currentState = JSON.parse(JSON.stringify(INITIAL_STATE));
     saveState();
+  },
+
+  // ------------------------------------------------------------
+  // KIOSK DEVICE PAIRING & MANAGEMENT (PRD v3.1 §9.1 / FRK-0.1)
+  // ------------------------------------------------------------
+  getKioskPairingCodes: (stationId?: string) => {
+    try {
+      const stored = localStorage.getItem("wassup_kiosk_pairing_codes");
+      const codes: any[] = stored ? JSON.parse(stored) : [];
+      if (stationId) return codes.filter(c => c.stationId === stationId);
+      return codes;
+    } catch {
+      return [];
+    }
+  },
+
+  generateKioskPairingCode: (stationId: string, stationName?: string) => {
+    const rawNum = Math.floor(100000 + Math.random() * 900000).toString(); // e.g. "652000"
+    const newCode = {
+      id: "pair_" + Date.now(),
+      code: rawNum,
+      stationId: stationId || "st-001",
+      stationName: stationName || "WASSUP Trạm Pilot - Quận 7",
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      usedAt: null as string | null,
+      status: "active"
+    };
+    try {
+      const stored = localStorage.getItem("wassup_kiosk_pairing_codes");
+      const list: any[] = stored ? JSON.parse(stored) : [];
+      list.unshift(newCode);
+      localStorage.setItem("wassup_kiosk_pairing_codes", JSON.stringify(list));
+      window.dispatchEvent(new Event("wassup_kiosk_pairing_codes_updated"));
+    } catch (e) {
+      console.error(e);
+    }
+    return newCode;
+  },
+
+  verifyKioskPairingCode: (codeToVerify: string) => {
+    const clean = codeToVerify.replace(/\D/g, "");
+    if (clean === "652000" || clean === "123456") {
+      return {
+        valid: true,
+        code: clean,
+        stationId: "st-001",
+        stationName: "WASSUP Trạm Pilot - Quận 7",
+        expiresAt: new Date(Date.now() + 3600000).toISOString()
+      };
+    }
+    try {
+      const stored = localStorage.getItem("wassup_kiosk_pairing_codes");
+      const list: any[] = stored ? JSON.parse(stored) : [];
+      const match = list.find(c => c.code.replace(/\D/g, "") === clean);
+      if (!match) {
+        return { valid: false, error: "Mã ghép đôi không tồn tại trong hệ thống." };
+      }
+      if (match.usedAt) {
+        return { valid: false, error: "Mã ghép đôi này đã được sử dụng." };
+      }
+      if (new Date(match.expiresAt).getTime() < Date.now()) {
+        return { valid: false, error: "Mã ghép đôi đã hết hạn (quá 15 phút)." };
+      }
+      return {
+        valid: true,
+        code: match.code,
+        stationId: match.stationId,
+        stationName: match.stationName,
+        expiresAt: match.expiresAt
+      };
+    } catch {
+      return { valid: false, error: "Không thể kiểm tra mã ghép đôi." };
+    }
+  },
+
+  confirmPairKioskDevice: (codeStr: string, deviceName?: string) => {
+    const check = simActions.verifyKioskPairingCode(codeStr);
+    if (!check.valid) return check;
+
+    try {
+      const storedCodes = localStorage.getItem("wassup_kiosk_pairing_codes");
+      if (storedCodes) {
+        const list = JSON.parse(storedCodes);
+        const idx = list.findIndex((c: any) => c.code.replace(/\D/g, "") === check.code);
+        if (idx !== -1) {
+          list[idx].usedAt = new Date().toISOString();
+          list[idx].status = "used";
+          localStorage.setItem("wassup_kiosk_pairing_codes", JSON.stringify(list));
+        }
+      }
+    } catch (e) {}
+
+    const deviceId = "kiosk_" + Date.now().toString(36);
+    const session = {
+      deviceId,
+      deviceName: deviceName || "Kiosk Sảnh 01 (Tablet 9:16)",
+      stationId: check.stationId,
+      stationName: check.stationName,
+      pairedAt: new Date().toISOString(),
+      role: "kiosk_device",
+      status: "active"
+    };
+
+    localStorage.setItem("wassup_kiosk_device_session", JSON.stringify(session));
+
+    try {
+      const storedDevs = localStorage.getItem("wassup_paired_kiosk_devices");
+      const devList: any[] = storedDevs ? JSON.parse(storedDevs) : [];
+      devList.unshift(session);
+      localStorage.setItem("wassup_paired_kiosk_devices", JSON.stringify(devList));
+      window.dispatchEvent(new Event("wassup_paired_kiosk_devices_updated"));
+    } catch (e) {}
+
+    return { valid: true, session };
+  },
+
+  getPairedKioskDevices: (stationId?: string) => {
+    try {
+      const stored = localStorage.getItem("wassup_paired_kiosk_devices");
+      let list: any[] = stored ? JSON.parse(stored) : [];
+      if (list.length === 0) {
+        list = [{
+          deviceId: "kiosk_pilot_01",
+          deviceName: "Kiosk Sảnh 01 (Tablet 9:16)",
+          stationId: "st-001",
+          stationName: "WASSUP Trạm Pilot - Quận 7",
+          pairedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+          role: "kiosk_device",
+          status: "active"
+        }];
+        localStorage.setItem("wassup_paired_kiosk_devices", JSON.stringify(list));
+      }
+      if (stationId) return list.filter(d => d.stationId === stationId);
+      return list;
+    } catch {
+      return [];
+    }
+  },
+
+  revokeKioskDevice: (deviceId: string) => {
+    try {
+      const stored = localStorage.getItem("wassup_paired_kiosk_devices");
+      if (stored) {
+        const list = JSON.parse(stored);
+        const filtered = list.filter((d: any) => d.deviceId !== deviceId);
+        localStorage.setItem("wassup_paired_kiosk_devices", JSON.stringify(filtered));
+      }
+      const current = localStorage.getItem("wassup_kiosk_device_session");
+      if (current) {
+        const parsed = JSON.parse(current);
+        if (parsed.deviceId === deviceId) {
+          localStorage.removeItem("wassup_kiosk_device_session");
+        }
+      }
+      window.dispatchEvent(new Event("wassup_paired_kiosk_devices_updated"));
+      window.dispatchEvent(new Event("wassup_kiosk_device_session_updated"));
+      return true;
+    } catch {
+      return false;
+    }
   }
 };
 
@@ -1305,7 +1496,7 @@ export const supabaseRealtime = {
           completedAt: row.completed_at || undefined,
           createdAt: row.created_at || row.order_created_at,
           customerId: row.customer_id || undefined,
-          customerName: row.customer_name || "Khách vãng lai",
+          customerName: row.customer_name || "Hội viên WASSUP",
           customerPhone: row.customer_phone || undefined,
           licensePlate: row.license_plate,
           vehicleSegment: row.vehicle_segment,

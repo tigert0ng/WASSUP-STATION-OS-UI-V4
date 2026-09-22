@@ -43,12 +43,14 @@ import {
   Building2,
   History,
   Truck,
+  Sliders,
+  Bot,
   ClipboardList,
   BookOpen,
   KeyRound
 } from "lucide-react";
 
-import { HashRouter, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, useNavigate, useLocation } from "react-router-dom";
 
 import {
   simActions,
@@ -60,6 +62,7 @@ import { OrderStatusView, WoStatus } from "./types/workOrder.types";
 import { Booth, Customer, Service } from "./types/order.types";
 import KioskCheckoutView from "./components/kiosk/KioskCheckoutView";
 import { Voucher } from "./types/voucher.types";
+import WassupLogo from "./components/common/WassupLogo";
 
 // Import Admin Modules
 import { SERVICES_CATALOG, ADDONS_CATALOG } from "./lib/services";
@@ -79,6 +82,7 @@ import LoginModule from "./components/admin/LoginModule";
 import HrModule from "./components/admin/HrModule";
 import AuditLog from "./components/admin/settings/AuditLog";
 import ChangePasswordModal from "./components/common/ChangePasswordModal";
+import TvQueueDisplayView from "./components/tv/TvQueueDisplayView";
 
 const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   master_admin: ["dashboard", "reception", "ktv", "pos", "finance", "crm", "services", "inventory", "monitor", "staff", "settings", "hr"],
@@ -103,9 +107,9 @@ const ADMIN_MODULES = [
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <AppContent />
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
@@ -196,6 +200,16 @@ function AppContent() {
     }
   }, [location.pathname, navigate]);
 
+  // Support legacy hash links seamlessly (e.g. #/kiosk or #/admin)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hashPath = window.location.hash.replace(/^#/, "");
+      if (hashPath.startsWith("/")) {
+        navigate(hashPath, { replace: true });
+      }
+    }
+  }, [navigate]);
+
   // Keep active sub-module safe and authorized for current user's role
   useEffect(() => {
     if (currentUser && activeScreen === "admin") {
@@ -283,6 +297,21 @@ function AppContent() {
       unsubCustomerGroups.unsubscribe();
     };
   }, []);
+
+  // STANDALONE ROUTE: KIOSK SẢNH (/kiosk) - 100vh Fullscreen without Admin Shell
+  if (activeScreen === "kiosk") {
+    return (
+      <div 
+        id="kiosk-standalone-root" 
+        className="h-screen h-[100dvh] w-screen bg-stone-100 flex flex-col justify-center items-center overflow-hidden select-none"
+      >
+        <NotificationManager />
+        <div className="w-full h-full">
+          <KioskCheckoutView />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-warm-white text-matte-black font-sans antialiased selection:bg-brand-green selection:text-matte-black flex flex-col overflow-hidden">
@@ -450,7 +479,7 @@ function AppContent() {
                               <div key={`${m.id}-${mIdx}`} className="space-y-1">
                                 <button
                                   onClick={() => {
-                                    navigate("/admin/system/stations");
+                                    navigate("/admin/system/general");
                                     setIsMobileDrawerOpen(false);
                                   }}
                                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
@@ -475,17 +504,59 @@ function AppContent() {
                                     >
                                       <button
                                         onClick={() => {
+                                          navigate("/admin/system/general");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname === "/admin/system" || location.pathname.includes("/system/general") || location.pathname.includes("/system/config")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Sliders className="h-3.5 w-3.5" />
+                                        <span>Thông tin chung</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
                                           navigate("/admin/system/stations");
                                           setIsMobileDrawerOpen(false);
                                         }}
                                         className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                          location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                          location.pathname.includes("/system/stations")
                                             ? "text-brand-green font-extrabold bg-[#262626]"
                                             : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
                                         }`}
                                       >
                                         <Building2 className="h-3.5 w-3.5" />
                                         <span>Cài đặt trạm</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/system/users");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("/system/users") || location.pathname.includes("/system/staff")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Users className="h-3.5 w-3.5" />
+                                        <span>User & Phân quyền</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigate("/admin/system/integrations");
+                                          setIsMobileDrawerOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                          location.pathname.includes("/system/integrations")
+                                            ? "text-brand-green font-extrabold bg-[#262626]"
+                                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                        }`}
+                                      >
+                                        <Bot className="h-3.5 w-3.5" />
+                                        <span>Tích hợp thiết bị</span>
                                       </button>
                                       <button
                                         onClick={() => {
@@ -587,11 +658,7 @@ function AppContent() {
           </button>
           <button
             onClick={() => navigate("/kiosk")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-display font-extrabold tracking-wider transition-all duration-300 cursor-pointer border-0 ${
-              activeScreen === "kiosk"
-                ? "bg-brand-green text-matte-black shadow-md shadow-brand-green/10"
-                : "text-gray-400 hover:text-white hover:bg-[#333333]"
-            }`}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-display font-extrabold tracking-wider transition-all duration-300 cursor-pointer border-0 text-gray-400 hover:text-white hover:bg-[#333333]"
           >
             <Car className="h-4 w-4" />
             M0: KIOSK SẢNH
@@ -791,7 +858,7 @@ function AppContent() {
                         return (
                           <div key={m.id} className="space-y-1">
                             <button
-                              onClick={() => navigate("/admin/system/stations")}
+                              onClick={() => navigate("/admin/system/general")}
                               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer border-0 ${
                                 isActive
                                   ? "bg-brand-green text-matte-black font-extrabold"
@@ -818,15 +885,48 @@ function AppContent() {
                                   className="ml-5 pl-2 border-l border-[#333333] space-y-1 pt-0.5 font-sans overflow-hidden"
                                 >
                                   <button
+                                    onClick={() => navigate("/admin/system/general")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname === "/admin/system" || location.pathname.includes("/system/general") || location.pathname.includes("/system/config")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Sliders className="h-3.5 w-3.5" />
+                                    <span>Thông tin chung</span>
+                                  </button>
+                                  <button
                                     onClick={() => navigate("/admin/system/stations")}
                                     className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
-                                      location.pathname.startsWith("/admin/system") && !location.pathname.includes("audit-log")
+                                      location.pathname.includes("/system/stations")
                                         ? "text-brand-green font-extrabold bg-[#262626]"
                                         : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
                                     }`}
                                   >
                                     <Building2 className="h-3.5 w-3.5" />
                                     <span>Cài đặt trạm</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/system/users")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("/system/users") || location.pathname.includes("/system/staff")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Users className="h-3.5 w-3.5" />
+                                    <span>User & Phân quyền</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate("/admin/system/integrations")}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer border-0 ${
+                                      location.pathname.includes("/system/integrations")
+                                        ? "text-brand-green font-extrabold bg-[#262626]"
+                                        : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                                    }`}
+                                  >
+                                    <Bot className="h-3.5 w-3.5" />
+                                    <span>Tích hợp thiết bị</span>
                                   </button>
                                   <button
                                     onClick={() => navigate("/admin/system/audit-log")}
@@ -1027,18 +1127,7 @@ function AppContent() {
                   </motion.div>
                 )}
 
-                {activeScreen === "kiosk" && (
-                  <motion.div
-                    key="kiosk"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full max-w-full"
-                  >
-                    <KioskCheckoutView />
-                  </motion.div>
-                )}
+
 
                 {activeScreen === "tv" && (
                   <motion.div
@@ -1750,223 +1839,4 @@ function AdminDashboardView({ orders, revenueStats, booths, staff, vouchers }: A
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 // VIEW: LARGE SCREEN TV QUEUE DISPLAY
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-interface TvQueueDisplayViewProps {
-  orders: OrderStatusView[];
-  booths: Booth[];
-}
-
-function TvQueueDisplayView({ orders, booths }: TvQueueDisplayViewProps) {
-  // Safe filtering
-  const waitingOrders = orders.filter(o => o.status === 'queued');
-  const ongoingWos = orders.filter(o => o.status !== 'done' && o.status !== 'queued');
-
-  return (
-    <div className="space-y-6">
-      {/* TV Header */}
-      <div className="bg-white border border-[#e5e5e5] p-6 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-brand-green" />
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 bg-brand-green-light rounded-xl flex items-center justify-center text-forest-green border border-brand-green/20">
-            <Tv className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black font-display text-matte-black tracking-tight uppercase">
-              BẢNG HIỂN THỊ ĐIỀU PHỐI TRẠNG THÁI KHÁCH HÀNG
-            </h1>
-            <p className="text-mid-gray font-sans text-xs uppercase tracking-wider font-extrabold mt-0.5">
-              WASSUP BROADCAST NETWORK · CẬP NHẬT TRỰC TUYẾN
-            </p>
-          </div>
-        </div>
-        <div className="text-right flex flex-col items-end gap-1">
-          <span className="font-display text-xs font-black text-forest-green bg-brand-green-light px-3 py-1 rounded-full border border-brand-green/20 flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="h-2 w-2 rounded-full bg-brand-green animate-pulse" /> Realtime Connected
-          </span>
-          <span className="font-sans text-[10px] text-mid-gray uppercase font-medium">Tự động làm mới theo thời gian thực</span>
-        </div>
-      </div>
-
-      {/* Main split grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Waiting queue display (HÀNG ĐỢI TIẾP NHẬN) */}
-        <div className="bg-white border border-[#e5e5e5] p-6 rounded-3xl space-y-4 shadow-sm">
-          <h2 className="text-sm font-black font-display tracking-wider text-matte-black uppercase border-b border-[#e5e5e5] pb-3 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-forest-green" /> HÀNG ĐỢI TIẾP NHẬN
-          </h2>
-
-          <div className="space-y-3.5">
-            <AnimatePresence mode="popLayout">
-              {waitingOrders.length === 0 ? (
-                <motion.div
-                  key="empty-waiting"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.3 }}
-                  className="h-[300px] flex flex-col items-center justify-center text-center p-6"
-                >
-                  <Car className="h-10 w-10 text-[#d5d5d5] mb-3" />
-                  <span className="text-xs font-extrabold text-matte-black font-display uppercase tracking-wider">Không có xe đợi gán</span>
-                  <span className="text-[10px] text-mid-gray mt-1 max-w-[200px] leading-relaxed font-sans">
-                    Toàn bộ xe đã được gán vào buồng sản xuất hoặc đã xử lý xong!
-                  </span>
-                </motion.div>
-              ) : (
-                waitingOrders.map((ord, idx) => (
-                  <motion.div
-                    key={ord.id ? `${ord.id}-${idx}` : `wait-ord-${idx}`}
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                    className="bg-warm-white border border-[#e5e5e5] rounded-2xl p-4.5 flex items-center justify-between font-sans shadow-sm hover:border-[#bcbcbc] transition-all"
-                  >
-                    <div className="space-y-1">
-                      <span className="text-lg font-black text-matte-black tracking-widest font-display">
-                        {ord.licensePlate}
-                      </span>
-                      <span className="text-[10px] text-mid-gray block uppercase font-extrabold font-sans">
-                        Gói: {ord.packageCode} · {ord.vehicleSegment.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="inline-flex px-2.5 py-1 rounded-full bg-brand-green-light text-forest-green border border-brand-green/20 text-[10px] font-black uppercase tracking-wider animate-pulse">
-                        Chờ gán bay
-                      </span>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Active Booth Grid (TRẠNG THÁI CÁC BUỒNG HOẠT ĐỘNG) */}
-        <div className="lg:col-span-2 bg-white border border-[#e5e5e5] p-6 rounded-3xl space-y-4 shadow-sm">
-          <h2 className="text-sm font-black font-display tracking-wider text-matte-black uppercase border-b border-[#e5e5e5] pb-3 flex items-center gap-2">
-            <Activity className="h-5 w-5 text-forest-green" /> TRẠNG THÁI CÁC BUỒNG SẢN XUẤT (ACTIVE BAYS)
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {booths.map((booth, idx) => {
-              const matchedWo = ongoingWos.find(w => w.boothId === booth.id);
-
-              return (
-                <motion.div
-                  key={booth.id ? `${booth.id}-${idx}` : `booth-${idx}`}
-                  layout
-                  className={`border rounded-2xl p-5 space-y-4 relative overflow-hidden transition-colors duration-500 min-h-[260px] flex flex-col justify-between ${
-                    matchedWo
-                      ? "bg-white border-brand-green border-2 shadow-sm"
-                      : "bg-warm-white border-[#e5e5e5] border-dashed text-mid-gray"
-                  }`}
-                >
-                  <div className="flex items-center justify-between border-b border-[#e5e5e5] pb-2.5">
-                    <span className="text-xs font-black text-matte-black uppercase font-display tracking-wider">
-                      {booth.name}
-                    </span>
-                    {matchedWo ? (
-                      <span className="flex items-center gap-1 text-[10px] font-extrabold text-forest-green uppercase font-sans">
-                        <span className="h-2 w-2 rounded-full bg-brand-green animate-ping inline-block mr-1" />
-                        Đang xử lý
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-extrabold text-mid-gray uppercase font-sans">
-                        Sẵn sàng
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 flex flex-col justify-center">
-                    <AnimatePresence mode="wait">
-                      {matchedWo ? (
-                        <motion.div
-                          key={`active-${matchedWo.id}`}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-4 w-full"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <span className="text-[9px] text-mid-gray font-extrabold uppercase font-sans tracking-wider block">BIỂN SỐ XE</span>
-                              <span className="text-xl font-black text-matte-black tracking-widest font-display block mt-0.5 animate-pulse">
-                                {matchedWo.licensePlate}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[9px] text-mid-gray font-extrabold uppercase font-sans tracking-wider block">KTV CHUYÊN TRÁCH</span>
-                              <span className="text-xs text-matte-black font-extrabold font-sans block truncate max-w-[140px] mt-0.5">
-                                {matchedWo.technicianName || "Chưa phân"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between text-[11px] items-center bg-warm-white px-3 py-2 rounded-xl border border-[#e5e5e5]">
-                            <span className="text-mid-gray font-sans font-medium">Quy trình hiện tại:</span>
-                            <span className="text-forest-green font-black uppercase text-[11px] tracking-wider font-sans">
-                              {matchedWo.status === 'assigned' ? 'Đã gán buồng' : 
-                               matchedWo.status === 'in_progress' ? 'Đang rửa gầm & khoang' : 
-                               matchedWo.status === 'quality_check' ? 'QC Kiểm định chất lượng' : 
-                               matchedWo.status === 'rework' ? 'Rửa lại (Rework)' : 
-                               matchedWo.status || 'Chờ tiếp nhận'}
-                            </span>
-                          </div>
-
-                          {/* Bar indicator */}
-                          <div className="space-y-1">
-                            <div className="w-full h-2.5 bg-[#f0f0f0] rounded-full overflow-hidden">
-                              <motion.div 
-                                className="h-full bg-brand-green rounded-full" 
-                                initial={{ width: 0 }}
-                                animate={{ 
-                                  width: matchedWo.status === 'assigned' 
-                                    ? '25%' 
-                                    : matchedWo.status === 'in_progress' 
-                                      ? '60%' 
-                                      : matchedWo.status === 'quality_check' 
-                                        ? '90%' 
-                                        : '0%' 
-                                }}
-                                transition={{ type: "spring", stiffness: 80, damping: 15 }}
-                              />
-                            </div>
-                            <div className="flex justify-between text-[8px] font-extrabold text-mid-gray font-sans uppercase">
-                              <span>Bắt đầu</span>
-                              <span>Đang làm</span>
-                              <span>QC</span>
-                              <span>Xong</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="idle"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.3 }}
-                          className="flex flex-col items-center justify-center text-center py-4 w-full"
-                        >
-                          <Car className="h-8 w-8 text-[#d5d5d5] mb-2" />
-                          <span className="text-[11px] font-black font-display text-mid-gray uppercase tracking-widest">
-                            Bay trống (IDLE)
-                          </span>
-                          <span className="text-[9px] text-mid-gray mt-1 max-w-[150px] font-sans">
-                            Có thể phân xe mới vào để thực hiện rửa ngay lập tức.
-                          </span>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// TvQueueDisplayView is imported from ./components/tv/TvQueueDisplayView
