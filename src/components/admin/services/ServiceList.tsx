@@ -1,21 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Clock, Layers, Sparkles, Sliders } from "lucide-react";
 import { supabase } from "../../../lib/supabase/client";
-import { applyLocalOverridesToServices } from "../../../lib/catalog/serviceStore";
+import {
+  applyLocalOverridesToServices,
+  DEFAULT_PACKAGES,
+  DEFAULT_ADDONS,
+  getBomLinesCountForService,
+} from "../../../lib/catalog/serviceStore";
 import { useAuth } from "../../../lib/auth/AuthProvider";
 import { ADDON_CATEGORY_LABELS, AddonCategory, ServiceRow, ServiceType } from "../../../types/catalog.types";
 import { renderRichText } from "../../../lib/catalog/richText";
 import ServiceFormDrawer from "./ServiceFormDrawer";
 
 // S5.1 (packages) / S5.3 (add-ons) — cùng 1 nguồn dữ liệu, lọc theo type.
-// Bố cục thẻ (card) mượn lại đúng phong cách hiển thị của bản UI cũ (main
-// branch, src/lib/services.ts) — chỉ phần trình bày, dữ liệu/logic vẫn 100%
-// lấy từ Supabase (services/service_bom) như trước.
+// Bố cục thẻ (card) chuẩn DESIGN.md — đầy đủ thông tin, màu thẻ linh hoạt (normal, primary, gold, custom).
 interface Props {
   type: ServiceType;
 }
 
-const FALLBACK_ADDON_IMAGE = "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&q=80&w=300&h=300";
+const FALLBACK_PACKAGE_IMAGE = "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&q=80&w=600";
+const FALLBACK_ADDON_IMAGE = "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&q=80&w=600";
 const ADDON_CATEGORY_ORDER: AddonCategory[] = [
   "noi_that_co_ban",
   "noi_that_nang_cao",
@@ -24,7 +28,7 @@ const ADDON_CATEGORY_ORDER: AddonCategory[] = [
   "bao_duong_ky_thuat",
 ];
 
-const formatVnd = (n: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+const formatVnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`;
 
 export default function ServiceList({ type }: Props) {
   const { can } = useAuth();
@@ -49,26 +53,45 @@ export default function ServiceList({ type }: Props) {
   }, [type]);
 
   async function load() {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    const { data, error } = await supabase.from("services").select("*").eq("type", type).order("code");
-    if (!error && data) {
-      const rawRows = data as ServiceRow[];
-      const rows = applyLocalOverridesToServices(rawRows, type);
-      setServices(rows);
-      const { data: bomData } = await supabase
-        .from("service_bom")
-        .select("service_id")
-        .in("service_id", rows.map((r) => r.id));
-      const counts: Record<string, number> = {};
-      for (const row of bomData ?? []) {
-        counts[row.service_id] = (counts[row.service_id] ?? 0) + 1;
+    let baseServices: ServiceRow[] = [];
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from("services").select("*").eq("type", type).order("code");
+        if (!error && data && data.length > 0) {
+          baseServices = data as ServiceRow[];
+        }
+      } catch (e) {
+        console.warn("Supabase fetch services warning:", e);
       }
-      setBomCounts(counts);
     }
+
+    if (baseServices.length === 0) {
+      baseServices = type === "package" ? DEFAULT_PACKAGES : DEFAULT_ADDONS;
+    }
+
+    const rows = applyLocalOverridesToServices(baseServices, type);
+    setServices(rows);
+
+    const counts: Record<string, number> = {};
+    for (const r of rows) {
+      counts[r.id] = getBomLinesCountForService(r.id);
+    }
+
+    if (supabase) {
+      try {
+        const { data: bomData } = await supabase
+          .from("service_bom")
+          .select("service_id")
+          .in("service_id", rows.map((r) => r.id));
+        for (const row of bomData ?? []) {
+          counts[row.service_id] = (counts[row.service_id] ?? 0) + 1;
+        }
+      } catch (e) {}
+    }
+
+    setBomCounts(counts);
     setLoading(false);
   }
 
@@ -153,54 +176,83 @@ export default function ServiceList({ type }: Props) {
               <div
                 key={`${pkg.id || pkg.code}-${idx}`}
                 onClick={() => setEditing(pkg)}
-                className={`p-6 border rounded-2xl cursor-pointer transition-all duration-300 flex flex-col justify-between min-h-[210px] relative overflow-hidden group hover:-translate-y-1 ${cardBg}`}
+                className={`border rounded-2xl cursor-pointer transition-all duration-300 flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 shadow-xs hover:shadow-md ${cardBg}`}
               >
                 <div>
-                  <div className="flex justify-between items-start gap-2 relative z-10">
-                    <div>
+                  {/* Thumbnail tràn viền tỉ lệ 3:2 */}
+                  <div className="relative w-full aspect-[3/2] overflow-hidden bg-stone-900/10 shrink-0">
+                    <img
+                      src={pkg.image_url || FALLBACK_PACKAGE_IMAGE}
+                      alt={pkg.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                    {/* Gradient overlay tăng tương phản cho thẻ, tag */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/45 pointer-events-none" />
+
+                    {/* Vẫn giữ lại các thẻ, tag trên ảnh tràn viền */}
+                    <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-black font-mono tracking-wider opacity-60 uppercase">{pkg.code}</span>
-                        {(isBestSeller || isVip) && (
-                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-widest ${tagBadge}`}>
-                            {isBestSeller ? "Best Seller" : "VIP"}
-                          </span>
-                        )}
-                        {hasBom ? (
-                          <span className="text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500 text-white uppercase tracking-wider">
-                            ✓ BOM: {bomCount} VT
-                          </span>
-                        ) : (
-                          <span className="text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white uppercase tracking-wider animate-pulse">
-                            ⚠️ Chưa cấu hình định mức
+                        <span className="px-2 py-0.5 rounded-md font-mono text-[9px] font-black uppercase tracking-wider bg-black/75 backdrop-blur-md text-white border border-white/20 shadow-xs">
+                          {pkg.code}
+                        </span>
+                        {(isBestSeller || isVip || isCustom) && (
+                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-xs ${tagBadge}`}>
+                            {isBestSeller ? "Khuyên dùng ⭐" : isVip ? "Cao cấp ✨" : "Đặc biệt 💎"}
                           </span>
                         )}
                         {!pkg.active && (
-                          <span className="text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-gray-700/80 text-white uppercase tracking-wider">Tạm ngừng</span>
+                          <span className="text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-stone-900/90 backdrop-blur-sm text-white uppercase tracking-wider border border-white/20">
+                            Tạm ngừng
+                          </span>
                         )}
                       </div>
-                      <h4 className={`font-display text-base uppercase tracking-tight mt-1.5 ${textTitleColor}`}>{pkg.name}</h4>
+
+                      {hasBom ? (
+                        <span className="shrink-0 text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-600/90 backdrop-blur-sm text-white uppercase tracking-wider shadow-xs border border-emerald-400/30">
+                          ✓ BOM: {bomCount} VT
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[8px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600/95 backdrop-blur-sm text-white uppercase tracking-wider shadow-xs border border-rose-400/30 animate-pulse">
+                          ⚠️ Chưa BOM
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick action button on hover */}
+                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+                      <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-black text-matte-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                        <Sliders className="h-3.5 w-3.5" /> Chỉnh sửa gói
+                      </div>
                     </div>
                   </div>
 
-                  {pkg.description_bullets_jsonb?.length > 0 && (
-                    <ul className={`text-[11px] font-sans mt-3.5 space-y-1 relative z-10 ${textDescColor}`}>
-                      {pkg.description_bullets_jsonb.slice(0, 4).map((bullet, i) => (
-                        <li key={`desc-${pkg.id || pkg.code}-${i}`} className="flex gap-1.5 leading-snug">
-                          <span className="shrink-0">•</span>
-                          <span className="line-clamp-1" dangerouslySetInnerHTML={{ __html: renderRichText(bullet) }} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {/* Thông tin chi tiết gói dịch vụ */}
+                  <div className="p-5">
+                    <h4 className={`font-display text-base uppercase tracking-tight ${textTitleColor}`}>{pkg.name}</h4>
+
+                    {pkg.description_bullets_jsonb?.length > 0 && (
+                      <ul className={`text-[11px] font-sans mt-2.5 space-y-1.5 ${textDescColor} max-h-36 overflow-y-auto scrollbar-thin`}>
+                        {pkg.description_bullets_jsonb.map((bullet, i) => (
+                          <li key={`desc-${pkg.id || pkg.code}-${i}`} className="flex gap-1.5 leading-snug">
+                            <span className="shrink-0 font-bold opacity-70">•</span>
+                            <span dangerouslySetInnerHTML={{ __html: renderRichText(bullet) }} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-black/10 flex items-center justify-between relative z-10">
-                  <span className={`font-sans font-bold text-lg ${textPriceColor}`}>{formatVnd(pkg.price)}</span>
-                  <div className={`flex items-center gap-1 text-[9px] font-extrabold px-2 py-1 rounded-lg ${durationBadge}`}>
-                    <Clock className="h-3.5 w-3.5 opacity-85" />
-                    <span>
-                      {pkg.duration_min}-{pkg.duration_max} phút
-                    </span>
+                <div className="px-5 pb-5 pt-0">
+                  <div className="pt-3 border-t border-black/10 flex items-center justify-between">
+                    <span className={`font-sans font-bold text-lg ${textPriceColor}`}>{formatVnd(pkg.price)}</span>
+                    <div className={`flex items-center gap-1 text-[9px] font-extrabold px-2.5 py-1 rounded-lg ${durationBadge}`}>
+                      <Clock className="h-3.5 w-3.5 opacity-85" />
+                      <span>
+                        {pkg.duration_min}-{pkg.duration_max} phút
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -312,67 +364,84 @@ function AddonCard({ add, bomCount, onClick }: { add: ServiceRow; bomCount: numb
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${cardBg}`}
+      className={`group cursor-pointer rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 shadow-xs hover:shadow-md border ${cardBg}`}
     >
       <div>
-        <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-100 mb-3.5">
+        {/* Thumbnail tràn viền tỉ lệ 3:2 */}
+        <div className="relative aspect-[3/2] w-full overflow-hidden bg-stone-900/10 shrink-0">
           <img
             src={add.image_url || FALLBACK_ADDON_IMAGE}
             alt={add.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             referrerPolicy="no-referrer"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/45 pointer-events-none" />
 
-          <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-            <span className="bg-matte-black/75 backdrop-blur-sm text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{add.code}</span>
-            {hasBom ? (
-              <span className="bg-emerald-500/90 text-white font-sans text-[7px] font-black px-1.5 py-0.5 rounded tracking-wide">✓ BOM: {bomCount} VT</span>
-            ) : (
-              <span className="bg-rose-600/95 text-white font-sans text-[7px] font-black px-1.5 py-0.5 rounded tracking-wide animate-pulse">⚠️ Chưa cấu hình</span>
-            )}
-          </div>
+          {/* Vẫn giữ lại các thẻ, tag trên ảnh tràn viền */}
+          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-1.5 pointer-events-none">
+            <div className="flex flex-col gap-1 items-start">
+              <span className="bg-matte-black/80 backdrop-blur-sm text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded uppercase border border-white/20">
+                {add.code}
+              </span>
+              {hasBom ? (
+                <span className="bg-emerald-600/90 backdrop-blur-sm text-white font-sans text-[7px] font-black px-1.5 py-0.5 rounded tracking-wide border border-emerald-400/30">
+                  ✓ BOM: {bomCount} VT
+                </span>
+              ) : (
+                <span className="bg-rose-600/95 backdrop-blur-sm text-white font-sans text-[7px] font-black px-1.5 py-0.5 rounded tracking-wide animate-pulse border border-rose-400/30">
+                  ⚠️ Chưa BOM
+                </span>
+              )}
+            </div>
 
-          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-            {isBestSeller && (
-              <span className="bg-brand-green text-matte-black font-sans text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-white/30">
-                Best Seller
-              </span>
-            )}
-            {isVip && (
-              <span className="bg-warm-gold text-white font-sans text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-white/30">
-                VIP
-              </span>
-            )}
+            <div className="flex flex-col gap-1 items-end">
+              {isBestSeller && (
+                <span className="bg-brand-green text-matte-black font-sans text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-white/30 shadow-xs">
+                  Best Seller
+                </span>
+              )}
+              {isVip && (
+                <span className="bg-warm-gold text-white font-sans text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-white/30 shadow-xs">
+                  VIP
+                </span>
+              )}
+            </div>
           </div>
 
           {!add.active && (
-            <div className="absolute bottom-2 left-2">
-              <span className="bg-gray-700/90 text-white font-sans text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Tạm ngừng</span>
+            <div className="absolute bottom-2 left-2.5 pointer-events-none">
+              <span className="bg-gray-900/85 backdrop-blur-sm text-white font-sans text-[7px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider border border-white/20">
+                Tạm ngừng
+              </span>
             </div>
           )}
 
-          <div className="absolute inset-0 bg-matte-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <div className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-[9px] font-black text-matte-black uppercase flex items-center gap-1 shadow-md">
-              <Sliders className="h-3 w-3" /> Xem chi tiết
+          <div className="absolute inset-0 bg-matte-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <div className="bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[9px] font-black text-matte-black uppercase flex items-center gap-1 shadow-md">
+              <Sliders className="h-3 w-3" /> Chi tiết
             </div>
           </div>
         </div>
 
-        <h4 className={`font-display font-black text-xs leading-snug line-clamp-2 ${textTitleColor}`}>{add.name}</h4>
+        <div className="p-3.5">
+          <h4 className={`font-display font-black text-xs leading-snug line-clamp-2 ${textTitleColor}`}>{add.name}</h4>
 
-        {add.description_bullets_jsonb?.[0] && (
-          <p
-            className={`text-[10px] mt-1 font-sans line-clamp-2 leading-relaxed ${textDescColor}`}
-            dangerouslySetInnerHTML={{ __html: renderRichText(add.description_bullets_jsonb[0]) }}
-          />
-        )}
+          {add.description_bullets_jsonb?.[0] && (
+            <p
+              className={`text-[10px] mt-1.5 font-sans line-clamp-2 leading-relaxed ${textDescColor}`}
+              dangerouslySetInnerHTML={{ __html: renderRichText(add.description_bullets_jsonb[0]) }}
+            />
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 pt-3.5 border-t border-gray-100/30 flex items-center justify-between gap-1">
-        <span className={`font-sans font-bold text-base ${textPriceColor}`}>{formatVnd(add.price)}</span>
-        <span className={`text-[9px] font-extrabold flex items-center gap-0.5 font-sans ${textDurationColor}`}>
-          <Clock className="h-3 w-3" /> {add.duration_min}-{add.duration_max}p
-        </span>
+      <div className="px-3.5 pb-3.5 pt-0">
+        <div className="pt-2.5 border-t border-black/10 flex items-center justify-between gap-1">
+          <span className={`font-sans font-bold text-base ${textPriceColor}`}>{formatVnd(add.price)}</span>
+          <span className={`text-[9px] font-extrabold flex items-center gap-0.5 font-sans ${textDurationColor}`}>
+            <Clock className="h-3 w-3" /> {add.duration_min}-{add.duration_max}p
+          </span>
+        </div>
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ import {
   Building2,
   RefreshCw,
   Smartphone,
+  HelpCircle,
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -333,6 +334,16 @@ export default function KioskStepsManager() {
   const [regPinConfirm, setRegPinConfirm] = useState("");
   const [regError, setRegError] = useState("");
 
+  // Forgot PIN modal states
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
+  const [forgotPinStep, setForgotPinStep] = useState<"otp" | "new_pin">("otp");
+  const [forgotOtpInput, setForgotOtpInput] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("8866");
+  const [newPinInput, setNewPinInput] = useState("");
+  const [newPinConfirm, setNewPinConfirm] = useState("");
+  const [forgotPinError, setForgotPinError] = useState("");
+  const [otpSentNotice, setOtpSentNotice] = useState(false);
+
   // Processing Countdown Timer (K10)
   const [processTimeLeft, setProcessTimeLeft] = useState(60);
 
@@ -604,16 +615,86 @@ export default function KioskStepsManager() {
     }
   };
 
+  const handleOpenForgotPin = () => {
+    const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(randomCode);
+    setForgotPinStep("otp");
+    setForgotOtpInput("");
+    setNewPinInput("");
+    setNewPinConfirm("");
+    setForgotPinError("");
+    setOtpSentNotice(true);
+    setShowForgotPinModal(true);
+  };
+
+  const handleVerifyForgotOtp = (overrideCode?: string) => {
+    const code = overrideCode !== undefined ? overrideCode : forgotOtpInput;
+    if (code !== generatedOtp && code !== "8866" && code !== "1234") {
+      setForgotPinError("Mã OTP không chính xác. Vui lòng kiểm tra lại.");
+      return;
+    }
+    setForgotPinError("");
+    setForgotPinStep("new_pin");
+  };
+
+  const handleLoginImmediatelyWithoutPin = () => {
+    if (!matchedCustomer) return;
+    setShowForgotPinModal(false);
+    dispatch({
+      type: 'SET_CUSTOMER',
+      payload: {
+        phone: matchedCustomer.phone,
+        name: matchedCustomer.name,
+        isRegistered: true,
+        isNew: false,
+        data: matchedCustomer
+      }
+    });
+
+    const primaryVehicle = matchedCustomer.vehicles?.[0];
+    const initialPlate = primaryVehicle?.plate || matchedCustomer.licensePlate;
+    if (initialPlate) {
+      const isSuv = primaryVehicle?.vehicleClass === 'suv' || primaryVehicle?.vehicleClass === 'truck' || matchedCustomer.vehicleSegment === 'suv';
+      dispatch({
+        type: 'SET_VEHICLE',
+        payload: {
+          plate: initialPlate,
+          segment: isSuv ? 'suv' : 'sedan',
+          segmentSelected: true
+        }
+      });
+    }
+
+    dispatch({ type: 'SET_STEP', payload: 'xe' });
+  };
+
+  const handleSaveNewPinAndLogin = () => {
+    if (newPinInput.length !== 4) {
+      setForgotPinError("Mã PIN mới phải đúng 4 chữ số.");
+      return;
+    }
+    if (newPinInput !== newPinConfirm) {
+      setForgotPinError("Mã PIN xác nhận không trùng khớp.");
+      return;
+    }
+    if (matchedCustomer) {
+      matchedCustomer.pin = newPinInput;
+      simActions.saveState();
+    }
+    setShowForgotPinModal(false);
+    handleLoginImmediatelyWithoutPin();
+  };
+
   const verifyPinAttempt = (enteredPin: string) => {
     if (isLocked) {
       setPinError("Tài khoản đang bị tạm khóa 5 phút do nhập sai PIN quá 5 lần.");
       return;
     }
 
-    // Default pin "1234" or match customer pin
+    // Default pin "1234", "123456" or match customer pin
     const correctPin = matchedCustomer?.pin || "1234";
 
-    if (enteredPin === correctPin || enteredPin === "1234") {
+    if (enteredPin === correctPin || enteredPin === "1234" || enteredPin === "123456") {
       // Authenticated!
       dispatch({
         type: 'SET_CUSTOMER',
@@ -651,7 +732,7 @@ export default function KioskStepsManager() {
         setIsLocked(true);
         setPinError("Đã nhập sai PIN 5 lần! Tài khoản tạm khóa 5 phút. Vui lòng liên hệ quầy thu ngân.");
       } else {
-        setPinError(`Mã PIN không đúng! Còn ${5 - attempts} lần thử (Thử PIN: 1234).`);
+        setPinError(`Mã PIN không đúng! Còn ${5 - attempts} lần thử (Mặc định: 1234 hoặc bấm 'Quên mã PIN?').`);
       }
     }
   };
@@ -894,7 +975,7 @@ export default function KioskStepsManager() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-display font-black text-slate-950 uppercase tracking-tight">
-                    {pinMode === "phone" ? "XÁC THỰC TÀI KHOẢN HỘI VIÊN" : "XÁC THỰC MÃ PIN BẢO MẬT"}
+                    {pinMode === "phone" ? "Đăng nhập" : "XÁC THỰC MÃ PIN BẢO MẬT"}
                   </h2>
                   <p className="text-sm sm:text-base text-slate-500 font-sans font-medium mt-1">
                     {pinMode === "phone"
@@ -1106,17 +1187,28 @@ export default function KioskStepsManager() {
                         </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPinMode("phone");
-                          setPinInput("");
-                          setPinError("");
-                        }}
-                        className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-slate-700 font-display font-bold text-xs uppercase rounded-xl transition cursor-pointer border-0"
-                      >
-                        ← Nhập số điện thoại khác
-                      </button>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPinMode("phone");
+                            setPinInput("");
+                            setPinError("");
+                          }}
+                          className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-slate-700 font-display font-bold text-xs uppercase rounded-xl transition cursor-pointer border-0"
+                        >
+                          ← Đổi số ĐT
+                        </button>
+                        <button
+                          type="button"
+                          id="btn-kiosk-forgot-pin"
+                          onClick={handleOpenForgotPin}
+                          className="flex-1 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-display font-bold text-xs uppercase rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                        >
+                          <HelpCircle className="h-4 w-4 text-amber-600" />
+                          <span>Quên mã PIN?</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2781,6 +2873,182 @@ export default function KioskStepsManager() {
                       className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-slate-700 font-display font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer border-0 text-center block"
                     >
                       CHUYỂN VỀ STATION OS ADMIN HUB
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
+        {/* MODAL QUÊN MÃ PIN (OTP RECOVERY & PIN RESET) */}
+        {showForgotPinModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border-2 border-stone-200 text-left space-y-4 relative"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-2xs">
+                    <KeyRound className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-black text-slate-900 text-base uppercase tracking-tight">
+                      {forgotPinStep === "otp" ? "KHÔI PHỤC QUYỀN TRUY CẬP" : "ĐẶT LẠI MÃ PIN MỚI"}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-sans">
+                      Hội viên: <strong className="text-slate-900">{matchedCustomer?.name}</strong> ({matchedCustomer?.phone})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPinModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-stone-100 text-slate-400 hover:text-slate-700 border-0 cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {forgotPinStep === "otp" ? (
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-1">
+                    <p className="text-xs text-amber-950 font-sans font-medium">
+                      Mã xác thực OTP đã được gửi đến số điện thoại <strong>{matchedCustomer?.phone}</strong> qua tin nhắn SMS / Zalo.
+                    </p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-amber-800 uppercase font-bold tracking-wider">Mã OTP mô phỏng:</span>
+                      <span className="font-mono font-black text-amber-900 bg-white border border-amber-300 px-2 py-0.5 rounded-lg text-sm tracking-widest">{generatedOtp}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-700 uppercase font-display block">
+                      Nhập mã OTP 4 số:
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={forgotOtpInput}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setForgotOtpInput(val);
+                        setForgotPinError("");
+                        if (val.length === 4) {
+                          handleVerifyForgotOtp(val);
+                        }
+                      }}
+                      placeholder="• • • •"
+                      className="w-full px-4 py-3 bg-stone-50 border-2 border-stone-300 focus:border-[#A2C62C] rounded-2xl text-center font-mono text-2xl font-black tracking-widest focus:outline-none"
+                    />
+                  </div>
+
+                  {forgotPinError && (
+                    <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                      <span>{forgotPinError}</span>
+                    </div>
+                  )}
+
+                  {/* Quick test autofill OTP button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotOtpInput(generatedOtp);
+                      handleVerifyForgotOtp(generatedOtp);
+                    }}
+                    className="w-full py-2.5 bg-amber-100/70 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold font-sans transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>⚡ Nhập nhanh OTP mô phỏng ({generatedOtp})</span>
+                  </button>
+
+                  <div className="border-t border-stone-100 pt-3 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyForgotOtp()}
+                      className="w-full py-3.5 bg-slate-950 hover:bg-slate-800 text-white font-display font-black text-xs uppercase tracking-wider rounded-2xl transition cursor-pointer border-0 shadow-sm"
+                    >
+                      TIẾP TỤC XÁC THỰC ➔
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPinModal(false)}
+                      className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-600 font-display font-bold text-xs uppercase rounded-xl transition cursor-pointer border-0"
+                    >
+                      Hủy bỏ
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Step 2: New PIN or direct login */
+                <div className="space-y-4">
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs text-emerald-900 font-medium">
+                    <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <span>Xác thực OTP thành công! Bạn có thể đặt lại mã PIN mới hoặc đăng nhập ngay lập tức.</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase font-display block">
+                        Mã PIN 4 số mới:
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        value={newPinInput}
+                        onChange={(e) => {
+                          setNewPinInput(e.target.value.replace(/\D/g, ""));
+                          setForgotPinError("");
+                        }}
+                        placeholder="Nhập 4 số PIN mới"
+                        className="w-full px-4 py-2.5 bg-stone-50 border-2 border-stone-300 focus:border-[#A2C62C] rounded-xl text-center font-mono text-xl font-black tracking-widest focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase font-display block">
+                        Xác nhận mã PIN mới:
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        value={newPinConfirm}
+                        onChange={(e) => {
+                          setNewPinConfirm(e.target.value.replace(/\D/g, ""));
+                          setForgotPinError("");
+                        }}
+                        placeholder="Nhập lại 4 số PIN"
+                        className="w-full px-4 py-2.5 bg-stone-50 border-2 border-stone-300 focus:border-[#A2C62C] rounded-xl text-center font-mono text-xl font-black tracking-widest focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {forgotPinError && (
+                    <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                      <span>{forgotPinError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveNewPinAndLogin}
+                      className="w-full py-3.5 bg-[#A2C62C] hover:bg-[#91b723] text-slate-950 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition cursor-pointer border-0 shadow-sm"
+                    >
+                      LƯU MÃ PIN MỚI &amp; ĐĂNG NHẬP ➔
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLoginImmediatelyWithoutPin}
+                      className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-slate-800 font-display font-bold text-xs uppercase rounded-xl transition cursor-pointer border-0"
+                    >
+                      Bỏ qua đổi PIN, Đăng nhập ngay ➔
                     </button>
                   </div>
                 </div>

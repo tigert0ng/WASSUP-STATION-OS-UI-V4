@@ -26,6 +26,14 @@ type GroupedRow = {
   line79: ServiceBomRow | null;
 };
 
+const DEFAULT_INVENTORY_ITEMS: InventoryItemPickerRow[] = [
+  { id: "inv-01", name: "Dầu bóng lốp xe Sonax Xtreme", category: "consumable", unit: "Chai 500ml", min_stock: 10 },
+  { id: "inv-02", name: "Hóa chất bọt tuyết siêu đậm đặc WASSUP SOAP", category: "consumable", unit: "ml", min_stock: 15 },
+  { id: "inv-03", name: "Đất sét tẩy ố bụi sơn 3M Claybar", category: "consumable", unit: "Cục 200g", min_stock: 5 },
+  { id: "inv-04", name: "Máy xịt nước cao áp sấy gầm Karcher HD 6/15", category: "tool", unit: "Bộ máy", min_stock: 2 },
+  { id: "inv-05", name: "Máy đánh bóng lệch tâm Rupes LHR15 Mark III", category: "tool", unit: "Máy", min_stock: 1 },
+];
+
 export default function BomEditor({ serviceId, serviceName, onBomCountChange }: Props) {
   const { can, staff } = useAuth();
   const canWrite = can("catalog", "update");
@@ -55,25 +63,54 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
   }, [serviceId]);
 
   async function loadAll() {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    const [{ data: bomData, error: bomErr }, { data: invData, error: invErr }] = await Promise.all([
-      supabase.from("service_bom").select("*").eq("service_id", serviceId),
-      supabase
-        .from("inventory_items")
-        .select("id, name, category, unit, min_stock")
-        .in("category", ["consumable", "tool"])
-        .order("name"),
-    ]);
-    if (bomErr) showToast("error", bomErr.message);
-    if (invErr) showToast("error", invErr.message);
+    let bomData: ServiceBomRow[] = [];
+    let invData: InventoryItemPickerRow[] = [];
+
+    if (supabase) {
+      try {
+        const [{ data: bData, error: bomErr }, { data: iData, error: invErr }] = await Promise.all([
+          supabase.from("service_bom").select("*").eq("service_id", serviceId),
+          supabase
+            .from("inventory_items")
+            .select("id, name, category, unit, min_stock")
+            .in("category", ["consumable", "tool"])
+            .order("name"),
+        ]);
+        if (bomErr) console.warn("Supabase fetch BOM error:", bomErr.message);
+        if (invErr) console.warn("Supabase fetch inv error:", invErr.message);
+        if (bData) bomData = bData as ServiceBomRow[];
+        if (iData && iData.length > 0) invData = iData as InventoryItemPickerRow[];
+      } catch (e) {
+        console.warn("Supabase loadAll BOM error:", e);
+      }
+    }
+
+    if (invData.length === 0) {
+      const cached = typeof window !== "undefined" ? localStorage.getItem("wassup_inventory_items") : null;
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            invData = parsed.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              category: item.category || "consumable",
+              unit: item.unit || "Cái",
+              min_stock: item.minThreshold || 5,
+            }));
+          }
+        } catch (e) {}
+      }
+      if (invData.length === 0) {
+        invData = DEFAULT_INVENTORY_ITEMS;
+      }
+    }
+
     const localOverride = getLocalBomForService(serviceId);
-    const bom = localOverride !== null ? (localOverride as ServiceBomRow[]) : ((bomData as ServiceBomRow[]) ?? []);
+    const bom = localOverride !== null ? (localOverride as ServiceBomRow[]) : bomData;
     setBomLines(bom);
-    setInventoryItems((invData as InventoryItemPickerRow[]) ?? []);
+    setInventoryItems(invData);
     onBomCountChange(bom.length);
     setLoading(false);
   }
@@ -111,19 +148,8 @@ export default function BomEditor({ serviceId, serviceName, onBomCountChange }: 
       return;
     }
 
-    let finalQty45 = qty45;
-    let finalQty79 = qty79;
-    if (qty45 && !qty79) {
-      const useShared = window.confirm(
-        "Chỉ nhập định lượng cho Xe 4-5 chỗ. Dùng chung định lượng này cho Xe 7-9 chỗ/bán tải?"
-      );
-      if (useShared) finalQty79 = qty45;
-    } else if (qty79 && !qty45) {
-      const useShared = window.confirm(
-        "Chỉ nhập định lượng cho Xe 7-9 chỗ/bán tải. Dùng chung định lượng này cho Xe 4-5 chỗ?"
-      );
-      if (useShared) finalQty45 = qty79;
-    }
+    const finalQty45 = qty45 ?? qty79;
+    const finalQty79 = qty79 ?? qty45;
 
     setSaving(true);
     const updated = [...bomLines];
